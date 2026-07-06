@@ -12,14 +12,19 @@ import {
 } from "@/lib/auth/credentials";
 import { checkTokenRateLimit } from "@/lib/rate-limit/token";
 import { getSessionUserFromRequest } from "@/lib/session/request";
+import { authorizeTokenAccess } from "@/lib/token/authorize";
 import { getTokenService } from "@/lib/token/config";
 import { issueRegistryToken } from "@/lib/token/issue";
-import { findMissingProjects } from "@/lib/token/projects";
 import { parseScopes } from "@/lib/token/scope";
 
 type TokenIdentity = {
   subject: string;
   rateLimitKey: string;
+  user: {
+    id: string;
+    email: string;
+    systemRole: "admin" | "user";
+  } | null;
 };
 
 async function resolveIdentity(
@@ -35,6 +40,11 @@ async function resolveIdentity(
     return {
       subject: user.email,
       rateLimitKey: user.email,
+      user: {
+        id: user.id,
+        email: user.email,
+        systemRole: user.systemRole,
+      },
     };
   }
 
@@ -46,6 +56,11 @@ async function resolveIdentity(
   return {
     subject: sessionUser.email,
     rateLimitKey: sessionUser.email,
+    user: {
+      id: sessionUser.id,
+      email: sessionUser.email,
+      systemRole: sessionUser.systemRole,
+    },
   };
 }
 
@@ -67,30 +82,57 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const access = parseScopes(scopeParam);
   const identity = await resolveIdentity(request);
+
   if (!identity) {
+    if (access.length === 0) {
+      return apiError("not_authenticated", "Authentication required", 401);
+    }
+
     if (!checkTokenRateLimit(clientIp, "unauthenticated")) {
       return apiError("rate_limited", "Too many token requests", 429);
     }
 
-    return apiError("not_authenticated", "Authentication required", 401);
+    const authorized = await authorizeTokenAccess(null, access);
+    if (!authorized.ok) {
+      if (authorized.code === "project_not_found") {
+        return apiError("project_not_found", authorized.message, 403);
+      }
+      return apiError("forbidden", authorized.message, 403);
+    }
+
+    const issued = await issueRegistryToken(
+      "anonymous",
+      service,
+      authorized.access,
+    );
+
+    return NextResponse.json({
+      token: issued.token,
+      access_token: issued.token,
+      expires_in: issued.expiresIn,
+      issued_at: issued.issuedAt,
+    });
   }
 
   if (!checkTokenRateLimit(clientIp, identity.rateLimitKey)) {
     return apiError("rate_limited", "Too many token requests", 429);
   }
 
-  const access = parseScopes(scopeParam);
-  const missingProjects = await findMissingProjects(access);
-  if (missingProjects.length > 0) {
-    return apiError(
-      "project_not_found",
-      `Project not found: ${missingProjects.join(", ")}`,
-      403,
-    );
+  const authorized = await authorizeTokenAccess(identity.user, access);
+  if (!authorized.ok) {
+    if (authorized.code === "project_not_found") {
+      return apiError("project_not_found", authorized.message, 403);
+    }
+    return apiError("forbidden", authorized.message, 403);
   }
 
-  const issued = await issueRegistryToken(identity.subject, service, access);
+  const issued = await issueRegistryToken(
+    identity.subject,
+    service,
+    authorized.access,
+  );
 
   return NextResponse.json({
     token: issued.token,

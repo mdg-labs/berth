@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 
 export type ApiErrorCode =
   | "bad_request"
+  | "conflict"
   | "csrf_missing"
+  | "forbidden"
   | "invalid_credentials"
   | "not_authenticated"
   | "not_found"

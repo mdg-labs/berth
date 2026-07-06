@@ -57,6 +57,15 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | `/v2/*` proxy | App Router catch-all `app/v2/[[...path]]/route.ts` streaming to `REGISTRY_INTERNAL_URL` | Single public entrypoint per spec §0; registry stays internal-only |
 | Token rate-limit keys | Per-IP and per-identifier (`token:ip:*`, `token:id:*`) | Reuses login limiter buckets per spec §3.5 / §9.1 |
 
+## Phase 4 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Project name validation | DNS-like slug: `^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`, 2–63 chars | Aligns with spec §5.2 "DNS-like slug"; lowercase on create |
+| Member list shape | Discriminated union `{ type: "user" \| "invite", ... }` | Single endpoint shows members and pending invites per spec §5.5 |
+| Token anonymous subject | `"anonymous"` for unauthenticated public pull tokens | Distinguishes from authenticated subjects in JWT `sub` |
+| Force project delete | Best-effort manifest cascade via internal registry API | Spec §5.4 `force=true`; full portal delete flows in Phase 8 |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8)
