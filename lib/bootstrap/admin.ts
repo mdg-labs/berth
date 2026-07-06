@@ -48,11 +48,24 @@ export type BootstrapAdminResult = {
 };
 
 export async function ensureBootstrapAdmin(): Promise<BootstrapAdminResult> {
+  const configuredPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim();
+
   if (await hasAdminUser()) {
+    if (configuredPassword) {
+      const db = getDb();
+      const passwordHash = await hash(configuredPassword, BCRYPT_ROUNDS);
+      await db
+        .update(users)
+        .set({
+          passwordHash,
+          mustChangePassword: false,
+        })
+        .where(eq(users.email, resolveBootstrapEmail()));
+    }
+
     return { created: false, passwordLogged: false };
   }
 
-  const configuredPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD?.trim();
   const password = configuredPassword || generateBootstrapPassword();
   const passwordLogged = !configuredPassword;
 

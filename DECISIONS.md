@@ -34,6 +34,17 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Password hashing library | **`bcryptjs`** (bcrypt algorithm, pure JS) | Avoids native `bcrypt` build scripts blocked by pnpm in CI/sandbox; same hash format for Phase 2 login |
 | Bootstrap `must_change_password` | Boolean column on `users` | Spec §3.4 requires forced password change on first login when password is auto-generated |
 
+## Phase 2 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Session cookie name | `berth_session` | Namespaced to avoid collisions with other apps on same host |
+| Cookie `Secure` flag | Set only when `APP_URL` uses `https://` | Local compose uses `http://localhost:8080`; `Secure` cookies are not sent over plain HTTP |
+| OIDC PKCE state storage | HMAC-signed cookie `berth_oidc_state` scoped to `/api/auth/oidc` | Stateless redirect flow without server-side session store for OAuth state |
+| Login rate-limit keys | Per-IP and per-email buckets | Matches spec §9.1 per-IP and per-identifier requirement |
+| OIDC integration tests | Mock `openid-client` in unit tests | Avoids Keycloak container in default CI; compose OIDC AC verified via mocked grant path |
+| Bootstrap password on restart | When `BOOTSTRAP_ADMIN_PASSWORD` is set and admin exists, sync hash on boot | Keeps local compose + integration tests deterministic without wiping Postgres volumes |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8)

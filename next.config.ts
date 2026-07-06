@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["postgres", "bcryptjs"],
+  serverExternalPackages: ["postgres", "bcryptjs", "openid-client"],
   outputFileTracingIncludes: {
     "/*": ["./drizzle/**/*"],
   },

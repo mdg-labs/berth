@@ -59,6 +59,9 @@ services:
       SESSION_SECRET: dev-session-secret-change-in-production
       APP_URL: http://localhost:8080
       BOOTSTRAP_ADMIN_EMAIL: admin@localhost
+      BOOTSTRAP_ADMIN_PASSWORD: test-admin-password
+      RATE_LIMIT_LOGIN_MAX_ATTEMPTS: "10"
+      RATE_LIMIT_WINDOW_SECONDS: "60"
     depends_on:
       postgres:
         condition: service_healthy

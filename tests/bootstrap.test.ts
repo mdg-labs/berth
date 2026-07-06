@@ -12,15 +12,17 @@ import {
   resolveBootstrapEmail,
 } from "@/lib/bootstrap/admin";
 
-const { selectMock, insertMock } = vi.hoisted(() => ({
+const { selectMock, insertMock, updateMock } = vi.hoisted(() => ({
   selectMock: vi.fn(),
   insertMock: vi.fn(),
+  updateMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   getDb: () => ({
     select: selectMock,
     insert: insertMock,
+    update: updateMock,
   }),
 }));
 
@@ -78,12 +80,31 @@ describe("bootstrap admin", () => {
 
   it("ensureBootstrapAdmin skips when an admin already exists", async () => {
     mockSelectChain([{ id: "user-1" }]);
+    insertMock.mockReturnValue({
+      values: vi.fn().mockResolvedValue(undefined),
+    });
 
     await expect(ensureBootstrapAdmin()).resolves.toEqual({
       created: false,
       passwordLogged: false,
     });
     expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("ensureBootstrapAdmin syncs configured password when admin exists", async () => {
+    mockSelectChain([{ id: "user-1" }]);
+    process.env.BOOTSTRAP_ADMIN_PASSWORD = "configured-password";
+    updateMock.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue(undefined),
+      }),
+    });
+
+    await expect(ensureBootstrapAdmin()).resolves.toEqual({
+      created: false,
+      passwordLogged: false,
+    });
+    expect(updateMock).toHaveBeenCalled();
   });
 
   it("ensureBootstrapAdmin creates admin with configured password", async () => {
