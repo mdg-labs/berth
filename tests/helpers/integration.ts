@@ -89,6 +89,17 @@ export async function hasTokenRoutes(): Promise<boolean> {
   }
 }
 
+export async function hasAdminRoutes(): Promise<boolean> {
+  try {
+    const response = await fetch(`${INTEGRATION_BASE_URL}/api/admin/users`, {
+      signal: AbortSignal.timeout(2_000),
+    });
+    return response.status !== 404;
+  } catch {
+    return false;
+  }
+}
+
 export async function canLoginWithConfiguredCredentials(): Promise<boolean> {
   try {
     const response = await fetch(`${INTEGRATION_BASE_URL}/api/auth/login`, {

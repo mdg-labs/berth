@@ -117,6 +117,19 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Registry delete token | Per-user JWT with `repository:<project>/<repo>:pull,delete` | Spec §7.4 session-authenticated registry writes |
 | Audit log actions | `tag.delete`, `tag.bulk_delete`, `repository.delete` | Spec §8 destructive-action logging |
 
+## Phase 9 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| coss Settings batch | Installed via `npx shadcn@latest add @coss/{form,field,fieldset,switch,radio-group}` per Appendix B | Spec §0 / Appendix B component contract |
+| coss/ui license (P9 components) | Same MIT upstream zone as prior phases; no per-file SPDX headers | Spec §16 third-party note |
+| Registry data mount | `registry-data` volume mounted read-only at `/var/lib/registry` in `app`; `REGISTRY_DATA_PATH` env | Spec §3.1 storage-stats without Docker socket |
+| GC operator UX | `/admin/gc` shows approximate volume size + copy-paste `docker compose … garbage-collect` command; no live trigger | Spec §3.1 MVP approach |
+| Admin API guard | `isSessionSystemAdmin` on all `/api/admin/*` routes; portal `/admin` layout blocks non-admins | Spec §5.3 / §7.5 |
+| Local user creation | `POST /api/admin/users` with optional password; auto-generate + `must_change_password` when omitted | Spec §7.5 / bootstrap pattern |
+| Pending invite UX | Warning `Alert` on project settings when pending invites exist; documents unverified OIDC edge case (§5.5) | Spec §5.5 |
+| Invite cancellation | `DELETE /api/projects/[id]/invites/[inviteId]` for pending invites | Settings member management completeness |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist

@@ -301,6 +301,57 @@ export async function removeProjectMember(
   return { ok: true };
 }
 
+export async function removeProjectInvite(
+  projectId: string,
+  inviteId: string,
+  actorId: string,
+  systemRole: SystemRole,
+): Promise<{ ok: true } | { error: "not_found" | "forbidden" }> {
+  const db = getDb();
+  const [project] = await db
+    .select({ id: projects.id, name: projects.name })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+
+  if (!project) {
+    return { error: "not_found" };
+  }
+
+  const actorRole = await getProjectMemberRole(actorId, projectId);
+  if (
+    !canPerformProjectAction(systemRole, actorRole, "manage_members")
+  ) {
+    return { error: "forbidden" };
+  }
+
+  const [invite] = await db
+    .select({ id: projectInvites.id, email: projectInvites.email })
+    .from(projectInvites)
+    .where(
+      and(
+        eq(projectInvites.id, inviteId),
+        eq(projectInvites.projectId, projectId),
+        isNull(projectInvites.acceptedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!invite) {
+    return { error: "not_found" };
+  }
+
+  await db.delete(projectInvites).where(eq(projectInvites.id, inviteId));
+
+  await writeAuditLog({
+    userId: actorId,
+    action: "member.invite_remove",
+    resource: `project:${project.name}/invite:${invite.email}`,
+  });
+
+  return { ok: true };
+}
+
 function isValidMemberRole(role: string): role is ProjectRole {
   return (
     role === "guest" ||

@@ -52,8 +52,11 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - "8080:3000"
+    volumes:
+      - registry-data:/var/lib/registry:ro
     environment:
       DATABASE_URL: postgresql://berth:berth@postgres:5432/berth
+      REGISTRY_DATA_PATH: /var/lib/registry
       REGISTRY_INTERNAL_URL: http://registry:5000
       TOKEN_ISSUER: registry
       TOKEN_SIGNING_KEY_PATH: /etc/berth/token/signing-key.pem

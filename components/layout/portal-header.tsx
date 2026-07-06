@@ -58,7 +58,16 @@ export function PortalHeader() {
         <div className="flex items-center gap-2">
           <CommandPalette currentProject={currentProject} />
           {user?.systemRole === "admin" ? (
-            <Badge variant="secondary">Admin</Badge>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                render={<Link href="/admin" />}
+              >
+                Admin
+              </Button>
+              <Badge variant="secondary">Admin</Badge>
+            </>
           ) : null}
           <ThemeToggle />
           <Menu>
