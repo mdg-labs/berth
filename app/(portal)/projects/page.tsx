@@ -3,6 +3,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 import { useRef, useState } from "react";
 
@@ -122,12 +123,15 @@ export default function ProjectsPage() {
               key={project.id}
               className="flex items-center justify-between gap-4 px-4 py-4"
             >
-              <div className="min-w-0">
+              <Link
+                href={`/p/${project.name}`}
+                className="min-w-0 flex-1 transition-colors hover:text-primary"
+              >
                 <p className="font-medium">{project.name}</p>
                 <p className="text-xs text-muted-foreground">
                   Created {new Date(project.createdAt).toLocaleDateString()}
                 </p>
-              </div>
+              </Link>
               <div className="flex items-center gap-2">
                 {project.isPublic ? <Badge variant="secondary">Public</Badge> : null}
                 {project.role ? <Badge>{project.role}</Badge> : null}

@@ -89,6 +89,20 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Route segment | `runtime=nodejs`, `maxDuration=600`, `dynamic=force-dynamic` on `/v2/*` | Long-running uploads on Node runtime |
 | Dev token rate limit | `RATE_LIMIT_TOKEN_MAX_ATTEMPTS=200` in compose (login stays 10) | Docker push/pull integration makes many token round-trips per IP |
 
+## Phase 7 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| coss Catalog + Tags + Detail batches | Installed via `npx shadcn@latest add @coss/<name>` per Appendix B; no bulk `@coss/ui` | Spec §0 / Appendix B component contract |
+| coss/ui license (P7 components) | Same MIT upstream zone as Phase 5 Shell batch; no per-file SPDX headers in copied files | Spec §16 third-party note; Apache-2.0 compatible |
+| Registry catalog auth | Issue per-user JWT with `registry:catalog:*` + `repository:<project>/*:pull`; filter `_catalog` by project prefix | Spec §7.4 session-authenticated registry reads |
+| Tag list state | `nuqs` for `search`, `sort`, `page`, `pageSize` on `/p/[project]/r/[...repo]` | Spec §6.2 shareable filter/pagination URL state |
+| Tag table rendering | TanStack Table columns + TanStack Virtual body rows | Roadmap P7 / Appendix B Tags batch |
+| Catalog refresh | TanStack Query `refetchInterval: 30_000` on catalog/tags/detail | Exit criteria: portal shows push within 30s |
+| Command palette | `p-command-1` pattern with Ctrl/Cmd+K; navigates projects + repos in current project | Roadmap P7 / Appendix B overlay rules |
+| Copy pull command | `anchoredToastManager` anchored to copy button (`p-toast-12`) | Appendix B overlay rules |
+| Repo/tag portal routes | Single optional catch-all `r/[[...rest]]` parses list vs `/t/<tag>` detail | Next.js requires catch-all be terminal; preserves spec URLs |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8)

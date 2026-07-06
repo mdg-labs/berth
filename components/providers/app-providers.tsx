@@ -5,6 +5,7 @@
 import { AnchoredToastProvider, ToastProvider } from "@/components/ui/toast";
 import { getDefaultTheme } from "@/lib/theme/config";
 
+import { NuqsProvider } from "./nuqs-provider";
 import { QueryProvider } from "./query-provider";
 import { ThemeProvider } from "./theme-provider";
 
@@ -12,9 +13,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider defaultTheme={getDefaultTheme()}>
       <QueryProvider>
-        <ToastProvider>
-          <AnchoredToastProvider>{children}</AnchoredToastProvider>
-        </ToastProvider>
+        <NuqsProvider>
+          <ToastProvider>
+            <AnchoredToastProvider>{children}</AnchoredToastProvider>
+          </ToastProvider>
+        </NuqsProvider>
       </QueryProvider>
     </ThemeProvider>
   );

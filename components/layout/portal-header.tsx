@@ -3,12 +3,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOutIcon, UserIcon } from "lucide-react";
 
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { CommandPalette } from "@/components/command-palette/command-palette";
 import { BreadcrumbNav } from "@/components/layout/breadcrumb-nav";
 import { apiFetch } from "@/lib/api/client";
 import { Badge } from "@/components/ui/badge";
@@ -22,11 +23,21 @@ import {
   MenuTrigger,
 } from "@/components/ui/menu";
 
+function currentProjectFromPath(pathname: string): string | undefined {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] === "p" && segments[1]) {
+    return decodeURIComponent(segments[1]);
+  }
+  return undefined;
+}
+
 export function PortalHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { data } = useAuthUser();
   const user = data?.user;
+  const currentProject = currentProjectFromPath(pathname);
 
   async function handleLogout() {
     await apiFetch("/api/auth/logout", { method: "POST" });
@@ -45,6 +56,7 @@ export function PortalHeader() {
           <BreadcrumbNav />
         </div>
         <div className="flex items-center gap-2">
+          <CommandPalette currentProject={currentProject} />
           {user?.systemRole === "admin" ? (
             <Badge variant="secondary">Admin</Badge>
           ) : null}
