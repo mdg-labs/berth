@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-import { compare } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
@@ -28,6 +28,12 @@ export async function verifyPassword(
   }
 
   return compare(password, passwordHash);
+}
+
+const BCRYPT_ROUNDS = 12;
+
+export async function hashPassword(password: string): Promise<string> {
+  return hash(password, BCRYPT_ROUNDS);
 }
 
 export function getClientIp(request: Request): string {

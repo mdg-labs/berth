@@ -23,6 +23,17 @@ Record implementation choices here as they are made. Seeds from spec Appendix C 
 
 Per-file license headers on copied-in `@coss/ui` components must be verified during **Phase 5** before assuming Apache-2.0 compatibility (spec §16).
 
+**Phase 5 result:** Shell-batch components installed via `npx shadcn@latest init @coss/style` and retained only: `button`, `menu`, `separator`, `badge`, `breadcrumb`, `skeleton`, `spinner`, `kbd`, `toast`. Copied registry JSON from `https://coss.com/ui/r/{name}.json` (coss `apps/ui/` tree) — **MIT** per coss.com/ui docs and spec §16 third-party note. Individual copied files carry **no per-file SPDX header**; upstream source zone is MIT-licensed (Apache-2.0 compatible). Bulk `@coss/ui` install was removed after init; only Shell-batch files kept.
+
+## Phase 5 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Theme persistence | `localStorage` key `berth-theme` + `class="dark"` on `<html>` | Matches spec `THEME_DEFAULT`; no extra dependency |
+| Create project UI | Native `<dialog>` + plain inputs | Shell batch excludes `dialog`/`input` until Catalog phase (Appendix B) |
+| Protected routes | Middleware cookie gate + server layout session check + client `AuthGuard` | Defense in depth; DB session validated server-side |
+| Password change API | `POST /api/auth/change-password` | Clears `must_change_password`; required for bootstrap admin flow |
+
 ## Phase 0 choices
 
 | Decision | Choice | Rationale |

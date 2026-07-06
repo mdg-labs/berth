@@ -1,0 +1,17 @@
+// Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  name: string;
+  systemRole: "admin" | "user";
+  mustChangePassword: boolean;
+};
+
+export type ProjectSummary = {
+  id: string;
+  name: string;
+  isPublic: boolean;
+  createdAt: string;
+  role: "guest" | "developer" | "maintainer" | "admin" | null;
+};
