@@ -1,0 +1,46 @@
+---
+description: When and how to use the Berth orchestrator skill — ROADMAP phases P0–P11
+alwaysApply: true
+---
+
+# Orchestrator & task tracking
+
+Berth greenfield MVP is built via **roadmap phases** tracked in `workspace-notes.md`.
+
+| Mode | ID | When |
+|------|-----|------|
+| **Roadmap (greenfield MVP)** | `P0` … `P11`, `P0-T03` | `orchestrate P0`, `implement P6` |
+
+## Use the orchestrator skill when
+
+- The user asks to "orchestrate", "delegate", or implement a roadmap phase (`P6`, `P0-T03`)
+- Multi-step work spans several linked phases
+- Autonomous Berth MVP development is requested
+
+Follow `.cursor/skills/orchestrator/SKILL.md`. Do not improvise dispatch rules.
+
+## Task lifecycle
+
+| Stage | Who | Meaning |
+|-------|-----|---------|
+| In Progress | **Execution** | Working (`TASK: P6 — In Progress`) |
+| In Review | **Execution** | Implemented + CI + **committed** — awaiting verifier |
+| Done | **Verifier** + **Orchestrator** | PASS — update `workspace-notes.md` |
+
+## Orchestrator dispatch rules
+
+- Present **batch plan** before first `Task` dispatch (unless `plan only` / `wait`)
+- **Parallel:** only P5 + P6 after P4 (Lane P, max 2, `best-of-n-runner` worktrees)
+- **Scoped CI (sub-agents):** lint / typecheck / test per prompt-templates — not full E2E unless AC requires
+- **Execution prompts** → paste **TASK FIRST** as first lines — see `prompt-templates.md`
+- **Execution agents** → implement → **CI gate** → **one commit** → verifier
+- **Orchestrator** → after verifier PASS: **commit-linkage audit** before marking Done
+- **Forbidden:** orchestrator reading `docs/spec.md` bodies or implementation files
+
+## Universal acceptance criteria (every task)
+
+- Conventional commits with `[P<phase>]` linkage (`02-git-workflow.mdc`)
+- TypeScript strict; no `any`; no `console.log` in production paths
+- Drizzle: schema edit + `db:generate` + commit migrations
+- spec §0: no Harbor / joxit/docker-registry-ui; no bulk `@coss/ui`
+- Record decisions in `DECISIONS.md`

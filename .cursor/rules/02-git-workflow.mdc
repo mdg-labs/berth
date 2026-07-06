@@ -1,0 +1,52 @@
+---
+description: Git branch policy, commit format, orchestrator task commits mandatory
+alwaysApply: true
+---
+
+# Git workflow (Berth)
+
+## Branches
+
+| Branch | Role |
+|--------|------|
+| `main` | Default — orchestrator-verified roadmap commits land here |
+| `orchestrator/P<phase>[-T<nn>]` | Lane P worktree branches — merged to `main` after verify |
+
+- Lane P agents use **Cursor git worktrees** (`subagent_type: "best-of-n-runner"`), not shared-checkout branch switching.
+- **Never push** unless the user explicitly asks.
+
+## Commit messages (Conventional Commits)
+
+Subject ≤72 chars, imperative mood, **scoped**. **Orchestrator task commits must link the work item.**
+
+```
+feat(<scope>)[P6]: <imperative summary>        # roadmap phase
+feat(<scope>)[P0-T03]: <summary>               # roadmap sub-task
+fix(<scope>)[#12]: <summary>                  # GitLab issue (post-MVP)
+```
+
+**Roadmap:** `[P<phase>[-T<nn>]]` in subject; `Task: P<phase>[-T<nn>]` on its own line in the body.
+
+**Allowed scopes:** `repo`, `ci`, `api`, `web`, `db`, `docker`, `docs`, `deps`, `auth`, `registry`
+
+## Commit rules
+
+- **Orchestrator execution sub-agents MUST commit** before verifier handoff — one task = **one implementation commit**. Overrides generic "only commit when asked" for orchestrator-dispatched work.
+- **Never** `git add .` or `git add -A`. Stage explicit paths from WRITE SCOPE (+ generated migrations / lockfile when applicable).
+- Never amend commits that have been pushed.
+
+## Push policy
+
+**Never push** unless the user explicitly asks. Run full CI before push when requested.
+
+## Example
+
+```bash
+git add docker/compose.yml app/api/health/route.ts
+git commit -m "$(cat <<'EOF'
+feat(docker)[P0]: add three-service compose skeleton
+
+Task: P0
+EOF
+)"
+```
