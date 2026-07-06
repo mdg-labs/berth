@@ -2,9 +2,10 @@
 
 import { readFileSync } from "node:fs";
 
-import { importPKCS8 } from "jose";
+import { importPKCS8, importX509 } from "jose";
 
 let cachedPrivateKey: CryptoKey | null = null;
+let cachedPublicKey: CryptoKey | null = null;
 let cachedCertDer: string | null = null;
 
 function readPemFromEnvOrPath(
@@ -45,21 +46,33 @@ export async function getSigningPrivateKey(): Promise<CryptoKey> {
   return cachedPrivateKey;
 }
 
+export function getSigningCertPem(): string {
+  return readPemFromEnvOrPath(
+    process.env.TOKEN_CERT,
+    process.env.TOKEN_CERT_PATH,
+  );
+}
+
 export function getSigningCertDer(): string {
   if (cachedCertDer) {
     return cachedCertDer;
   }
 
-  const pem = readPemFromEnvOrPath(
-    process.env.TOKEN_CERT,
-    process.env.TOKEN_CERT_PATH,
-  );
-
-  cachedCertDer = pemToDerBase64(pem);
+  cachedCertDer = pemToDerBase64(getSigningCertPem());
   return cachedCertDer;
+}
+
+export async function getVerificationPublicKey(): Promise<CryptoKey> {
+  if (cachedPublicKey) {
+    return cachedPublicKey;
+  }
+
+  cachedPublicKey = await importX509(getSigningCertPem(), "RS256");
+  return cachedPublicKey;
 }
 
 export function resetSigningKeyCache(): void {
   cachedPrivateKey = null;
+  cachedPublicKey = null;
   cachedCertDer = null;
 }

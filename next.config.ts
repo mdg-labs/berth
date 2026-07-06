@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["./drizzle/**/*"],
   },
+  experimental: {
+    // Docker layer uploads stream through /v2/* — avoid default body caps.
+    middlewareClientMaxBodySize: "500mb",
+  },
 };
 
 export default nextConfig;

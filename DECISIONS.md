@@ -77,6 +77,18 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Token anonymous subject | `"anonymous"` for unauthenticated public pull tokens | Distinguishes from authenticated subjects in JWT `sub` |
 | Force project delete | Best-effort manifest cascade via internal registry API | Spec §5.4 `force=true`; full portal delete flows in Phase 8 |
 
+## Phase 6 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Proxy module layout | `lib/registry/proxy/{config,public-url,rewrite,forward}.ts` | Keeps route handler thin; unit-testable Location rewrite |
+| Bearer validation | Verify JWT signature/issuer/audience when `Authorization: Bearer` present; unauthenticated `/v2/` challenges still forwarded | Spec §4.3 step 1 returns 401 without a token; invalid tokens rejected at app |
+| Hop-by-hop headers | Strip `connection`/`upgrade` only; pass through `Transfer-Encoding`, `Content-Length`, `Content-Range` | Spec §4.1.1 resumable/chunked uploads |
+| Upload timeouts | `REGISTRY_PROXY_TIMEOUT_MS` (default 600000) on upstream fetch | Spec §4.1.1 slow uplinks; independent of `/api/*` |
+| Body size caps | `experimental.middlewareClientMaxBodySize: 500mb` + streaming `request.body` | Opt out of form-sized defaults for layer uploads |
+| Route segment | `runtime=nodejs`, `maxDuration=600`, `dynamic=force-dynamic` on `/v2/*` | Long-running uploads on Node runtime |
+| Dev token rate limit | `RATE_LIMIT_TOKEN_MAX_ATTEMPTS=200` in compose (login stays 10) | Docker push/pull integration makes many token round-trips per IP |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8)

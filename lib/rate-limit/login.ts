@@ -7,7 +7,7 @@ type Bucket = {
 
 const buckets = new Map<string, Bucket>();
 
-function getLimits() {
+export function getRateLimitConfig() {
   const maxAttempts = Number.parseInt(
     process.env.RATE_LIMIT_LOGIN_MAX_ATTEMPTS ?? "10",
     10,
@@ -23,8 +23,11 @@ function getLimits() {
   };
 }
 
-export function consumeRateLimit(key: string): boolean {
-  const { maxAttempts, windowSeconds } = getLimits();
+export function consumeRateLimit(
+  key: string,
+  maxAttempts = getRateLimitConfig().maxAttempts,
+  windowSeconds = getRateLimitConfig().windowSeconds,
+): boolean {
   const now = Date.now();
   const bucket = buckets.get(key);
 

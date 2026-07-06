@@ -65,6 +65,7 @@ services:
       BOOTSTRAP_ADMIN_EMAIL: admin@localhost
       BOOTSTRAP_ADMIN_PASSWORD: test-admin-password
       RATE_LIMIT_LOGIN_MAX_ATTEMPTS: "10"
+      RATE_LIMIT_TOKEN_MAX_ATTEMPTS: "200"
       RATE_LIMIT_WINDOW_SECONDS: "60"
     depends_on:
       postgres:
