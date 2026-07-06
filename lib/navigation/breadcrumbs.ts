@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-import { repoPathSegments } from "@/lib/catalog/format";
+import { imagePathSegments } from "@/lib/catalog/format";
 
 export type BreadcrumbItemData = {
   label: string;
@@ -66,33 +66,33 @@ function buildProjectBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
     return items;
   }
 
-  if (tail[0] === "r") {
-    const repoSegments = tail.slice(1).map(decodeURIComponent);
+  if (tail[0] === "i" || tail[0] === "r") {
+    const imageSegments = tail.slice(1).map(decodeURIComponent);
     items.push({ label: titleCase(project), href: projectPath });
 
-    if (repoSegments.length === 0) {
-      items.push({ label: "Repositories" });
+    if (imageSegments.length === 0) {
+      items.push({ label: "Images" });
       return items;
     }
 
-    if (repoSegments.at(-1) === "settings" && repoSegments.length >= 2) {
-      const repoName = repoSegments.slice(0, -1).join("/");
-      const repoHref = `/p/${encodeURIComponent(project)}/r/${repoPathSegments(repoName)}`;
-      items.push({ label: repoName, href: repoHref });
+    if (imageSegments.at(-1) === "settings" && imageSegments.length >= 2) {
+      const imageName = imageSegments.slice(0, -1).join("/");
+      const imageHref = `/p/${encodeURIComponent(project)}/i/${imagePathSegments(imageName)}`;
+      items.push({ label: imageName, href: imageHref });
       items.push({ label: "Settings" });
       return items;
     }
 
-    const parsed = parseProjectRepositoryRoute(repoSegments);
+    const parsed = parseProjectRepositoryRoute(imageSegments);
     if (!parsed) {
-      items.push({ label: "Repositories" });
+      items.push({ label: "Images" });
       return items;
     }
 
-    const repoHref = `/p/${encodeURIComponent(project)}/r/${repoPathSegments(parsed.repoName)}`;
+    const imageHref = `/p/${encodeURIComponent(project)}/i/${imagePathSegments(parsed.repoName)}`;
 
     if (parsed.kind === "detail") {
-      items.push({ label: parsed.repoName, href: repoHref });
+      items.push({ label: parsed.repoName, href: imageHref });
       items.push({ label: parsed.tag });
       return items;
     }

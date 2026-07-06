@@ -35,3 +35,7 @@ export function repoPathSegments(repoPath: string): string {
     .map((segment) => encodeURIComponent(segment))
     .join("/");
 }
+
+export function imagePathSegments(imagePath: string): string {
+  return repoPathSegments(imagePath);
+}

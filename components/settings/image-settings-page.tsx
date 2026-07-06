@@ -4,9 +4,10 @@
 
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { SettingsIcon } from "lucide-react";
+import { ArrowLeftIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { ErrorAlert } from "@/components/catalog/error-alert";
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,16 +26,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toastManager } from "@/components/ui/toast";
 import { apiFetch, ApiError } from "@/lib/api/client";
-import { repoPathSegments } from "@/lib/catalog/format";
+import { imagePathSegments } from "@/lib/catalog/format";
 import { useProjectByName } from "@/lib/hooks/use-project";
 import type {
   AnonymousPullOverride,
   RepositorySettings,
 } from "@/lib/repositories/types";
 
-type RepositorySettingsPageProps = {
+type ImageSettingsPageProps = {
   projectName: string;
-  repoName: string;
+  imageName: string;
 };
 
 type SettingsResponse = {
@@ -51,10 +52,10 @@ function useSyncedState<T>(value: T) {
   return [state, setState] as const;
 }
 
-export function RepositorySettingsPage({
+export function ImageSettingsPage({
   projectName,
-  repoName,
-}: RepositorySettingsPageProps) {
+  imageName,
+}: ImageSettingsPageProps) {
   const queryClient = useQueryClient();
   const { data: authData } = useAuthUser();
   const projectQuery = useProjectByName(projectName);
@@ -63,10 +64,10 @@ export function RepositorySettingsPage({
     authData?.user.systemRole === "admin" || projectQuery.data?.role === "admin";
 
   const settingsQuery = useQuery({
-    queryKey: ["repository-settings", projectQuery.data?.id, repoName],
+    queryKey: ["image-settings", projectQuery.data?.id, imageName],
     queryFn: () =>
       apiFetch<SettingsResponse>(
-        `/api/projects/${projectQuery.data!.id}/repos/${repoPathSegments(repoName)}/settings`,
+        `/api/projects/${projectQuery.data!.id}/images/${imagePathSegments(imageName)}/settings`,
       ),
     enabled: Boolean(projectQuery.data?.id && canManage),
   });
@@ -78,7 +79,7 @@ export function RepositorySettingsPage({
   const mutation = useMutation({
     mutationFn: (next: AnonymousPullOverride) =>
       apiFetch<SettingsResponse>(
-        `/api/projects/${projectQuery.data!.id}/repos/${repoPathSegments(repoName)}/settings`,
+        `/api/projects/${projectQuery.data!.id}/images/${imagePathSegments(imageName)}/settings`,
         {
           method: "PATCH",
           body: { anonymousPull: next },
@@ -86,7 +87,7 @@ export function RepositorySettingsPage({
       ),
     onSuccess: (response) => {
       queryClient.setQueryData(
-        ["repository-settings", projectQuery.data?.id, repoName],
+        ["image-settings", projectQuery.data?.id, imageName],
         response,
       );
       void queryClient.invalidateQueries({
@@ -94,7 +95,7 @@ export function RepositorySettingsPage({
       });
       toastManager.add({
         type: "success",
-        title: "Repository settings updated",
+        title: "Image settings updated",
       });
     },
     onError: (error) => {
@@ -124,16 +125,17 @@ export function RepositorySettingsPage({
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-          Only project admins can manage settings for {repoName}.
+          Only project admins can manage settings for {imageName}.
         </div>
         <Button
           variant="outline"
           render={
             <Link
-              href={`/p/${encodeURIComponent(projectName)}/r/${repoPathSegments(repoName)}`}
+              href={`/p/${encodeURIComponent(projectName)}/i/${imagePathSegments(imageName)}`}
             />
           }
         >
+          <ArrowLeftIcon className="size-4" />
           Back to tags
         </Button>
       </div>
@@ -145,24 +147,19 @@ export function RepositorySettingsPage({
     ? "Anonymous pull allowed"
     : "Anonymous pull denied";
 
+  const tagsHref = `/p/${encodeURIComponent(projectName)}/i/${imagePathSegments(imageName)}`;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{repoName}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{imageName}</h1>
           <p className="text-sm text-muted-foreground">
-            Repository settings in {projectName}
+            Image settings in {projectName}
           </p>
         </div>
-        <Button
-          variant="outline"
-          render={
-            <Link
-              href={`/p/${encodeURIComponent(projectName)}/r/${repoPathSegments(repoName)}`}
-            />
-          }
-        >
-          <SettingsIcon className="size-4" />
+        <Button variant="outline" render={<Link href={tagsHref} />}>
+          <ArrowLeftIcon className="size-4" />
           Back to tags
         </Button>
       </div>
@@ -171,13 +168,25 @@ export function RepositorySettingsPage({
         <Skeleton className="h-48 w-full rounded-lg" />
       ) : null}
 
+      {settingsQuery.isError ? (
+        <ErrorAlert
+          title="Failed to load image settings"
+          message={
+            settingsQuery.error instanceof Error
+              ? settingsQuery.error.message
+              : "Request failed"
+          }
+          onRetry={() => void settingsQuery.refetch()}
+        />
+      ) : null}
+
       {settings ? (
         <Card>
           <CardHeader>
             <CardTitle>Anonymous pull</CardTitle>
             <CardDescription>
-              Override the project default for this repository. Members with
-              access can always pull when authenticated.
+              Override the project default for this image. Members with access
+              can always pull when authenticated.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -227,7 +236,7 @@ export function RepositorySettingsPage({
                     <span>
                       <span className="font-medium">Allow anonymous pull</span>
                       <p className="text-muted-foreground text-xs">
-                        Unauthenticated clients can pull this repository.
+                        Unauthenticated clients can pull this image.
                       </p>
                     </span>
                   </Label>

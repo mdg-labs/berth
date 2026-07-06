@@ -37,7 +37,7 @@ import {
   buildPullCommand,
   formatBytes,
   formatDigest,
-  repoPathSegments,
+  imagePathSegments,
 } from "@/lib/catalog/format";
 import { useProjectByName } from "@/lib/hooks/use-project";
 import type { SiblingsResponse, TagDetail } from "@/lib/registry/client/types";
@@ -85,7 +85,7 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
     queryKey: ["tag-detail", projectQuery.data?.id, repoName, tag],
     queryFn: () =>
       apiFetch<TagDetailResponse>(
-        `/api/projects/${projectQuery.data!.id}/repos/${encodedRepo}/tags/${encodedTag}`,
+        `/api/projects/${projectQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}`,
       ),
     enabled: Boolean(projectQuery.data?.id),
     refetchInterval: 30_000,
@@ -95,7 +95,7 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
     queryKey: ["tag-siblings", projectQuery.data?.id, repoName, tag],
     queryFn: () =>
       apiFetch<SiblingsResponse>(
-        `/api/projects/${projectQuery.data!.id}/repos/${encodedRepo}/tags/${encodedTag}/siblings`,
+        `/api/projects/${projectQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}/siblings`,
       ),
     enabled: Boolean(projectQuery.data?.id && detailQuery.data),
   });
@@ -108,7 +108,7 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
   const deleteMutation = useMutation({
     mutationFn: () =>
       apiFetch<{ deleted: boolean }>(
-        `/api/projects/${projectQuery.data!.id}/repos/${encodedRepo}/tags/${encodedTag}`,
+        `/api/projects/${projectQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}`,
         { method: "DELETE" },
       ),
     onSuccess: () => {
@@ -120,7 +120,7 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
         title: "Tag deleted",
         description: `${tag} was removed from the repository.`,
       });
-      router.push(`/p/${projectName}/r/${repoPathSegments(repoName)}`);
+      router.push(`/p/${projectName}/i/${imagePathSegments(repoName)}`);
     },
     onError: (error) => {
       toastManager.add({

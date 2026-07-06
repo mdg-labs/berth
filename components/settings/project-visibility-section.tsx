@@ -57,7 +57,7 @@ export function ProjectVisibilitySection({
       <CardHeader>
         <CardTitle>Default anonymous pull</CardTitle>
         <CardDescription>
-          Applies to all repositories unless overridden on an individual image
+          Applies to all images unless overridden on an individual image
           settings page.
         </CardDescription>
       </CardHeader>
@@ -66,7 +66,7 @@ export function ProjectVisibilitySection({
           <Field className="flex-1">
             <FieldLabel htmlFor={switchId}>Allow anonymous pull</FieldLabel>
             <FieldDescription>
-              When enabled, unauthenticated clients can pull repositories that
+              When enabled, unauthenticated clients can pull images that
               inherit this project default.
             </FieldDescription>
           </Field>

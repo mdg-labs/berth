@@ -1,25 +1,25 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-import { RepositorySettingsPage } from "@/components/settings/repository-settings-page";
+import { ImageSettingsPage } from "@/components/settings/image-settings-page";
 import { TagDetailPage } from "@/components/tags/tag-detail-page";
 import { TagsPage } from "@/components/tags/tags-page";
 
 type PageProps = {
-  params: Promise<{ project: string; rest?: string[] }>;
+  params: Promise<{ project: string; rest: string[] }>;
 };
 
-function parseRepositoryRoute(rest: string[] | undefined): {
+function parseImageRoute(rest: string[]): {
   kind: "settings";
-  repoName: string;
+  imageName: string;
 } | {
   kind: "list";
-  repoName: string;
+  imageName: string;
 } | {
   kind: "detail";
-  repoName: string;
+  imageName: string;
   tag: string;
 } | null {
-  if (!rest || rest.length === 0) {
+  if (rest.length === 0) {
     return null;
   }
 
@@ -32,7 +32,7 @@ function parseRepositoryRoute(rest: string[] | undefined): {
 
     return {
       kind: "settings",
-      repoName: segments.slice(0, -1).join("/"),
+      imageName: segments.slice(0, -1).join("/"),
     };
   }
 
@@ -41,35 +41,35 @@ function parseRepositoryRoute(rest: string[] | undefined): {
   if (tagMarkerIndex > 0 && tagMarkerIndex === segments.length - 2) {
     return {
       kind: "detail",
-      repoName: segments.slice(0, tagMarkerIndex).join("/"),
+      imageName: segments.slice(0, tagMarkerIndex).join("/"),
       tag: segments[tagMarkerIndex + 1]!,
     };
   }
 
   return {
     kind: "list",
-    repoName: segments.join("/"),
+    imageName: segments.join("/"),
   };
 }
 
-export default async function RepositoryRoutePage({ params }: PageProps) {
+export default async function ImageRoutePage({ params }: PageProps) {
   const { project, rest } = await params;
   const projectName = decodeURIComponent(project);
-  const parsed = parseRepositoryRoute(rest);
+  const parsed = parseImageRoute(rest);
 
   if (!parsed) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Select a repository from the project catalog.
+        Select an image from the project catalog.
       </div>
     );
   }
 
   if (parsed.kind === "settings") {
     return (
-      <RepositorySettingsPage
+      <ImageSettingsPage
         projectName={projectName}
-        repoName={parsed.repoName}
+        imageName={parsed.imageName}
       />
     );
   }
@@ -78,11 +78,11 @@ export default async function RepositoryRoutePage({ params }: PageProps) {
     return (
       <TagDetailPage
         projectName={projectName}
-        repoName={parsed.repoName}
+        repoName={parsed.imageName}
         tag={parsed.tag}
       />
     );
   }
 
-  return <TagsPage projectName={projectName} repoName={parsed.repoName} />;
+  return <TagsPage projectName={projectName} repoName={parsed.imageName} />;
 }

@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
 import { useProjectByName } from "@/lib/hooks/use-project";
 import type { CatalogResponse } from "@/lib/registry/client/types";
-import { repoPathSegments } from "@/lib/catalog/format";
+import { imagePathSegments } from "@/lib/catalog/format";
 
 type CatalogPageProps = {
   projectName: string;
@@ -94,7 +94,7 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{projectName}</h1>
           <p className="text-sm text-muted-foreground">
-            Browse repositories in this project.
+            Browse images in this project.
           </p>
         </div>
         <InputGroup className="max-w-sm">
@@ -102,7 +102,7 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
             <SearchIcon />
           </InputGroupAddon>
           <InputGroupInput
-            placeholder="Search repositories…"
+            placeholder="Search images…"
             value={search}
             onChange={(event) => void setSearch(event.target.value)}
           />
@@ -129,7 +129,7 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
             <EmptyMedia variant="icon">
               <PackageIcon />
             </EmptyMedia>
-            <EmptyTitle>No repositories yet</EmptyTitle>
+            <EmptyTitle>No images yet</EmptyTitle>
             <EmptyDescription>
               Push an image to this project to see it here.
             </EmptyDescription>
@@ -142,7 +142,7 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
           {catalogQuery.data!.repositories.map((repo) => (
             <li key={repo.name} className="flex items-center gap-2 px-4 py-4">
               <Link
-                href={`/p/${projectName}/r/${repoPathSegments(repo.name)}`}
+                href={`/p/${projectName}/i/${imagePathSegments(repo.name)}`}
                 className="flex min-w-0 flex-1 items-center justify-between gap-4 transition-colors hover:text-primary"
               >
                 <div className="min-w-0">
@@ -170,7 +170,7 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
                   aria-label={`Settings for ${repo.name}`}
                   render={
                     <Link
-                      href={`/p/${encodeURIComponent(projectName)}/r/${repoPathSegments(repo.name)}/settings`}
+                      href={`/p/${encodeURIComponent(projectName)}/i/${imagePathSegments(repo.name)}/settings`}
                     />
                   }
                 >

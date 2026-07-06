@@ -63,6 +63,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const legacyImagePath = pathname.match(/^\/p\/([^/]+)\/r(?:\/(.*))?$/);
+  if (legacyImagePath) {
+    const project = legacyImagePath[1]!;
+    const rest = legacyImagePath[2];
+    const target = rest
+      ? `/p/${project}/i/${rest}`
+      : `/p/${project}`;
+    return NextResponse.redirect(new URL(target, request.url));
+  }
+
   return NextResponse.next();
 }
 

@@ -62,7 +62,7 @@ test.describe("portal happy path", () => {
       .click();
 
     await expect(page).toHaveURL(
-      new RegExp(`/p/${projectName}/r/${repoName}`),
+      new RegExp(`/p/${projectName}/i/${repoName}`),
     );
     await expect(page.getByRole("link", { name: tagName })).toHaveCount(0);
   });

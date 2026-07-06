@@ -26,19 +26,19 @@ describe("buildBreadcrumbItems", () => {
     ]);
   });
 
-  it("maps repository tag list routes without the /r segment", () => {
-    expect(buildBreadcrumbItems("/p/demo-app/r/my-repo")).toEqual([
+  it("maps image tag list routes without the /i segment", () => {
+    expect(buildBreadcrumbItems("/p/demo-app/i/my-image")).toEqual([
       { label: "Projects", href: "/projects" },
       { label: "Demo App", href: "/p/demo-app" },
-      { label: "my-repo" },
+      { label: "my-image" },
     ]);
   });
 
-  it("maps repository tag detail routes", () => {
-    expect(buildBreadcrumbItems("/p/demo-app/r/my-repo/t/latest")).toEqual([
+  it("maps image tag detail routes", () => {
+    expect(buildBreadcrumbItems("/p/demo-app/i/my-image/t/latest")).toEqual([
       { label: "Projects", href: "/projects" },
       { label: "Demo App", href: "/p/demo-app" },
-      { label: "my-repo", href: "/p/demo-app/r/my-repo" },
+      { label: "my-image", href: "/p/demo-app/i/my-image" },
       { label: "latest" },
     ]);
   });
@@ -67,11 +67,11 @@ describe("buildBreadcrumbItems", () => {
     ]);
   });
 
-  it("maps repository settings routes", () => {
-    expect(buildBreadcrumbItems("/p/demo-app/r/my-repo/settings")).toEqual([
+  it("maps image settings routes", () => {
+    expect(buildBreadcrumbItems("/p/demo-app/i/my-image/settings")).toEqual([
       { label: "Projects", href: "/projects" },
       { label: "Demo App", href: "/p/demo-app" },
-      { label: "my-repo", href: "/p/demo-app/r/my-repo" },
+      { label: "my-image", href: "/p/demo-app/i/my-image" },
       { label: "Settings" },
     ]);
   });

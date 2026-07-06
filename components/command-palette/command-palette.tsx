@@ -22,7 +22,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { useProjectByName, useProjectsList } from "@/lib/hooks/use-project";
 import { apiFetch } from "@/lib/api/client";
 import type { CatalogResponse } from "@/lib/registry/client/types";
-import { repoPathSegments } from "@/lib/catalog/format";
+import { imagePathSegments } from "@/lib/catalog/format";
 
 type CommandPaletteProps = {
   currentProject?: string;
@@ -68,7 +68,7 @@ export function CommandPalette({ currentProject }: CommandPaletteProps) {
         palette.push({
           id: `repo:${currentProject}/${repo.name}`,
           label: repo.name,
-          href: `/p/${currentProject}/r/${repoPathSegments(repo.name)}`,
+          href: `/p/${currentProject}/i/${imagePathSegments(repo.name)}`,
           group: `Repositories in ${currentProject}`,
         });
       }

@@ -18,8 +18,8 @@ export function PortalShell({ children }: PortalShellProps) {
         <PortalSidebar />
         <SidebarInset>
           <PortalHeader />
-          <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
+          <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+            <div className="w-full min-w-0">{children}</div>
           </div>
         </SidebarInset>
       </SidebarProvider>

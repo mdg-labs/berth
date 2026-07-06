@@ -10,7 +10,6 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -24,7 +23,7 @@ import {
   parseAsStringLiteral,
   useQueryStates,
 } from "nuqs";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { useAuthUser } from "@/components/providers/auth-guard";
@@ -48,11 +47,19 @@ import {
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectButton,
+  SelectItem,
+  SelectPopup,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -65,7 +72,7 @@ import {
 import { toastManager } from "@/components/ui/toast";
 import { Toolbar, ToolbarButton, ToolbarGroup } from "@/components/ui/toolbar";
 import { apiFetch } from "@/lib/api/client";
-import { formatBytes, formatDigest, repoPathSegments } from "@/lib/catalog/format";
+import { formatBytes, formatDigest, imagePathSegments } from "@/lib/catalog/format";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import { useProjectByName } from "@/lib/hooks/use-project";
 import type { TagSummary, TagsListResponse } from "@/lib/registry/client/types";
@@ -77,11 +84,43 @@ type TagsPageProps = {
 
 const columnHelper = createColumnHelper<TagSummary>();
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
 function encodeRepoPath(repoName: string): string {
   return repoName
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
+}
+
+function getPaginationRange(
+  currentPage: number,
+  totalPages: number,
+): Array<number | "ellipsis"> {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages: Array<number | "ellipsis"> = [1];
+
+  if (currentPage > 3) {
+    pages.push("ellipsis");
+  }
+
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page);
+  }
+
+  if (currentPage < totalPages - 2) {
+    pages.push("ellipsis");
+  }
+
+  pages.push(totalPages);
+
+  return pages;
 }
 
 function TagsSkeleton() {
@@ -133,7 +172,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
       }
 
       return apiFetch<TagsListResponse>(
-        `/api/projects/${projectQuery.data!.id}/repos/${encodeRepoPath(repoName)}/tags?${params.toString()}`,
+        `/api/projects/${projectQuery.data!.id}/images/${encodeRepoPath(repoName)}/tags?${params.toString()}`,
       );
     },
     enabled: Boolean(projectQuery.data?.id),
@@ -151,7 +190,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
   const bulkDeleteMutation = useMutation({
     mutationFn: (tagNames: string[]) =>
       apiFetch<{ deletedTags: string[] }>(
-        `/api/projects/${projectQuery.data!.id}/repos/${encodeRepoPath(repoName)}/tags/bulk-delete`,
+        `/api/projects/${projectQuery.data!.id}/images/${encodeRepoPath(repoName)}/tags/bulk-delete`,
         { method: "POST", body: { tags: tagNames } },
       ),
     onSuccess: (result) => {
@@ -177,7 +216,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
   const repoDeleteMutation = useMutation({
     mutationFn: () =>
       apiFetch<{ deletedTags: string[] }>(
-        `/api/projects/${projectQuery.data!.id}/repos/${encodeRepoPath(repoName)}`,
+        `/api/projects/${projectQuery.data!.id}/images/${encodeRepoPath(repoName)}`,
         { method: "DELETE" },
       ),
     onSuccess: (result) => {
@@ -269,7 +308,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
         header: "Tag",
         cell: (info) => (
           <Link
-            href={`/p/${projectName}/r/${repoPathSegments(repoName)}/t/${encodeURIComponent(info.getValue())}`}
+            href={`/p/${projectName}/i/${imagePathSegments(repoName)}/t/${encodeURIComponent(info.getValue())}`}
             className="font-medium hover:underline"
           >
             {info.getValue()}
@@ -307,18 +346,12 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const parentRef = useRef<HTMLDivElement>(null);
-  const rows = table.getRowModel().rows;
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 44,
-    overscan: 8,
-  });
-
-  const totalPages = tagsQuery.data
-    ? Math.max(1, Math.ceil(tagsQuery.data.total / tagsQuery.data.pageSize))
-    : 1;
+  const total = tagsQuery.data?.total ?? 0;
+  const pageSize = tagsQuery.data?.pageSize ?? query.pageSize;
+  const totalPages = total > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+  const rangeStart = total === 0 ? 0 : (query.page - 1) * pageSize + 1;
+  const rangeEnd = total === 0 ? 0 : Math.min(query.page * pageSize, total);
+  const pageNumbers = getPaginationRange(query.page, totalPages);
 
   const isLoading = projectQuery.isLoading || tagsQuery.isLoading;
   const error = projectQuery.error ?? tagsQuery.error;
@@ -365,7 +398,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
               size="sm"
               render={
                 <Link
-                  href={`/p/${encodeURIComponent(projectName)}/r/${repoPathSegments(repoName)}/settings`}
+                  href={`/p/${encodeURIComponent(projectName)}/i/${imagePathSegments(repoName)}/settings`}
                 />
               }
             >
@@ -434,7 +467,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
 
       {!isLoading && !error && (tagsQuery.data?.tags.length ?? 0) > 0 ? (
         <div className="space-y-4">
-          <div ref={parentRef} className="max-h-[60vh] overflow-auto rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -452,68 +485,112 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody style={{ height: `${virtualizer.getTotalSize()}px` }}>
-                {virtualizer.getVirtualItems().map((virtualRow) => {
-                  const row = rows[virtualRow.index];
-                  return (
-                    <TableRow
-                      key={row.id}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  );
-                })}
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
 
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  render={
-                    <button
-                      type="button"
-                      disabled={query.page <= 1}
-                      onClick={() => void setQuery({ page: Math.max(1, query.page - 1) })}
-                    />
+          <div className="flex flex-nowrap items-center justify-end gap-6 overflow-x-auto border-t pt-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>Rows per page</span>
+              <Select
+                value={String(query.pageSize)}
+                onValueChange={(value) => {
+                  if (!value) {
+                    return;
                   }
-                />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationLink isActive>
-                  {query.page} / {totalPages}
-                </PaginationLink>
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext
-                  render={
-                    <button
-                      type="button"
-                      disabled={query.page >= totalPages}
-                      onClick={() =>
-                        void setQuery({ page: Math.min(totalPages, query.page + 1) })
+
+                  void setQuery({
+                    pageSize: Number.parseInt(value, 10),
+                    page: 1,
+                  });
+                }}
+              >
+                <SelectButton size="sm" className="w-auto min-w-16">
+                  <SelectValue />
+                </SelectButton>
+                <SelectPopup>
+                  {PAGE_SIZE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectPopup>
+              </Select>
+            </div>
+
+            <span>
+              {rangeStart}–{rangeEnd} of {total}
+            </span>
+
+            {totalPages > 1 ? (
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      render={
+                        <button
+                          type="button"
+                          disabled={query.page <= 1}
+                          onClick={() =>
+                            void setQuery({ page: Math.max(1, query.page - 1) })
+                          }
+                        />
                       }
                     />
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                  </PaginationItem>
+                  {pageNumbers.map((page, index) =>
+                    page === "ellipsis" ? (
+                      <PaginationItem key={`ellipsis-${index}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          isActive={page === query.page}
+                          render={
+                            <button
+                              type="button"
+                              onClick={() => void setQuery({ page })}
+                            />
+                          }
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      render={
+                        <button
+                          type="button"
+                          disabled={query.page >= totalPages}
+                          onClick={() =>
+                            void setQuery({
+                              page: Math.min(totalPages, query.page + 1),
+                            })
+                          }
+                        />
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

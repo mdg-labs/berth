@@ -93,7 +93,7 @@ describe("catalog API integration", () => {
     expect(Array.isArray(catalog.repositories)).toBe(true);
 
     const tagsResponse = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/repos/hello/tags`,
+      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/hello/tags`,
       {
         headers: cookieHeader(SESSION_COOKIE, sessionId),
       },
