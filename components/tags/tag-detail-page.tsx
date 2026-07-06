@@ -2,11 +2,16 @@
 
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { CopyIcon } from "lucide-react";
-import { useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CopyIcon, Trash2Icon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
+import { useAuthUser } from "@/components/providers/auth-guard";
+import { DeleteTagDialog } from "@/components/delete/delete-tag-dialog";
+import { GcInfoAlert } from "@/components/delete/gc-info-alert";
+import { canDeleteRegistryContent } from "@/components/delete/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,12 +31,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTab } from "@/components/ui/tabs";
-import { anchoredToastManager } from "@/components/ui/toast";
+import { anchoredToastManager, toastManager } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api/client";
 import {
   buildPullCommand,
   formatBytes,
   formatDigest,
+  repoPathSegments,
 } from "@/lib/catalog/format";
 import { useProjectByName } from "@/lib/hooks/use-project";
 import type { SiblingsResponse, TagDetail } from "@/lib/registry/client/types";
@@ -56,14 +62,23 @@ function DetailSkeleton() {
   );
 }
 
-export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps) {
-  const projectQuery = useProjectByName(projectName);
-  const copyButtonRef = useRef<HTMLButtonElement>(null);
-
-  const encodedRepo = repoName
+function encodeRepoPath(repoName: string): string {
+  return repoName
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
+}
+
+export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const authQuery = useAuthUser();
+  const projectQuery = useProjectByName(projectName);
+  const copyButtonRef = useRef<HTMLButtonElement>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [showGcInfo, setShowGcInfo] = useState(false);
+
+  const encodedRepo = encodeRepoPath(repoName);
   const encodedTag = encodeURIComponent(tag);
 
   const detailQuery = useQuery({
@@ -83,6 +98,37 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
         `/api/projects/${projectQuery.data!.id}/repos/${encodedRepo}/tags/${encodedTag}/siblings`,
       ),
     enabled: Boolean(projectQuery.data?.id && detailQuery.data),
+  });
+
+  const canDelete = canDeleteRegistryContent(
+    authQuery.data?.user.systemRole ?? "user",
+    projectQuery.data?.role ?? null,
+  );
+
+  const deleteMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ deleted: boolean }>(
+        `/api/projects/${projectQuery.data!.id}/repos/${encodedRepo}/tags/${encodedTag}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: () => {
+      setDeleteOpen(false);
+      setShowGcInfo(true);
+      void queryClient.invalidateQueries({ queryKey: ["tags"] });
+      toastManager.add({
+        type: "success",
+        title: "Tag deleted",
+        description: `${tag} was removed from the repository.`,
+      });
+      router.push(`/p/${projectName}/r/${repoPathSegments(repoName)}`);
+    },
+    onError: (error) => {
+      toastManager.add({
+        type: "error",
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Request failed",
+      });
+    },
   });
 
   const pullCommand = buildPullCommand(
@@ -109,6 +155,7 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
   const isLoading = projectQuery.isLoading || detailQuery.isLoading;
   const error = projectQuery.error ?? detailQuery.error;
   const detail = detailQuery.data?.tag;
+  const siblings = siblingsQuery.data?.siblings.map((entry) => entry.name) ?? [];
 
   return (
     <div className="space-y-6">
@@ -124,6 +171,8 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
         />
       ) : null}
 
+      {showGcInfo ? <GcInfoAlert onDismiss={() => setShowGcInfo(false)} /> : null}
+
       {detail ? (
         <>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -133,10 +182,21 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
                 {projectName}/{repoName}
               </p>
             </div>
-            <Button ref={copyButtonRef} variant="outline" onClick={copyPullCommand}>
-              <CopyIcon />
-              Copy pull command
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button ref={copyButtonRef} variant="outline" onClick={copyPullCommand}>
+                <CopyIcon />
+                Copy pull command
+              </Button>
+              {canDelete ? (
+                <Button
+                  variant="destructive-outline"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2Icon />
+                  Delete tag
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           <Card>
@@ -232,21 +292,30 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
             </TabsContent>
 
             <TabsContent value="siblings" className="mt-4">
-              {(siblingsQuery.data?.siblings.length ?? 0) === 0 ? (
+              {siblings.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No other tags share this digest.
                 </p>
               ) : (
                 <ul className="divide-y rounded-lg border">
-                  {siblingsQuery.data!.siblings.map((sibling) => (
-                    <li key={sibling.name} className="px-4 py-3 text-sm">
-                      {sibling.name}
+                  {siblings.map((sibling) => (
+                    <li key={sibling} className="px-4 py-3 text-sm">
+                      {sibling}
                     </li>
                   ))}
                 </ul>
               )}
             </TabsContent>
           </Tabs>
+
+          <DeleteTagDialog
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            tagName={tag}
+            siblings={siblings}
+            isPending={deleteMutation.isPending}
+            onConfirm={() => deleteMutation.mutate()}
+          />
         </>
       ) : null}
     </div>

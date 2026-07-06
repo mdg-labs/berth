@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
 import type { HistoryEntry, PlatformInfo } from "./types";
-import { registryFetch } from "./fetch";
+import { registryFetch, RegistryUpstreamError } from "./fetch";
 
 const MANIFEST_ACCEPT =
   "application/vnd.docker.distribution.manifest.v2+json, " +
@@ -237,4 +237,26 @@ export async function getManifestDigest(
   }
 
   return { digest, size };
+}
+
+export async function deleteManifestReference(
+  fullRepoName: string,
+  reference: string,
+  token: string,
+): Promise<void> {
+  const response = await registryFetch(
+    `/v2/${fullRepoName}/manifests/${encodeURIComponent(reference)}`,
+    token,
+    {
+      method: "DELETE",
+      headers: { Accept: MANIFEST_ACCEPT },
+    },
+  );
+
+  if (!response.ok && response.status !== 404) {
+    throw new RegistryUpstreamError(
+      `Failed to delete manifest: ${response.statusText}`,
+      response.status,
+    );
+  }
 }

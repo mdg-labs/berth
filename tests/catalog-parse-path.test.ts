@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { parseRepoApiPath } from "@/lib/registry/catalog/parse-path";
+import { parseRepoApiPath, parseRepoDeletePath } from "@/lib/registry/catalog/parse-path";
 
 describe("parseRepoApiPath", () => {
   it("parses tag list paths", () => {
@@ -27,5 +27,20 @@ describe("parseRepoApiPath", () => {
       repoName: "hello",
       tag: "v1.0",
     });
+    expect(parseRepoApiPath(["hello", "tags", "bulk-delete"])).toEqual({
+      kind: "bulk-delete",
+      repoName: "hello",
+    });
+  });
+});
+
+describe("parseRepoDeletePath", () => {
+  it("parses repository delete paths without tags segment", () => {
+    expect(parseRepoDeletePath(["hello"])).toEqual({ repoName: "hello" });
+    expect(parseRepoDeletePath(["team", "app"])).toEqual({
+      repoName: "team/app",
+    });
+    expect(parseRepoDeletePath(["hello", "tags", "v1.0"])).toBeNull();
+    expect(parseRepoDeletePath(undefined)).toBeNull();
   });
 });

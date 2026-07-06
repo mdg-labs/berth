@@ -103,6 +103,20 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Copy pull command | `anchoredToastManager` anchored to copy button (`p-toast-12`) | Appendix B overlay rules |
 | Repo/tag portal routes | Single optional catch-all `r/[[...rest]]` parses list vs `/t/<tag>` detail | Next.js requires catch-all be terminal; preserves spec URLs |
 
+## Phase 8 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Single tag delete | `DELETE` manifest by **tag reference** (not digest) | Sibling tags remain; sibling AlertDialog warns before confirm (spec §6.3) |
+| Bulk / repository delete | Resolve unique digests, `DELETE` by digest | Removes manifest data; dedupes shared digests (spec §7.4) |
+| Bulk delete confirmation | Typed phrase `delete tags` when N > 5 | Spec §6.3 / exit criteria |
+| Repository delete confirmation | Typed phrase `delete <repoName>` | Same confirmation pattern as bulk delete |
+| Sibling warning UX | `p-alert-dialog-1` pattern + checkbox ack when siblings exist | Spec Appendix B; microcopy in DECISIONS not spec-fixed |
+| GC feedback | Persistent `Alert` variant info after successful delete | Spec §6.4 — storage reclaimed after manual GC |
+| Delete RBAC | `maintainer` + `admin` (+ system admin bypass) via `requireDeleteAccess` | Spec §5.3 role matrix |
+| Registry delete token | Per-user JWT with `repository:<project>/<repo>:pull,delete` | Spec §7.4 session-authenticated registry writes |
+| Audit log actions | `tag.delete`, `tag.bulk_delete`, `repository.delete` | Spec §8 destructive-action logging |
+
 ## Open (record when decided)
 
-- Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8)
+- Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist

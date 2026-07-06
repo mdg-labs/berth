@@ -3,7 +3,23 @@
 export type ParsedRepoApiPath =
   | { kind: "tags-list"; repoName: string }
   | { kind: "tag-detail"; repoName: string; tag: string }
-  | { kind: "tag-siblings"; repoName: string; tag: string };
+  | { kind: "tag-siblings"; repoName: string; tag: string }
+  | { kind: "bulk-delete"; repoName: string };
+
+export function parseRepoDeletePath(
+  segments: string[] | undefined,
+): { repoName: string } | null {
+  if (!segments || segments.length === 0) {
+    return null;
+  }
+
+  const decoded = segments.map(decodeURIComponent);
+  if (decoded.includes("tags")) {
+    return null;
+  }
+
+  return { repoName: decoded.join("/") };
+}
 
 export function parseRepoApiPath(
   segments: string[] | undefined,
@@ -26,6 +42,9 @@ export function parseRepoApiPath(
   }
 
   if (afterTags.length === 1) {
+    if (afterTags[0] === "bulk-delete") {
+      return { kind: "bulk-delete", repoName };
+    }
     return { kind: "tag-detail", repoName, tag: afterTags[0]! };
   }
 

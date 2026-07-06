@@ -3,7 +3,7 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
   flexRender,
@@ -11,17 +11,28 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ArrowDownIcon, ArrowUpIcon, SearchIcon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  SearchIcon,
+  Trash2Icon,
+} from "lucide-react";
 import {
   parseAsInteger,
   parseAsString,
   parseAsStringLiteral,
   useQueryStates,
 } from "nuqs";
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
+import { useAuthUser } from "@/components/providers/auth-guard";
+import { BulkDeleteDialog } from "@/components/delete/bulk-delete-dialog";
+import { GcInfoAlert } from "@/components/delete/gc-info-alert";
+import { canDeleteRegistryContent } from "@/components/delete/permissions";
+import { RepositoryDeleteDialog } from "@/components/delete/repository-delete-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   InputGroup,
   InputGroupAddon,
@@ -50,6 +61,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toastManager } from "@/components/ui/toast";
+import { Toolbar, ToolbarButton, ToolbarGroup } from "@/components/ui/toolbar";
 import { apiFetch } from "@/lib/api/client";
 import { formatBytes, formatDigest, repoPathSegments } from "@/lib/catalog/format";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
@@ -63,6 +76,13 @@ type TagsPageProps = {
 
 const columnHelper = createColumnHelper<TagSummary>();
 
+function encodeRepoPath(repoName: string): string {
+  return repoName
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
 function TagsSkeleton() {
   return (
     <div className="space-y-3">
@@ -74,6 +94,8 @@ function TagsSkeleton() {
 }
 
 export function TagsPage({ projectName, repoName }: TagsPageProps) {
+  const queryClient = useQueryClient();
+  const authQuery = useAuthUser();
   const projectQuery = useProjectByName(projectName);
   const [query, setQuery] = useQueryStates({
     search: parseAsString.withDefault(""),
@@ -81,6 +103,11 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
     page: parseAsInteger.withDefault(1),
     pageSize: parseAsInteger.withDefault(25),
   });
+
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [repoDeleteOpen, setRepoDeleteOpen] = useState(false);
+  const [showGcInfo, setShowGcInfo] = useState(false);
 
   const debouncedSearch = useDebouncedValue(query.search, 300);
 
@@ -104,21 +131,136 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
         params.set("search", debouncedSearch.trim());
       }
 
-      const encodedRepo = repoName
-        .split("/")
-        .map((segment) => encodeURIComponent(segment))
-        .join("/");
-
       return apiFetch<TagsListResponse>(
-        `/api/projects/${projectQuery.data!.id}/repos/${encodedRepo}/tags?${params.toString()}`,
+        `/api/projects/${projectQuery.data!.id}/repos/${encodeRepoPath(repoName)}/tags?${params.toString()}`,
       );
     },
     enabled: Boolean(projectQuery.data?.id),
     refetchInterval: 30_000,
   });
 
-  const columns = useMemo(
-    () => [
+  const canDelete = canDeleteRegistryContent(
+    authQuery.data?.user.systemRole ?? "user",
+    projectQuery.data?.role ?? null,
+  );
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (tagNames: string[]) =>
+      apiFetch<{ deletedTags: string[] }>(
+        `/api/projects/${projectQuery.data!.id}/repos/${encodeRepoPath(repoName)}/tags/bulk-delete`,
+        { method: "POST", body: { tags: tagNames } },
+      ),
+    onSuccess: (result) => {
+      setBulkDeleteOpen(false);
+      setSelectedTags(new Set());
+      setShowGcInfo(true);
+      void queryClient.invalidateQueries({ queryKey: ["tags"] });
+      toastManager.add({
+        type: "success",
+        title: "Tags deleted",
+        description: `Removed ${result.deletedTags.length} tag${result.deletedTags.length === 1 ? "" : "s"}.`,
+      });
+    },
+    onError: (error) => {
+      toastManager.add({
+        type: "error",
+        title: "Bulk delete failed",
+        description: error instanceof Error ? error.message : "Request failed",
+      });
+    },
+  });
+
+  const repoDeleteMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ deletedTags: string[] }>(
+        `/api/projects/${projectQuery.data!.id}/repos/${encodeRepoPath(repoName)}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: (result) => {
+      setRepoDeleteOpen(false);
+      setSelectedTags(new Set());
+      setShowGcInfo(true);
+      void queryClient.invalidateQueries({ queryKey: ["tags"] });
+      toastManager.add({
+        type: "success",
+        title: "Repository deleted",
+        description: `Removed ${result.deletedTags.length} tag${result.deletedTags.length === 1 ? "" : "s"}.`,
+      });
+    },
+    onError: (error) => {
+      toastManager.add({
+        type: "error",
+        title: "Repository delete failed",
+        description: error instanceof Error ? error.message : "Request failed",
+      });
+    },
+  });
+
+  const toggleTag = useCallback((tagName: string, checked: boolean) => {
+    setSelectedTags((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(tagName);
+      } else {
+        next.delete(tagName);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleAllOnPage = useCallback(
+    (checked: boolean) => {
+      const pageTags = tagsQuery.data?.tags ?? [];
+      setSelectedTags((current) => {
+        const next = new Set(current);
+        for (const tag of pageTags) {
+          if (checked) {
+            next.add(tag.name);
+          } else {
+            next.delete(tag.name);
+          }
+        }
+        return next;
+      });
+    },
+    [tagsQuery.data?.tags],
+  );
+
+  const columns = useMemo(() => {
+    const baseColumns = [];
+
+    if (canDelete) {
+      const pageTags = tagsQuery.data?.tags ?? [];
+      const allSelected =
+        pageTags.length > 0 && pageTags.every((tag) => selectedTags.has(tag.name));
+      const someSelected =
+        pageTags.some((tag) => selectedTags.has(tag.name)) && !allSelected;
+
+      baseColumns.push(
+        columnHelper.display({
+          id: "select",
+          header: () => (
+            <Checkbox
+              checked={allSelected}
+              indeterminate={someSelected}
+              onCheckedChange={(checked) => toggleAllOnPage(checked === true)}
+              aria-label="Select all tags on page"
+            />
+          ),
+          cell: ({ row }) => (
+            <Checkbox
+              checked={selectedTags.has(row.original.name)}
+              onCheckedChange={(checked) =>
+                toggleTag(row.original.name, checked === true)
+              }
+              aria-label={`Select ${row.original.name}`}
+            />
+          ),
+        }),
+      );
+    }
+
+    baseColumns.push(
       columnHelper.accessor("name", {
         header: "Tag",
         cell: (info) => (
@@ -142,9 +284,18 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
         header: "Size",
         cell: (info) => formatBytes(info.getValue()),
       }),
-    ],
-    [projectName, repoName],
-  );
+    );
+
+    return baseColumns;
+  }, [
+    canDelete,
+    projectName,
+    repoName,
+    selectedTags,
+    tagsQuery.data?.tags,
+    toggleAllOnPage,
+    toggleTag,
+  ]);
 
   const table = useReactTable({
     data: tagsQuery.data?.tags ?? [],
@@ -167,6 +318,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
 
   const isLoading = projectQuery.isLoading || tagsQuery.isLoading;
   const error = projectQuery.error ?? tagsQuery.error;
+  const selectedTagNames = [...selectedTags];
 
   return (
     <div className="space-y-6">
@@ -203,8 +355,41 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
             {query.sort === "name_desc" ? <ArrowDownIcon /> : <ArrowUpIcon />}
             Sort
           </Button>
+          {canDelete ? (
+            <Button
+              variant="destructive-outline"
+              size="sm"
+              disabled={(tagsQuery.data?.total ?? 0) === 0}
+              onClick={() => setRepoDeleteOpen(true)}
+            >
+              <Trash2Icon />
+              Delete repository
+            </Button>
+          ) : null}
         </div>
       </div>
+
+      {showGcInfo ? <GcInfoAlert onDismiss={() => setShowGcInfo(false)} /> : null}
+
+      {canDelete && selectedTagNames.length > 0 ? (
+        <Toolbar>
+          <ToolbarGroup className="flex-1 px-2 text-sm text-muted-foreground">
+            {selectedTagNames.length} selected
+          </ToolbarGroup>
+          <ToolbarButton
+            render={
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+              />
+            }
+          >
+            <Trash2Icon />
+            Delete selected
+          </ToolbarButton>
+        </Toolbar>
+      ) : null}
 
       {isLoading ? <TagsSkeleton /> : null}
 
@@ -313,6 +498,23 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
           </Pagination>
         </div>
       ) : null}
+
+      <BulkDeleteDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        tagNames={selectedTagNames}
+        isPending={bulkDeleteMutation.isPending}
+        onConfirm={() => bulkDeleteMutation.mutate(selectedTagNames)}
+      />
+
+      <RepositoryDeleteDialog
+        open={repoDeleteOpen}
+        onOpenChange={setRepoDeleteOpen}
+        repoName={repoName}
+        tagCount={tagsQuery.data?.total ?? 0}
+        isPending={repoDeleteMutation.isPending}
+        onConfirm={() => repoDeleteMutation.mutate()}
+      />
     </div>
   );
 }
