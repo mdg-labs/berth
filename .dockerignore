@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.github
+.cursor
+.agents
+coverage
+*.md
+!README.md
+.env
+.env.*
+!.env.example

@@ -1,0 +1,16 @@
+version: 0.1
+log:
+  level: info
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  delete:
+    enabled: true
+http:
+  addr: :5000
+auth:
+  token:
+    realm: http://localhost:8080/api/auth/token
+    service: registry
+    issuer: registry
+    rootcertbundle: /etc/registry/certs/rootcert.pem
