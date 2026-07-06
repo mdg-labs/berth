@@ -16,6 +16,7 @@
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.3",
     "next": "^15.3.4",
     "openid-client": "^6.8.4",
     "postgres": "^3.4.9",

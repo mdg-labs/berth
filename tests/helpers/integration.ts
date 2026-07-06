@@ -75,6 +75,20 @@ export async function hasAuthRoutes(): Promise<boolean> {
   }
 }
 
+export async function hasTokenRoutes(): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `${INTEGRATION_BASE_URL}/api/auth/token?service=registry`,
+      {
+        signal: AbortSignal.timeout(2_000),
+      },
+    );
+    return response.status !== 404;
+  } catch {
+    return false;
+  }
+}
+
 export async function canLoginWithConfiguredCredentials(): Promise<boolean> {
   try {
     const response = await fetch(`${INTEGRATION_BASE_URL}/api/auth/login`, {

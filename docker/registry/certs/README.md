@@ -1,3 +1,4 @@
-# Placeholder directory for registry token root cert bundle (spec §3.3, §9.2).
-# Phase 0 ships a dev self-signed cert so distribution/registry:3 can start with auth: token.
-# Production: replace with app-issued signing cert(s); support multi-cert rotation per DECISIONS.md.
+# Dev token signing material (spec §3.3, §9.2).
+# Generate with: ./docker/token/generate-keypair.sh
+# - docker/token/dev-signing-key.pem — app signing key (dev only; mount via compose)
+# - docker/registry/certs/rootcert.pem — registry trust bundle (may hold multiple PEM certs for rotation)

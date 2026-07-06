@@ -45,6 +45,18 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | OIDC integration tests | Mock `openid-client` in unit tests | Avoids Keycloak container in default CI; compose OIDC AC verified via mocked grant path |
 | Bootstrap password on restart | When `BOOTSTRAP_ADMIN_PASSWORD` is set and admin exists, sync hash on boot | Keeps local compose + integration tests deterministic without wiping Postgres volumes |
 
+## Phase 3 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| JWT signing algorithm | **RS256** | Confirmed for implementation; broader ecosystem support vs ES256 (see Phase 0 deferral) |
+| JWT `x5c` header | Signing cert embedded on every issued token | Distribution `registry:3` may reject bundle-only validation; belt-and-suspenders per spec §4.2 |
+| Dev signing key storage | `docker/token/dev-signing-key.pem` (committed for compose dev) | Matches compose mount path; production uses env-inlined PEM or secret volume |
+| Registry image pin | `registry:3@sha256:1be55279f18a2fe1a74edf2664cac61c1bea305b7b4642dab412e7affdcb3e33` | Reproducible token-validation behavior across environments |
+| Token scope project gate (pre-RBAC) | `403 project_not_found` when repository scope references missing project | P3 exit criteria; full role intersection deferred to Phase 4 |
+| `/v2/*` proxy | App Router catch-all `app/v2/[[...path]]/route.ts` streaming to `REGISTRY_INTERNAL_URL` | Single public entrypoint per spec §0; registry stays internal-only |
+| Token rate-limit keys | Per-IP and per-identifier (`token:ip:*`, `token:id:*`) | Reuses login limiter buckets per spec §3.5 / §9.1 |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8)

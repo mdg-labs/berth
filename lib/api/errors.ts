@@ -10,6 +10,7 @@ export type ApiErrorCode =
   | "not_found"
   | "oidc_not_configured"
   | "oidc_state_invalid"
+  | "project_not_found"
   | "rate_limited"
   | "server_error";
 

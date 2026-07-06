@@ -26,6 +26,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+COPY --chown=nextjs:nodejs docker/token/dev-signing-key.pem /etc/berth/token/signing-key.pem
+COPY --chown=nextjs:nodejs docker/registry/certs/rootcert.pem /etc/berth/token/signing-cert.pem
 
 USER nextjs
 EXPOSE 3000
