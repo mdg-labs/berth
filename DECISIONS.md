@@ -141,6 +141,15 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Responsive baseline | 375px — portal header wraps, main padding `px-3`, mobile command-palette trigger | ROADMAP P10 / spec §6.4 |
 | Error/empty consistency | Shared `ErrorAlert` + coss `Empty` on projects and admin routes | Aligns catalog/tags pattern across §6.1 routes |
 
+## Phase 11 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Operator doc layout | Split guides under `docs/` + expanded `README.md` quickstart/arch/env | ROADMAP P11 exit criteria: cold-start → push → backup without reading source |
+| Production checklist | Standalone `docs/production-checklist.md` linked from README | Keeps README scannable; checklist cross-links TLS, backup, GC, key rotation |
+| TLS guidance | Reverse proxy primary; compose edge TLS documented as pattern | App serves HTTP internally; no in-app ACME in MVP (spec §3.5) |
+| Dev signing certs | Documented as JWT trust material, distinct from HTTPS TLS | `rootcert.pem` / dev keypair ship in compose; upgrade path in key-rotation + tls docs |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist
