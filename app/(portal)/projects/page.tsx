@@ -9,8 +9,15 @@ import { useRef, useState } from "react";
 
 import { apiFetch, ApiError } from "@/lib/api/client";
 import type { ProjectSummary } from "@/lib/api/types";
+import { ErrorAlert } from "@/components/catalog/error-alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toastManager } from "@/components/ui/toast";
@@ -87,14 +94,14 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
           <p className="text-sm text-muted-foreground">
             Create and manage registry projects.
           </p>
         </div>
-        <Button type="button" onClick={openDialog}>
+        <Button type="button" className="shrink-0" onClick={openDialog}>
           <PlusIcon />
           New project
         </Button>
@@ -103,17 +110,28 @@ export default function ProjectsPage() {
       {projectsQuery.isLoading ? <ProjectListSkeleton /> : null}
 
       {projectsQuery.isError ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive-foreground">
-          Failed to load projects.
-        </div>
+        <ErrorAlert
+          title="Failed to load projects"
+          message={
+            projectsQuery.error instanceof Error
+              ? projectsQuery.error.message
+              : "Something went wrong"
+          }
+          onRetry={() => void projectsQuery.refetch()}
+        />
       ) : null}
 
-      {projectsQuery.data?.projects.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No projects yet. Create your first project to get started.
-          </p>
-        </div>
+      {!projectsQuery.isLoading &&
+      !projectsQuery.isError &&
+      projectsQuery.data?.projects.length === 0 ? (
+        <Empty className="rounded-lg border border-dashed">
+          <EmptyHeader>
+            <EmptyTitle>No projects yet</EmptyTitle>
+            <EmptyDescription>
+              Create your first project to start pushing images.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : null}
 
       {projectsQuery.data && projectsQuery.data.projects.length > 0 ? (
@@ -143,11 +161,17 @@ export default function ProjectsPage() {
 
       <dialog
         ref={dialogRef}
-        className="w-full max-w-md rounded-xl border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/40 open:flex open:flex-col"
+        className="fixed inset-x-3 top-[10vh] m-0 w-auto max-w-md rounded-xl border bg-background p-0 text-foreground shadow-lg backdrop:bg-black/40 open:flex open:flex-col sm:inset-x-auto sm:left-1/2 sm:w-full sm:-translate-x-1/2"
+        onClose={() => {
+          setName("");
+          setIsPublic(false);
+        }}
       >
         <form className="space-y-4 p-6" onSubmit={handleCreate}>
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold">Create project</h2>
+            <h2 id="create-project-title" className="text-lg font-semibold">
+              Create project
+            </h2>
             <p className="text-sm text-muted-foreground">
               Use a DNS-like slug (lowercase letters, numbers, hyphens).
             </p>
@@ -160,6 +184,8 @@ export default function ProjectsPage() {
               id="project-name"
               name="name"
               required
+              autoFocus
+              aria-labelledby="create-project-title"
               pattern="[a-z][a-z0-9]*(?:-[a-z0-9]+)*"
               minLength={2}
               maxLength={63}

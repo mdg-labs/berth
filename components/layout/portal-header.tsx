@@ -47,15 +47,18 @@ export function PortalHeader() {
 
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-        <Link href="/projects" className="text-sm font-semibold tracking-tight">
+      <div className="mx-auto flex h-auto min-h-14 max-w-6xl flex-wrap items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-0">
+        <Link
+          href="/projects"
+          className="shrink-0 text-sm font-semibold tracking-tight"
+        >
           Berth
         </Link>
-        <Separator orientation="vertical" className="h-6" />
-        <div className="min-w-0 flex-1">
+        <Separator orientation="vertical" className="hidden h-6 sm:block" />
+        <div className="order-3 min-w-0 basis-full sm:order-none sm:flex-1 sm:basis-auto">
           <BreadcrumbNav />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="ms-auto flex shrink-0 items-center gap-1 sm:gap-2">
           <CommandPalette currentProject={currentProject} />
           {user?.systemRole === "admin" ? (
             <>
@@ -66,7 +69,9 @@ export function PortalHeader() {
               >
                 Admin
               </Button>
-              <Badge variant="secondary">Admin</Badge>
+              <Badge variant="secondary" className="hidden sm:inline-flex">
+                Admin
+              </Badge>
             </>
           ) : null}
           <ThemeToggle />

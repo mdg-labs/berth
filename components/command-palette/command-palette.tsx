@@ -93,7 +93,16 @@ export function CommandPalette({ currentProject }: CommandPaletteProps) {
     <>
       <button
         type="button"
+        className="inline-flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs text-muted-foreground sm:hidden"
+        aria-label="Open command palette"
+        onClick={() => setOpen(true)}
+      >
+        Search
+      </button>
+      <button
+        type="button"
         className="hidden items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground sm:inline-flex"
+        aria-label="Open command palette"
         onClick={() => setOpen(true)}
       >
         Search…
@@ -107,7 +116,11 @@ export function CommandPalette({ currentProject }: CommandPaletteProps) {
             items={items}
             itemToStringValue={(item) => (item as PaletteItem).label}
             onValueChange={(value) => {
-              const selected = items.find((item) => item.label === value);
+              const label =
+                typeof value === "string"
+                  ? value
+                  : (value as PaletteItem | null)?.label;
+              const selected = items.find((item) => item.label === label);
               if (!selected) {
                 return;
               }
@@ -123,7 +136,14 @@ export function CommandPalette({ currentProject }: CommandPaletteProps) {
                 {items
                   .filter((item) => item.group === "Projects")
                   .map((item) => (
-                    <CommandItem key={item.id} value={item.label}>
+                    <CommandItem
+                      key={item.id}
+                      value={item.label}
+                      onClick={() => {
+                        setOpen(false);
+                        router.push(item.href);
+                      }}
+                    >
                       <PackageIcon className="size-4" />
                       {item.label}
                     </CommandItem>
@@ -137,7 +157,14 @@ export function CommandPalette({ currentProject }: CommandPaletteProps) {
                   {items
                     .filter((item) => item.group.startsWith("Repositories"))
                     .map((item) => (
-                      <CommandItem key={item.id} value={item.label}>
+                      <CommandItem
+                        key={item.id}
+                        value={item.label}
+                        onClick={() => {
+                          setOpen(false);
+                          router.push(item.href);
+                        }}
+                      >
                         {item.label}
                       </CommandItem>
                     ))}

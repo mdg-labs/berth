@@ -1,0 +1,96 @@
+# CI integration stack — spec §13 / ROADMAP P10
+# Usage: docker compose -f docker/compose.ci.yml up -d --build --wait
+
+name: berth-ci
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: berth
+      POSTGRES_PASSWORD: berth
+      POSTGRES_DB: berth
+    networks:
+      - berth-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U berth -d berth"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  registry:
+    image: registry:3@sha256:1be55279f18a2fe1a74edf2664cac61c1bea305b7b4642dab412e7affdcb3e33
+    volumes:
+      - registry-data:/var/lib/registry
+      - ./registry/config.yml:/etc/distribution/config.yml:ro
+      - ./registry/certs/rootcert.pem:/etc/registry/certs/rootcert.pem:ro
+    environment:
+      REGISTRY_AUTH: token
+      REGISTRY_AUTH_TOKEN_REALM: http://localhost:8080/api/auth/token
+      REGISTRY_AUTH_TOKEN_SERVICE: registry
+      REGISTRY_AUTH_TOKEN_ISSUER: registry
+      REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: /etc/registry/certs/rootcert.pem
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    networks:
+      - berth-internal
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -S --spider http://localhost:5000/v2/ 2>&1 | grep -q '401 Unauthorized'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:3000"
+    volumes:
+      - registry-data:/var/lib/registry:ro
+    environment:
+      DATABASE_URL: postgresql://berth:berth@postgres:5432/berth
+      REGISTRY_DATA_PATH: /var/lib/registry
+      REGISTRY_INTERNAL_URL: http://registry:5000
+      TOKEN_ISSUER: registry
+      TOKEN_SIGNING_KEY_PATH: /etc/berth/token/signing-key.pem
+      TOKEN_CERT_PATH: /etc/berth/token/signing-cert.pem
+      TOKEN_TTL_SECONDS: "300"
+      REGISTRY_AUTH_TOKEN_SERVICE: registry
+      SESSION_SECRET: ci-session-secret-for-testing-only
+      APP_URL: http://localhost:8080
+      BOOTSTRAP_ADMIN_EMAIL: admin@localhost
+      BOOTSTRAP_ADMIN_PASSWORD: test-admin-password
+      RATE_LIMIT_LOGIN_MAX_ATTEMPTS: "10"
+      RATE_LIMIT_TOKEN_MAX_ATTEMPTS: "200"
+      RATE_LIMIT_WINDOW_SECONDS: "60"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      registry:
+        condition: service_healthy
+    networks:
+      - berth-internal
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1);return fetch('http://127.0.0.1:3000/api/ready')}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+networks:
+  berth-internal:
+    driver: bridge
+
+volumes:
+  registry-data:
+  postgres-data:

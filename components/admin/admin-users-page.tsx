@@ -9,6 +9,7 @@ import { useRef } from "react";
 
 import { AdminUsersTable } from "@/components/admin/admin-users-table";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
+import { ErrorAlert } from "@/components/catalog/error-alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
@@ -62,6 +63,18 @@ export function AdminUsersPage() {
             <Skeleton key={index} className="h-12 w-full rounded-lg" />
           ))}
         </div>
+      ) : null}
+
+      {usersQuery.isError ? (
+        <ErrorAlert
+          title="Failed to load users"
+          message={
+            usersQuery.error instanceof Error
+              ? usersQuery.error.message
+              : "Something went wrong"
+          }
+          onRetry={() => void usersQuery.refetch()}
+        />
       ) : null}
 
       {usersQuery.data ? (

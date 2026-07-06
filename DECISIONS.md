@@ -130,6 +130,17 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Pending invite UX | Warning `Alert` on project settings when pending invites exist; documents unverified OIDC edge case (§5.5) | Spec §5.5 |
 | Invite cancellation | `DELETE /api/projects/[id]/invites/[inviteId]` for pending invites | Settings member management completeness |
 
+## Phase 10 choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| CI compose file | `docker/compose.ci.yml` — dedicated stack with app healthcheck on `/api/health` + `/api/ready` | Spec §13; reproducible integration/E2E environment on every PR |
+| E2E registry push | Registry API fixture in `e2e/helpers/registry-push.ts` (minimal OCI manifest) | No Docker CLI dependency in Playwright; faster and portable |
+| OIDC E2E | Skipped unless `E2E_OIDC_ENABLED` — no IdP in CI compose | Phase 2 already mocks OIDC in unit tests; Keycloak container deferred post-MVP |
+| A11y regression | `@axe-core/playwright` spot-check on `/login` and `/projects` (critical/serious only) | P10 exit criteria; full axe sweep deferred to avoid flaky third-party noise |
+| Responsive baseline | 375px — portal header wraps, main padding `px-3`, mobile command-palette trigger | ROADMAP P10 / spec §6.4 |
+| Error/empty consistency | Shared `ErrorAlert` + coss `Empty` on projects and admin routes | Aligns catalog/tags pattern across §6.1 routes |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist

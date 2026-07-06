@@ -53,7 +53,12 @@ export async function listProjectCatalog(
   const repositories: CatalogRepository[] = [];
 
   for (const shortName of candidates) {
-    const tagCount = await countTags(`${projectName}/${shortName}`, token);
+    const repoToken = await issueUserRegistryToken(
+      user,
+      projectName,
+      shortName,
+    );
+    const tagCount = await countTags(`${projectName}/${shortName}`, repoToken);
     if (tagCount > 0) {
       repositories.push({ name: shortName, tagCount });
     }
