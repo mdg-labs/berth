@@ -31,6 +31,8 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | JWT signing algorithm | **RS256** (deferred implementation to Phase 3) | Broader library/ecosystem support vs ES256; either is valid per Distribution token spec |
 | Dev registry token cert | Self-signed RSA placeholder in `docker/registry/certs/` | Allows `registry:3` to start with `auth: token` before Phase 3 token issuer ships |
 | Registry Docker image | **`registry:3`** (official library image) | Spec references `distribution/registry:3` conceptually; Docker Hub official tag is `registry:3` |
+| Password hashing library | **`bcryptjs`** (bcrypt algorithm, pure JS) | Avoids native `bcrypt` build scripts blocked by pnpm in CI/sandbox; same hash format for Phase 2 login |
+| Bootstrap `must_change_password` | Boolean column on `users` | Spec §3.4 requires forced password change on first login when password is auto-generated |
 
 ## Open (record when decided)
 
