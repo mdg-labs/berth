@@ -3,19 +3,19 @@
 import type { RegistryAuthUser } from "./auth";
 import { issueUserRegistryToken } from "./auth";
 import { registryJson } from "./fetch";
-import type { CatalogRepository, CatalogResponse } from "./types";
+import type { CatalogImage, CatalogResponse } from "./types";
 
 type CatalogPage = {
   repositories?: string[];
 };
 
 async function countTags(
-  fullRepoName: string,
+  fullImageName: string,
   token: string,
 ): Promise<number> {
   try {
     const body = await registryJson<{ tags?: string[] }>(
-      `/v2/${fullRepoName}/tags/list?n=1`,
+      `/v2/${fullImageName}/tags/list?n=1`,
       token,
     );
     return body.tags?.length ?? 0;
@@ -24,12 +24,12 @@ async function countTags(
   }
 }
 
-export async function listProjectCatalog(
+export async function listRepositoryCatalog(
   user: RegistryAuthUser,
-  projectName: string,
+  repositoryName: string,
   search?: string,
 ): Promise<CatalogResponse> {
-  const token = await issueUserRegistryToken(user, projectName, undefined, {
+  const token = await issueUserRegistryToken(user, repositoryName, undefined, {
     catalog: true,
   });
 
@@ -38,7 +38,7 @@ export async function listProjectCatalog(
     token,
   );
 
-  const prefix = `${projectName}/`;
+  const prefix = `${repositoryName}/`;
   const searchLower = search?.trim().toLowerCase() ?? "";
 
   const candidates = (body.repositories ?? [])
@@ -50,19 +50,19 @@ export async function listProjectCatalog(
     )
     .sort((a, b) => a.localeCompare(b));
 
-  const repositories: CatalogRepository[] = [];
+  const images: CatalogImage[] = [];
 
   for (const shortName of candidates) {
     const repoToken = await issueUserRegistryToken(
       user,
-      projectName,
+      repositoryName,
       shortName,
     );
-    const tagCount = await countTags(`${projectName}/${shortName}`, repoToken);
+    const tagCount = await countTags(`${repositoryName}/${shortName}`, repoToken);
     if (tagCount > 0) {
-      repositories.push({ name: shortName, tagCount });
+      images.push({ name: shortName, tagCount });
     }
   }
 
-  return { repositories };
+  return { images };
 }

@@ -30,7 +30,7 @@ import { useAuthUser } from "@/components/providers/auth-guard";
 import { BulkDeleteDialog } from "@/components/delete/bulk-delete-dialog";
 import { GcInfoAlert } from "@/components/delete/gc-info-alert";
 import { canDeleteRegistryContent } from "@/components/delete/permissions";
-import { RepositoryDeleteDialog } from "@/components/delete/repository-delete-dialog";
+import { TagSiblingsCell } from "@/components/tags/tag-siblings-cell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -74,20 +74,21 @@ import { Toolbar, ToolbarButton, ToolbarGroup } from "@/components/ui/toolbar";
 import { apiFetch } from "@/lib/api/client";
 import { formatBytes, formatDigest, imagePathSegments } from "@/lib/catalog/format";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
-import { useProjectByName } from "@/lib/hooks/use-project";
+import { useRepositoryByName } from "@/lib/hooks/use-repository";
 import type { TagSummary, TagsListResponse } from "@/lib/registry/client/types";
+import { cn } from "@/lib/utils";
 
 type TagsPageProps = {
-  projectName: string;
-  repoName: string;
+  repositoryName: string;
+  imageName: string;
 };
 
 const columnHelper = createColumnHelper<TagSummary>();
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
-function encodeRepoPath(repoName: string): string {
-  return repoName
+function encodeRepoPath(imageName: string): string {
+  return imageName
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
@@ -123,9 +124,9 @@ function getPaginationRange(
   return pages;
 }
 
-function TagsSkeleton() {
+function TagsSkeleton({ className }: { className?: string }) {
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", className)}>
       {Array.from({ length: 6 }).map((_, index) => (
         <Skeleton key={index} className="h-10 w-full rounded-lg" />
       ))}
@@ -133,10 +134,10 @@ function TagsSkeleton() {
   );
 }
 
-export function TagsPage({ projectName, repoName }: TagsPageProps) {
+export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
   const queryClient = useQueryClient();
   const authQuery = useAuthUser();
-  const projectQuery = useProjectByName(projectName);
+  const repositoryQuery = useRepositoryByName(repositoryName);
   const [query, setQuery] = useQueryStates({
     search: parseAsString.withDefault(""),
     sort: parseAsStringLiteral(["name", "name_desc"] as const).withDefault("name"),
@@ -146,7 +147,6 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
 
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [repoDeleteOpen, setRepoDeleteOpen] = useState(false);
   const [showGcInfo, setShowGcInfo] = useState(false);
 
   const debouncedSearch = useDebouncedValue(query.search, 300);
@@ -154,8 +154,8 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
   const tagsQuery = useQuery({
     queryKey: [
       "tags",
-      projectQuery.data?.id,
-      repoName,
+      repositoryQuery.data?.id,
+      imageName,
       debouncedSearch,
       query.sort,
       query.page,
@@ -172,25 +172,26 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
       }
 
       return apiFetch<TagsListResponse>(
-        `/api/projects/${projectQuery.data!.id}/images/${encodeRepoPath(repoName)}/tags?${params.toString()}`,
+        `/api/repositories/${repositoryQuery.data!.id}/images/${encodeRepoPath(imageName)}/tags?${params.toString()}`,
       );
     },
-    enabled: Boolean(projectQuery.data?.id),
+    enabled: Boolean(repositoryQuery.data?.id),
     refetchInterval: 30_000,
   });
 
   const canDelete = canDeleteRegistryContent(
     authQuery.data?.user.systemRole ?? "user",
-    projectQuery.data?.role ?? null,
+    repositoryQuery.data?.role ?? null,
   );
   const canManage =
     authQuery.data?.user.systemRole === "admin" ||
-    projectQuery.data?.role === "admin";
+    repositoryQuery.data?.role === "admin";
+  const canAccessSettings = canManage || canDelete;
 
   const bulkDeleteMutation = useMutation({
     mutationFn: (tagNames: string[]) =>
       apiFetch<{ deletedTags: string[] }>(
-        `/api/projects/${projectQuery.data!.id}/images/${encodeRepoPath(repoName)}/tags/bulk-delete`,
+        `/api/repositories/${repositoryQuery.data!.id}/images/${encodeRepoPath(imageName)}/tags/bulk-delete`,
         { method: "POST", body: { tags: tagNames } },
       ),
     onSuccess: (result) => {
@@ -208,32 +209,6 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
       toastManager.add({
         type: "error",
         title: "Bulk delete failed",
-        description: error instanceof Error ? error.message : "Request failed",
-      });
-    },
-  });
-
-  const repoDeleteMutation = useMutation({
-    mutationFn: () =>
-      apiFetch<{ deletedTags: string[] }>(
-        `/api/projects/${projectQuery.data!.id}/images/${encodeRepoPath(repoName)}`,
-        { method: "DELETE" },
-      ),
-    onSuccess: (result) => {
-      setRepoDeleteOpen(false);
-      setSelectedTags(new Set());
-      setShowGcInfo(true);
-      void queryClient.invalidateQueries({ queryKey: ["tags"] });
-      toastManager.add({
-        type: "success",
-        title: "Repository deleted",
-        description: `Removed ${result.deletedTags.length} tag${result.deletedTags.length === 1 ? "" : "s"}.`,
-      });
-    },
-    onError: (error) => {
-      toastManager.add({
-        type: "error",
-        title: "Repository delete failed",
         description: error instanceof Error ? error.message : "Request failed",
       });
     },
@@ -308,7 +283,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
         header: "Tag",
         cell: (info) => (
           <Link
-            href={`/p/${projectName}/i/${imagePathSegments(repoName)}/t/${encodeURIComponent(info.getValue())}`}
+            href={`/r/${repositoryName}/i/${imagePathSegments(imageName)}/t/${encodeURIComponent(info.getValue())}`}
             className="font-medium hover:underline"
           >
             {info.getValue()}
@@ -327,13 +302,31 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
         header: "Size",
         cell: (info) => formatBytes(info.getValue()),
       }),
+      columnHelper.accessor("pullCount", {
+        header: () => <span className="block w-full text-right">Pulls</span>,
+        cell: (info) => (
+          <span className="block text-right tabular-nums text-muted-foreground">
+            {info.getValue() ?? 0}
+          </span>
+        ),
+      }),
+      columnHelper.accessor("siblings", {
+        header: "Siblings",
+        cell: (info) => (
+          <TagSiblingsCell
+            repositoryName={repositoryName}
+            imageName={imageName}
+            siblings={info.getValue()}
+          />
+        ),
+      }),
     );
 
     return baseColumns;
   }, [
     canDelete,
-    projectName,
-    repoName,
+    repositoryName,
+    imageName,
     selectedTags,
     tagsQuery.data?.tags,
     toggleAllOnPage,
@@ -353,17 +346,17 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
   const rangeEnd = total === 0 ? 0 : Math.min(query.page * pageSize, total);
   const pageNumbers = getPaginationRange(query.page, totalPages);
 
-  const isLoading = projectQuery.isLoading || tagsQuery.isLoading;
-  const error = projectQuery.error ?? tagsQuery.error;
+  const isLoading = repositoryQuery.isLoading || tagsQuery.isLoading;
+  const error = repositoryQuery.error ?? tagsQuery.error;
   const selectedTagNames = [...selectedTags];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
+      <div className="flex shrink-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{repoName}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{imageName}</h1>
           <p className="text-sm text-muted-foreground">
-            Tags in {projectName}/{repoName}
+            Tags in {repositoryName}/{imageName}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -392,13 +385,13 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
             {query.sort === "name_desc" ? <ArrowDownIcon /> : <ArrowUpIcon />}
             Sort
           </Button>
-          {canManage ? (
+          {canAccessSettings ? (
             <Button
               variant="outline"
               size="sm"
               render={
                 <Link
-                  href={`/p/${encodeURIComponent(projectName)}/i/${imagePathSegments(repoName)}/settings`}
+                  href={`/r/${encodeURIComponent(repositoryName)}/i/${imagePathSegments(imageName)}/settings`}
                 />
               }
             >
@@ -406,24 +399,17 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
               Settings
             </Button>
           ) : null}
-          {canDelete ? (
-            <Button
-              variant="destructive-outline"
-              size="sm"
-              disabled={(tagsQuery.data?.total ?? 0) === 0}
-              onClick={() => setRepoDeleteOpen(true)}
-            >
-              <Trash2Icon />
-              Delete repository
-            </Button>
-          ) : null}
         </div>
       </div>
 
-      {showGcInfo ? <GcInfoAlert onDismiss={() => setShowGcInfo(false)} /> : null}
+      {showGcInfo ? (
+        <div className="shrink-0">
+          <GcInfoAlert onDismiss={() => setShowGcInfo(false)} />
+        </div>
+      ) : null}
 
       {canDelete && selectedTagNames.length > 0 ? (
-        <Toolbar>
+        <Toolbar className="shrink-0">
           <ToolbarGroup className="flex-1 px-2 text-sm text-muted-foreground">
             {selectedTagNames.length} selected
           </ToolbarGroup>
@@ -442,32 +428,34 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
         </Toolbar>
       ) : null}
 
-      {isLoading ? <TagsSkeleton /> : null}
+      {isLoading ? <TagsSkeleton className="shrink-0" /> : null}
 
       {error ? (
-        <ErrorAlert
-          message={error instanceof Error ? error.message : "Failed to load tags"}
-          onRetry={() => {
-            void projectQuery.refetch();
-            void tagsQuery.refetch();
-          }}
-        />
+        <div className="shrink-0">
+          <ErrorAlert
+            message={error instanceof Error ? error.message : "Failed to load tags"}
+            onRetry={() => {
+              void repositoryQuery.refetch();
+              void tagsQuery.refetch();
+            }}
+          />
+        </div>
       ) : null}
 
       {!isLoading && !error && tagsQuery.data?.tags.length === 0 ? (
-        <Empty className="rounded-lg border border-dashed">
+        <Empty className="shrink-0 rounded-lg border border-dashed">
           <EmptyHeader>
             <EmptyTitle>No tags found</EmptyTitle>
             <EmptyDescription>
-              Push a tag to this repository to see it here.
+              Push a tag to this image to see it here.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : null}
 
       {!isLoading && !error && (tagsQuery.data?.tags.length ?? 0) > 0 ? (
-        <div className="space-y-4">
-          <div className="overflow-x-auto rounded-lg border">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background">
+          <div className="min-h-0 flex-1 overflow-auto">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -502,7 +490,7 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
             </Table>
           </div>
 
-          <div className="flex flex-nowrap items-center justify-end gap-6 overflow-x-auto border-t pt-4 text-sm text-muted-foreground">
+          <div className="flex shrink-0 flex-nowrap items-center justify-end gap-6 overflow-x-auto border-t px-2.5 py-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <span>Rows per page</span>
               <Select
@@ -600,15 +588,6 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
         tagNames={selectedTagNames}
         isPending={bulkDeleteMutation.isPending}
         onConfirm={() => bulkDeleteMutation.mutate(selectedTagNames)}
-      />
-
-      <RepositoryDeleteDialog
-        open={repoDeleteOpen}
-        onOpenChange={setRepoDeleteOpen}
-        repoName={repoName}
-        tagCount={tagsQuery.data?.total ?? 0}
-        isPending={repoDeleteMutation.isPending}
-        onConfirm={() => repoDeleteMutation.mutate()}
       />
     </div>
   );

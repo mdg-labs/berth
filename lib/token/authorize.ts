@@ -7,17 +7,17 @@ import {
   isSystemAdmin,
 } from "@/lib/rbac/check";
 import {
-  getEffectiveProjectRole,
-  getProjectByName,
+  getEffectiveRepositoryRole,
+  getRepositoryByName,
 } from "@/lib/rbac/roles";
 import {
   computeEffectiveAnonymousPull,
-  getRepositoryOverridesForProject,
+  getImageOverridesForRepository,
 } from "@/lib/repositories/settings";
 import type { RegistryAccess } from "@/lib/token/scope";
-import { parseRepositoryScopeName } from "@/lib/token/scope";
+import { parseRegistryScopePath } from "@/lib/token/scope";
 
-import { findMissingProjects } from "./projects";
+import { findMissingRepositories } from "./repositories";
 
 export type TokenAuthUser = {
   id: string;
@@ -27,18 +27,18 @@ export type TokenAuthUser = {
 
 export type AuthorizeTokenResult =
   | { ok: true; access: RegistryAccess[] }
-  | { ok: false; code: "project_not_found" | "forbidden"; message: string };
+  | { ok: false; code: "repository_not_found" | "forbidden"; message: string };
 
 export async function authorizeTokenAccess(
   user: TokenAuthUser | null,
   access: RegistryAccess[],
 ): Promise<AuthorizeTokenResult> {
-  const missingProjects = await findMissingProjects(access);
-  if (missingProjects.length > 0) {
+  const missingRepositories = await findMissingRepositories(access);
+  if (missingRepositories.length > 0) {
     return {
       ok: false,
-      code: "project_not_found",
-      message: `Project not found: ${missingProjects.join(", ")}`,
+      code: "repository_not_found",
+      message: `Repository not found: ${missingRepositories.join(", ")}`,
     };
   }
 
@@ -71,72 +71,72 @@ async function authorizePublicPullAccess(
   const repoScopes = access
     .filter((entry) => entry.type === "repository")
     .map((entry) => {
-      const parsed = parseRepositoryScopeName(entry.name);
+      const parsed = parseRegistryScopePath(entry.name);
       return parsed ? { entry, ...parsed } : null;
     })
     .filter((scope): scope is NonNullable<typeof scope> => scope !== null);
 
-  const projectsByName = new Map<
+  const repositoriesByName = new Map<
     string,
-    Awaited<ReturnType<typeof getProjectByName>>
+    Awaited<ReturnType<typeof getRepositoryByName>>
   >();
 
   for (const scope of repoScopes) {
-    if (projectsByName.has(scope.projectName)) {
+    if (repositoriesByName.has(scope.repositoryName)) {
       continue;
     }
 
-    const project = await getProjectByName(scope.projectName);
-    if (!project) {
+    const repository = await getRepositoryByName(scope.repositoryName);
+    if (!repository) {
       return {
         ok: false,
         code: "forbidden",
-        message: `Project is not public: ${scope.projectName}`,
+        message: `Repository is not public: ${scope.repositoryName}`,
       };
     }
 
-    projectsByName.set(scope.projectName, project);
+    repositoriesByName.set(scope.repositoryName, repository);
   }
 
-  const reposByProjectId = new Map<string, string[]>();
+  const imagesByRepositoryId = new Map<string, string[]>();
   for (const scope of repoScopes) {
-    const project = projectsByName.get(scope.projectName);
-    if (!project) {
+    const repository = repositoriesByName.get(scope.repositoryName);
+    if (!repository) {
       continue;
     }
 
-    const existing = reposByProjectId.get(project.id) ?? [];
-    existing.push(scope.repoName);
-    reposByProjectId.set(project.id, existing);
+    const existing = imagesByRepositoryId.get(repository.id) ?? [];
+    existing.push(scope.imageName);
+    imagesByRepositoryId.set(repository.id, existing);
   }
 
-  const overridesByProjectId = new Map<
+  const overridesByRepositoryId = new Map<
     string,
-    Awaited<ReturnType<typeof getRepositoryOverridesForProject>>
+    Awaited<ReturnType<typeof getImageOverridesForRepository>>
   >();
 
-  for (const [projectId, repoNames] of reposByProjectId) {
-    overridesByProjectId.set(
-      projectId,
-      await getRepositoryOverridesForProject(projectId, repoNames),
+  for (const [repositoryId, imageNames] of imagesByRepositoryId) {
+    overridesByRepositoryId.set(
+      repositoryId,
+      await getImageOverridesForRepository(repositoryId, imageNames),
     );
   }
 
   for (const scope of repoScopes) {
-    const project = projectsByName.get(scope.projectName);
-    if (!project) {
+    const repository = repositoriesByName.get(scope.repositoryName);
+    if (!repository) {
       continue;
     }
 
     const override =
-      overridesByProjectId.get(project.id)?.get(scope.repoName) ?? "inherit";
-    const allowed = computeEffectiveAnonymousPull(project.isPublic, override);
+      overridesByRepositoryId.get(repository.id)?.get(scope.imageName) ?? "inherit";
+    const allowed = computeEffectiveAnonymousPull(repository.isPublic, override);
 
     if (!allowed) {
       return {
         ok: false,
         code: "forbidden",
-        message: `Anonymous pull is not allowed for repository: ${scope.entry.name}`,
+        message: `Anonymous pull is not allowed for image: ${scope.entry.name}`,
       };
     }
   }
@@ -161,26 +161,26 @@ async function authorizeAuthenticatedAccess(
       continue;
     }
 
-    const parsed = parseRepositoryScopeName(entry.name);
-    const projectName = parsed?.projectName ?? entry.name;
+    const parsed = parseRegistryScopePath(entry.name);
+    const repositoryName = parsed?.repositoryName ?? entry.name;
 
-    if (!projectName) {
+    if (!repositoryName) {
       continue;
     }
 
-    const project = await getProjectByName(projectName);
-    if (!project) {
+    const repository = await getRepositoryByName(repositoryName);
+    if (!repository) {
       return {
         ok: false,
-        code: "project_not_found",
-        message: `Project not found: ${projectName}`,
+        code: "repository_not_found",
+        message: `Repository not found: ${repositoryName}`,
       };
     }
 
-    const effectiveRole = await getEffectiveProjectRole(
+    const effectiveRole = await getEffectiveRepositoryRole(
       user.id,
       user.systemRole,
-      project,
+      repository,
     );
 
     if (effectiveRole === "bypass") {
@@ -192,7 +192,7 @@ async function authorizeAuthenticatedAccess(
       return {
         ok: false,
         code: "forbidden",
-        message: `No access to project: ${projectName}`,
+        message: `No access to repository: ${repositoryName}`,
       };
     }
 
@@ -205,7 +205,7 @@ async function authorizeAuthenticatedAccess(
       return {
         ok: false,
         code: "forbidden",
-        message: `Insufficient permissions for project: ${projectName}`,
+        message: `Insufficient permissions for repository: ${repositoryName}`,
       };
     }
 

@@ -12,11 +12,11 @@ export type AuthUser = {
   purgesAt: string | null;
 };
 
-export type ProjectSummary = {
+export type RepositorySummary = {
   id: string;
   name: string;
   isPublic: boolean;
   createdAt: string;
   role: "guest" | "developer" | "maintainer" | "admin" | null;
-  repositoryCount: number;
+  imageCount: number;
 };

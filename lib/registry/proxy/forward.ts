@@ -7,6 +7,8 @@ import { getRegistryInternalUrl } from "@/lib/registry/health";
 import { getRegistryProxyTimeoutMs } from "@/lib/registry/proxy/config";
 import { getPublicOrigin } from "@/lib/registry/proxy/public-url";
 import { rewriteResponseHeaderValue } from "@/lib/registry/proxy/rewrite";
+import { parseManifestPath } from "@/lib/registry/proxy/parse-manifest-path";
+import { schedulePullEventRecording } from "@/lib/pulls/record";
 import { getTokenService } from "@/lib/token/config";
 import {
   extractBearerToken,
@@ -75,34 +77,66 @@ function copyResponseHeaders(
 
 async function validateBearerIfPresent(
   request: NextRequest,
-): Promise<NextResponse | null> {
+): Promise<
+  | { ok: true; subject: string | null }
+  | { ok: false; response: NextResponse }
+> {
   const bearer = extractBearerToken(request.headers.get("authorization"));
   if (!bearer) {
-    return null;
+    return { ok: true, subject: null };
   }
 
   const verified = await verifyRegistryBearerToken(bearer);
   if (verified.ok) {
-    return null;
+    return { ok: true, subject: verified.subject };
   }
 
   const service = getTokenService();
   const realm = `${getPublicOrigin(request)}/api/auth/token`;
 
-  return new NextResponse("Unauthorized", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": `Bearer realm="${realm}",service="${service}"`,
-    },
+  return {
+    ok: false,
+    response: new NextResponse("Unauthorized", {
+      status: 401,
+      headers: {
+        "WWW-Authenticate": `Bearer realm="${realm}",service="${service}"`,
+      },
+    }),
+  };
+}
+
+function maybeRecordManifestPull(
+  request: NextRequest,
+  upstream: Response,
+  tokenSubject: string | null,
+): void {
+  if (request.method !== "GET" || upstream.status !== 200) {
+    return;
+  }
+
+  const parsed = parseManifestPath(request.nextUrl.pathname);
+  const digest = upstream.headers.get("docker-content-digest");
+
+  if (!parsed || !digest) {
+    return;
+  }
+
+  schedulePullEventRecording({
+    repositoryName: parsed.repositoryName,
+    imageName: parsed.imageName,
+    reference: parsed.reference,
+    isDigestReference: parsed.isDigestReference,
+    digest,
+    tokenSubject,
   });
 }
 
 export async function proxyRegistryRequest(
   request: NextRequest,
 ): Promise<NextResponse> {
-  const authFailure = await validateBearerIfPresent(request);
-  if (authFailure) {
-    return authFailure;
+  const auth = await validateBearerIfPresent(request);
+  if (!auth.ok) {
+    return auth.response;
   }
 
   const url = buildRegistryUrl(request);
@@ -128,6 +162,8 @@ export async function proxyRegistryRequest(
   try {
     const upstream = await fetch(url, init);
     const responseHeaders = copyResponseHeaders(upstream, publicOrigin);
+
+    maybeRecordManifestPull(request, upstream, auth.subject);
 
     return new NextResponse(upstream.body, {
       status: upstream.status,

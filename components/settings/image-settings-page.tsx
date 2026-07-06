@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { useAuthUser } from "@/components/providers/auth-guard";
+import { canDeleteRegistryContent } from "@/components/delete/permissions";
+import { ImageDangerZone } from "@/components/settings/image-danger-zone";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,19 +29,19 @@ import { Spinner } from "@/components/ui/spinner";
 import { toastManager } from "@/components/ui/toast";
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { imagePathSegments } from "@/lib/catalog/format";
-import { useProjectByName } from "@/lib/hooks/use-project";
+import { useRepositoryByName } from "@/lib/hooks/use-repository";
 import type {
   AnonymousPullOverride,
-  RepositorySettings,
-} from "@/lib/repositories/types";
+  ImageSettings,
+} from "@/lib/images/types";
 
 type ImageSettingsPageProps = {
-  projectName: string;
+  repositoryName: string;
   imageName: string;
 };
 
 type SettingsResponse = {
-  settings: RepositorySettings;
+  settings: ImageSettings;
 };
 
 function useSyncedState<T>(value: T) {
@@ -53,23 +55,28 @@ function useSyncedState<T>(value: T) {
 }
 
 export function ImageSettingsPage({
-  projectName,
+  repositoryName,
   imageName,
 }: ImageSettingsPageProps) {
   const queryClient = useQueryClient();
   const { data: authData } = useAuthUser();
-  const projectQuery = useProjectByName(projectName);
+  const repositoryQuery = useRepositoryByName(repositoryName);
 
   const canManage =
-    authData?.user.systemRole === "admin" || projectQuery.data?.role === "admin";
+    authData?.user.systemRole === "admin" || repositoryQuery.data?.role === "admin";
+  const canDelete = canDeleteRegistryContent(
+    authData?.user.systemRole ?? "user",
+    repositoryQuery.data?.role ?? null,
+  );
+  const canAccessSettings = canManage || canDelete;
 
   const settingsQuery = useQuery({
-    queryKey: ["image-settings", projectQuery.data?.id, imageName],
+    queryKey: ["image-settings", repositoryQuery.data?.id, imageName],
     queryFn: () =>
       apiFetch<SettingsResponse>(
-        `/api/projects/${projectQuery.data!.id}/images/${imagePathSegments(imageName)}/settings`,
+        `/api/repositories/${repositoryQuery.data!.id}/images/${imagePathSegments(imageName)}/settings`,
       ),
-    enabled: Boolean(projectQuery.data?.id && canManage),
+    enabled: Boolean(repositoryQuery.data?.id && canManage),
   });
 
   const [anonymousPull, setAnonymousPull] = useSyncedState(
@@ -79,7 +86,7 @@ export function ImageSettingsPage({
   const mutation = useMutation({
     mutationFn: (next: AnonymousPullOverride) =>
       apiFetch<SettingsResponse>(
-        `/api/projects/${projectQuery.data!.id}/images/${imagePathSegments(imageName)}/settings`,
+        `/api/repositories/${repositoryQuery.data!.id}/images/${imagePathSegments(imageName)}/settings`,
         {
           method: "PATCH",
           body: { anonymousPull: next },
@@ -87,11 +94,11 @@ export function ImageSettingsPage({
       ),
     onSuccess: (response) => {
       queryClient.setQueryData(
-        ["image-settings", projectQuery.data?.id, imageName],
+        ["image-settings", repositoryQuery.data?.id, imageName],
         response,
       );
       void queryClient.invalidateQueries({
-        queryKey: ["catalog", projectQuery.data?.id],
+        queryKey: ["catalog", repositoryQuery.data?.id],
       });
       toastManager.add({
         type: "success",
@@ -108,30 +115,30 @@ export function ImageSettingsPage({
     },
   });
 
-  if (projectQuery.isLoading) {
+  if (repositoryQuery.isLoading) {
     return <Skeleton className="h-64 w-full rounded-lg" />;
   }
 
-  if (projectQuery.isError || !projectQuery.data) {
+  if (repositoryQuery.isError || !repositoryQuery.data) {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-        Project not found or you do not have access.
+        Repository not found or you do not have access.
       </div>
     );
   }
 
-  if (!canManage) {
+  if (!canAccessSettings) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-          Only project admins can manage settings for {imageName}.
+          You do not have permission to manage settings for {imageName}.
         </div>
         <Button
           variant="outline"
           render={
             <Link
-              href={`/p/${encodeURIComponent(projectName)}/i/${imagePathSegments(imageName)}`}
+              href={`/r/${encodeURIComponent(repositoryName)}/i/${imagePathSegments(imageName)}`}
             />
           }
         >
@@ -147,7 +154,7 @@ export function ImageSettingsPage({
     ? "Anonymous pull allowed"
     : "Anonymous pull denied";
 
-  const tagsHref = `/p/${encodeURIComponent(projectName)}/i/${imagePathSegments(imageName)}`;
+  const tagsHref = `/r/${encodeURIComponent(repositoryName)}/i/${imagePathSegments(imageName)}`;
 
   return (
     <div className="space-y-6">
@@ -155,7 +162,7 @@ export function ImageSettingsPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{imageName}</h1>
           <p className="text-sm text-muted-foreground">
-            Image settings in {projectName}
+            Image settings in {repositoryName}
           </p>
         </div>
         <Button variant="outline" render={<Link href={tagsHref} />}>
@@ -180,20 +187,20 @@ export function ImageSettingsPage({
         />
       ) : null}
 
-      {settings ? (
+      {canManage && settings ? (
         <Card>
           <CardHeader>
             <CardTitle>Anonymous pull</CardTitle>
             <CardDescription>
-              Override the project default for this image. Members with access
+              Override the repository default for this image. Members with access
               can always pull when authenticated.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Project default:</span>
+              <span className="text-muted-foreground">Repository default:</span>
               <Badge variant="secondary">
-                {settings.projectAnonymousPullDefault
+                {settings.repositoryAnonymousPullDefault
                   ? "Allow anonymous pull"
                   : "Deny anonymous pull"}
               </Badge>
@@ -225,9 +232,9 @@ export function ImageSettingsPage({
                   <Label className="flex items-start gap-2">
                     <Radio value="inherit" className="mt-0.5" />
                     <span>
-                      <span className="font-medium">Inherit project default</span>
+                      <span className="font-medium">Inherit repository default</span>
                       <p className="text-muted-foreground text-xs">
-                        Use the project-wide anonymous pull setting.
+                        Use the repository-wide anonymous pull setting.
                       </p>
                     </span>
                   </Label>
@@ -245,7 +252,7 @@ export function ImageSettingsPage({
                     <span>
                       <span className="font-medium">Deny anonymous pull</span>
                       <p className="text-muted-foreground text-xs">
-                        Require authentication even when the project is public.
+                        Require authentication even when the repository is public.
                       </p>
                     </span>
                   </Label>
@@ -262,6 +269,14 @@ export function ImageSettingsPage({
             </Form>
           </CardContent>
         </Card>
+      ) : null}
+
+      {canDelete && repositoryQuery.data ? (
+        <ImageDangerZone
+          repositoryId={repositoryQuery.data.id}
+          repositoryName={repositoryName}
+          imageName={imageName}
+        />
       ) : null}
     </div>
   );

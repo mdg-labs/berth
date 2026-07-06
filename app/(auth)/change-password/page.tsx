@@ -12,7 +12,7 @@ export default async function ChangePasswordPage() {
   }
 
   if (!user.mustChangePassword) {
-    redirect("/projects");
+    redirect("/repositories");
   }
 
   return <ChangePasswordForm />;

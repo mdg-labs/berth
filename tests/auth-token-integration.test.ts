@@ -84,7 +84,7 @@ describe("token integration", () => {
 
     expect(response.status).toBe(403);
     const body = (await response.json()) as { error: { code: string } };
-    expect(body.error.code).toBe("project_not_found");
+    expect(body.error.code).toBe("repository_not_found");
   });
 
   it("issues JWT for existing project scope via Basic auth", async () => {
@@ -92,7 +92,7 @@ describe("token integration", () => {
       return;
     }
 
-    const createProject = await fetch(`${INTEGRATION_BASE_URL}/api/projects`, {
+    const createRepository = await fetch(`${INTEGRATION_BASE_URL}/api/repositories`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -101,7 +101,7 @@ describe("token integration", () => {
       body: JSON.stringify({ name: "test" }),
     });
 
-    if (createProject.status === 404) {
+    if (createRepository.status === 404) {
       return;
     }
 

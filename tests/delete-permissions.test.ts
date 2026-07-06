@@ -6,7 +6,7 @@ import { canDeleteRegistryContent } from "@/components/delete/permissions";
 import {
   BULK_DELETE_CONFIRM_PHRASE,
   BULK_DELETE_CONFIRM_THRESHOLD,
-  repositoryDeleteConfirmPhrase,
+  imageDeleteConfirmPhrase,
 } from "@/components/delete/constants";
 
 describe("delete permissions", () => {
@@ -34,7 +34,7 @@ describe("delete confirmation constants", () => {
   });
 
   it("builds repository delete phrase from repo name", () => {
-    expect(repositoryDeleteConfirmPhrase("hello/world")).toBe(
+    expect(imageDeleteConfirmPhrase("hello/world")).toBe(
       "delete hello/world",
     );
   });

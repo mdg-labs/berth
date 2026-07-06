@@ -45,7 +45,7 @@ export function AuthGuard({
 
     if (requirePasswordChange) {
       if (!data.user.mustChangePassword) {
-        router.replace("/projects");
+        router.replace("/repositories");
       }
       return;
     }
@@ -57,7 +57,7 @@ export function AuthGuard({
 
     if (onReactivatePage) {
       if (!data.user.pendingDeletion) {
-        router.replace("/projects");
+        router.replace("/repositories");
       }
       return;
     }

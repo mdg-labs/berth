@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { listProjectCatalog } from "@/lib/registry/client/catalog";
+import { listRepositoryCatalog } from "@/lib/registry/client/catalog";
 import { issueUserRegistryToken } from "@/lib/registry/client/auth";
 import { registryJson } from "@/lib/registry/client/fetch";
 
@@ -20,7 +20,7 @@ const user = {
   systemRole: "user" as const,
 };
 
-describe("listProjectCatalog", () => {
+describe("listRepositoryCatalog", () => {
   beforeEach(() => {
     vi.mocked(issueUserRegistryToken).mockReset();
     vi.mocked(registryJson).mockReset();
@@ -35,7 +35,7 @@ describe("listProjectCatalog", () => {
       .mockResolvedValueOnce({ tags: ["latest"] })
       .mockResolvedValueOnce({ tags: ["1.0", "1.1"] });
 
-    const result = await listProjectCatalog(user, "demo");
+    const result = await listRepositoryCatalog(user, "demo");
 
     expect(issueUserRegistryToken).toHaveBeenCalledWith(
       user,
@@ -43,7 +43,7 @@ describe("listProjectCatalog", () => {
       undefined,
       { catalog: true },
     );
-    expect(result.repositories).toEqual([
+    expect(result.images).toEqual([
       { name: "app", tagCount: 1 },
       { name: "web", tagCount: 2 },
     ]);

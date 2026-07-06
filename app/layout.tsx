@@ -27,7 +27,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Berth",
   description:
-    "Self-hosted OCI artifact registry with Harbor-class identity, projects, and RBAC",
+    "Self-hosted OCI artifact registry with Harbor-class identity, repositories, and RBAC",
 };
 
 export default function RootLayout({

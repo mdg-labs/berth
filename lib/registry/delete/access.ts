@@ -1,9 +1,9 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
 import { apiError } from "@/lib/api/errors";
-import { canPerformProjectAction } from "@/lib/rbac/check";
+import { canPerformRepositoryAction } from "@/lib/rbac/check";
 import {
-  requireProjectAccess,
+  requireRepositoryAccess,
 } from "@/lib/registry/catalog/access";
 import type { NextRequest } from "next/server";
 import type { NextResponse } from "next/server";
@@ -16,22 +16,22 @@ type DeleteAccessResult =
         email: string;
         systemRole: "admin" | "user";
       };
-      project: { id: string; name: string; role: "guest" | "developer" | "maintainer" | "admin" | null };
+      repository: { id: string; name: string; role: "guest" | "developer" | "maintainer" | "admin" | null };
     };
 
 export async function requireDeleteAccess(
   request: NextRequest,
-  projectId: string,
+  repositoryId: string,
 ): Promise<DeleteAccessResult> {
-  const access = await requireProjectAccess(request, projectId);
+  const access = await requireRepositoryAccess(request, repositoryId);
   if ("error" in access) {
     return access;
   }
 
   if (
-    !canPerformProjectAction(
+    !canPerformRepositoryAction(
       access.user.systemRole,
-      access.project.role,
+      access.repository.role,
       "delete",
     )
   ) {

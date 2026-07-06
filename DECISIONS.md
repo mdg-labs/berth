@@ -14,7 +14,7 @@ Record implementation choices here as they are made. Seeds from spec Appendix C 
 | OIDC library | **`openid-client`**; one provider in MVP | spec §10, §5.1 |
 | GC approach | Manual operator runbook + storage-stats page; no live HTTP trigger in MVP | spec §3.1 |
 | Token TTL default | **300s** (`TOKEN_TTL_SECONDS`) | spec §4.3, §9.1 |
-| Project deletion | Blocked while non-empty; `force=true` cascade available | spec §5.4 |
+| Repository deletion | Blocked while non-empty images; `force=true` cascade available | spec §5.4 |
 | Push to non-existent project | Rejected with `403`, not auto-created | spec §5.2 |
 | Key rotation | Multi-cert `ROOTCERTBUNDLE`, overlap-then-remove procedure | spec §3.5 |
 | Registry proxy | `/v2/*` always proxied through `app` — no direct registry port in any environment | spec Appendix C |
@@ -115,7 +115,7 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | GC feedback | Persistent `Alert` variant info after successful delete | Spec §6.4 — storage reclaimed after manual GC |
 | Delete RBAC | `maintainer` + `admin` (+ system admin bypass) via `requireDeleteAccess` | Spec §5.3 role matrix |
 | Registry delete token | Per-user JWT with `repository:<project>/<repo>:pull,delete` | Spec §7.4 session-authenticated registry writes |
-| Audit log actions | `tag.delete`, `tag.bulk_delete`, `repository.delete` | Spec §8 destructive-action logging |
+| Audit log actions | `tag.delete`, `tag.bulk_delete`, `image.delete` | Spec §8 destructive-action logging |
 
 ## Phase 9 choices
 

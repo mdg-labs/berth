@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { resetSigningKeyCache } from "@/lib/token/keys";
 import { issueRegistryToken } from "@/lib/token/issue";
 import {
-  extractProjectNames,
+  extractRepositoryNames,
   parseScopeEntry,
   parseScopeParam,
   parseScopes,
@@ -64,7 +64,7 @@ describe("token scope parsing", () => {
 
   it("extracts project names from repository scopes", () => {
     expect(
-      extractProjectNames([
+      extractRepositoryNames([
         { type: "repository", name: "test/repo", actions: ["pull"] },
         { type: "registry", name: "catalog", actions: ["*"] },
       ]),

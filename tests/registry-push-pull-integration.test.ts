@@ -61,12 +61,12 @@ async function loginSession(): Promise<string | null> {
   return extractSetCookie(login, SESSION_COOKIE);
 }
 
-async function createProject(
+async function createRepository(
   sessionId: string,
   name: string,
   isPublic = false,
 ): Promise<string | null> {
-  const response = await fetch(`${INTEGRATION_BASE_URL}/api/projects`, {
+  const response = await fetch(`${INTEGRATION_BASE_URL}/api/repositories`, {
     method: "POST",
     headers: {
       ...csrfHeaders(CLIENT_IP),
@@ -79,8 +79,8 @@ async function createProject(
     return null;
   }
 
-  const body = (await response.json()) as { project: { name: string } };
-  return body.project.name;
+  const body = (await response.json()) as { repository: { name: string } };
+  return body.repository.name;
 }
 
 async function fetchRegistryToken(
@@ -162,14 +162,14 @@ describe("registry push/pull integration", () => {
       return;
     }
 
-    const projectName = `loc${Date.now()}`;
-    const created = await createProject(sessionId, projectName, false);
+    const repositoryName = `loc${Date.now()}`;
+    const created = await createRepository(sessionId, repositoryName, false);
     if (!created) {
       return;
     }
 
     const token = await fetchRegistryToken(
-      `repository:${projectName}/hello:push,pull`,
+      `repository:${repositoryName}/hello:push,pull`,
       basicAuthHeader(INTEGRATION_ADMIN_EMAIL, INTEGRATION_ADMIN_PASSWORD),
     );
     if (!token) {
@@ -177,7 +177,7 @@ describe("registry push/pull integration", () => {
     }
 
     const response = await fetch(
-      `${INTEGRATION_BASE_URL}/v2/${projectName}/hello/blobs/uploads/`,
+      `${INTEGRATION_BASE_URL}/v2/${repositoryName}/hello/blobs/uploads/`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -197,14 +197,14 @@ describe("registry push/pull integration", () => {
       return;
     }
 
-    const projectName = `chunk${Date.now()}`;
-    const created = await createProject(sessionId, projectName, false);
+    const repositoryName = `chunk${Date.now()}`;
+    const created = await createRepository(sessionId, repositoryName, false);
     if (!created) {
       return;
     }
 
     const token = await fetchRegistryToken(
-      `repository:${projectName}/hello:push,pull`,
+      `repository:${repositoryName}/hello:push,pull`,
       basicAuthHeader(INTEGRATION_ADMIN_EMAIL, INTEGRATION_ADMIN_PASSWORD),
     );
     if (!token) {
@@ -212,7 +212,7 @@ describe("registry push/pull integration", () => {
     }
 
     const start = await fetch(
-      `${INTEGRATION_BASE_URL}/v2/${projectName}/hello/blobs/uploads/`,
+      `${INTEGRATION_BASE_URL}/v2/${repositoryName}/hello/blobs/uploads/`,
       {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -251,13 +251,13 @@ describe("registry push/pull integration", () => {
       return;
     }
 
-    const projectName = `push${Date.now()}`;
-    const created = await createProject(sessionId, projectName, false);
+    const repositoryName = `push${Date.now()}`;
+    const created = await createRepository(sessionId, repositoryName, false);
     if (!created) {
       return;
     }
 
-    const image = `${registryHost}/${projectName}/hello:1.0`;
+    const image = `${registryHost}/${repositoryName}/hello:1.0`;
 
     const buildDir = mkdtempSync(join(tmpdir(), "berth-push-"));
     writeFileSync(
@@ -277,13 +277,13 @@ describe("registry push/pull integration", () => {
       return;
     }
 
-    const projectName = `public${Date.now()}`;
-    const created = await createProject(sessionId, projectName, true);
+    const repositoryName = `public${Date.now()}`;
+    const created = await createRepository(sessionId, repositoryName, true);
     if (!created) {
       return;
     }
 
-    const image = `${registryHost}/${projectName}/hello:1.0`;
+    const image = `${registryHost}/${repositoryName}/hello:1.0`;
 
     const buildDir = mkdtempSync(join(tmpdir(), "berth-public-"));
     writeFileSync(

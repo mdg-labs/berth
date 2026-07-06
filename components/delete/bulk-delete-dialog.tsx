@@ -59,7 +59,7 @@ export function BulkDeleteDialog({
           <DialogDescription>
             {requiresTypedPhrase
               ? `You are about to delete ${tagNames.length} tags. Type "${BULK_DELETE_CONFIRM_PHRASE}" to confirm.`
-              : `This removes ${tagNames.length} tag reference${tagNames.length === 1 ? "" : "s"} from the repository.`}
+              : `This removes ${tagNames.length} tag reference${tagNames.length === 1 ? "" : "s"} from the image.`}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 px-6">

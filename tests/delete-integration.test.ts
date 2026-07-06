@@ -69,8 +69,8 @@ async function login(email: string, password: string): Promise<string | null> {
   return extractSetCookie(loginResponse, SESSION_COOKIE);
 }
 
-async function createProject(sessionId: string, name: string): Promise<string | null> {
-  const response = await fetch(`${INTEGRATION_BASE_URL}/api/projects`, {
+async function createRepository(sessionId: string, name: string): Promise<string | null> {
+  const response = await fetch(`${INTEGRATION_BASE_URL}/api/repositories`, {
     method: "POST",
     headers: {
       ...csrfHeaders(CLIENT_IP),
@@ -83,18 +83,18 @@ async function createProject(sessionId: string, name: string): Promise<string | 
     return null;
   }
 
-  const body = (await response.json()) as { project: { id: string } };
-  return body.project.id;
+  const body = (await response.json()) as { repository: { id: string } };
+  return body.repository.id;
 }
 
 async function addMember(
   adminSessionId: string,
-  projectId: string,
+  repositoryId: string,
   email: string,
   role: "developer" | "maintainer",
 ): Promise<boolean> {
   const response = await fetch(
-    `${INTEGRATION_BASE_URL}/api/projects/${projectId}/members`,
+    `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/members`,
     {
       method: "POST",
       headers: {
@@ -158,17 +158,17 @@ describe("delete API integration", () => {
       return;
     }
 
-    const projectName = `del${Date.now()}`;
-    const projectId = await createProject(adminSessionId, projectName);
-    if (!projectId) {
+    const repositoryName = `del${Date.now()}`;
+    const repositoryId = await createRepository(adminSessionId, repositoryName);
+    if (!repositoryId) {
       return;
     }
 
-    const image = `${registryHost}/${projectName}/hello:1.0`;
+    const image = `${registryHost}/${repositoryName}/hello:1.0`;
     pushImage(registryHost, image);
 
     const tagsBefore = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/hello/tags`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags`,
       { headers: cookieHeader(SESSION_COOKIE, adminSessionId) },
     );
     expect(tagsBefore.status).toBe(200);
@@ -176,7 +176,7 @@ describe("delete API integration", () => {
     expect(beforeBody.tags.some((entry) => entry.name === "1.0")).toBe(true);
 
     const deleteResponse = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/hello/tags/1.0`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags/1.0`,
       {
         method: "DELETE",
         headers: {
@@ -188,7 +188,7 @@ describe("delete API integration", () => {
     expect(deleteResponse.status).toBe(200);
 
     const tagsAfter = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/hello/tags`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags`,
       { headers: cookieHeader(SESSION_COOKIE, adminSessionId) },
     );
     const afterBody = (await tagsAfter.json()) as { tags: { name: string }[] };
@@ -200,19 +200,19 @@ describe("delete API integration", () => {
       return;
     }
 
-    const projectName = `sib${Date.now()}`;
-    const projectId = await createProject(adminSessionId, projectName);
-    if (!projectId) {
+    const repositoryName = `sib${Date.now()}`;
+    const repositoryId = await createRepository(adminSessionId, repositoryName);
+    if (!repositoryId) {
       return;
     }
 
-    const imageBase = `${registryHost}/${projectName}/hello`;
+    const imageBase = `${registryHost}/${repositoryName}/hello`;
     pushImage(registryHost, `${imageBase}:v1`);
     runDocker(`docker tag ${imageBase}:v1 ${imageBase}:v2`);
     runDocker(`docker push ${imageBase}:v2`);
 
     const siblingsResponse = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/hello/tags/v1/siblings`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags/v1/siblings`,
       { headers: cookieHeader(SESSION_COOKIE, adminSessionId) },
     );
     expect(siblingsResponse.status).toBe(200);
@@ -227,16 +227,16 @@ describe("delete API integration", () => {
       return;
     }
 
-    const projectName = `rbac${Date.now()}`;
-    const projectId = await createProject(adminSessionId, projectName);
-    if (!projectId) {
+    const repositoryName = `rbac${Date.now()}`;
+    const repositoryId = await createRepository(adminSessionId, repositoryName);
+    if (!repositoryId) {
       return;
     }
 
-    await addMember(adminSessionId, projectId, DEVELOPER_EMAIL, "developer");
-    await addMember(adminSessionId, projectId, MAINTAINER_EMAIL, "maintainer");
+    await addMember(adminSessionId, repositoryId, DEVELOPER_EMAIL, "developer");
+    await addMember(adminSessionId, repositoryId, MAINTAINER_EMAIL, "maintainer");
 
-    const image = `${registryHost}/${projectName}/hello:rbac`;
+    const image = `${registryHost}/${repositoryName}/hello:rbac`;
     pushImage(registryHost, image);
 
     const developerSession = await login(DEVELOPER_EMAIL, DEVELOPER_PASSWORD);
@@ -246,7 +246,7 @@ describe("delete API integration", () => {
     }
 
     const denied = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/hello/tags/rbac`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags/rbac`,
       {
         method: "DELETE",
         headers: {
@@ -258,7 +258,7 @@ describe("delete API integration", () => {
     expect(denied.status).toBe(403);
 
     const allowed = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/hello/tags/rbac`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags/rbac`,
       {
         method: "DELETE",
         headers: {
@@ -277,19 +277,19 @@ describe("delete API integration", () => {
       return;
     }
 
-    const projectName = `bulk${Date.now()}`;
-    const projectId = await createProject(adminSessionId, projectName);
-    if (!projectId) {
+    const repositoryName = `bulk${Date.now()}`;
+    const repositoryId = await createRepository(adminSessionId, repositoryName);
+    if (!repositoryId) {
       return;
     }
 
-    const imageBase = `${registryHost}/${projectName}/bulkrepo`;
+    const imageBase = `${registryHost}/${repositoryName}/bulkrepo`;
     pushImage(registryHost, `${imageBase}:a`);
     runDocker(`docker tag ${imageBase}:a ${imageBase}:b`);
     runDocker(`docker push ${imageBase}:b`);
 
     const bulkDelete = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/bulkrepo/tags/bulk-delete`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/bulkrepo/tags/bulk-delete`,
       {
         method: "POST",
         headers: {
@@ -302,7 +302,7 @@ describe("delete API integration", () => {
     expect(bulkDelete.status).toBe(200);
 
     const tagsAfterBulk = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/bulkrepo/tags`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/bulkrepo/tags`,
       { headers: cookieHeader(SESSION_COOKIE, adminSessionId) },
     );
     const bulkBody = (await tagsAfterBulk.json()) as {
@@ -314,7 +314,7 @@ describe("delete API integration", () => {
     pushImage(registryHost, `${imageBase}:c`);
 
     const repoDelete = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/bulkrepo`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/bulkrepo`,
       {
         method: "DELETE",
         headers: {
@@ -326,7 +326,7 @@ describe("delete API integration", () => {
     expect(repoDelete.status).toBe(200);
 
     const tagsAfterRepo = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/bulkrepo/tags`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/bulkrepo/tags`,
       { headers: cookieHeader(SESSION_COOKIE, adminSessionId) },
     );
     const repoBody = (await tagsAfterRepo.json()) as {

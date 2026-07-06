@@ -62,37 +62,37 @@ export function parseScopes(scopeParam: string | null): RegistryAccess[] {
   return access;
 }
 
-export function extractProjectNames(access: RegistryAccess[]): string[] {
-  const projects = new Set<string>();
+export function extractRepositoryNames(access: RegistryAccess[]): string[] {
+  const repositories = new Set<string>();
 
   for (const entry of access) {
     if (entry.type !== "repository") {
       continue;
     }
 
-    const parsed = parseRepositoryScopeName(entry.name);
-    if (parsed?.projectName) {
-      projects.add(parsed.projectName);
+    const parsed = parseRegistryScopePath(entry.name);
+    if (parsed?.repositoryName) {
+      repositories.add(parsed.repositoryName);
     }
   }
 
-  return [...projects];
+  return [...repositories];
 }
 
-export function parseRepositoryScopeName(
+export function parseRegistryScopePath(
   fullName: string,
-): { projectName: string; repoName: string } | null {
+): { repositoryName: string; imageName: string } | null {
   const slashIndex = fullName.indexOf("/");
   if (slashIndex === -1) {
     return null;
   }
 
-  const projectName = fullName.slice(0, slashIndex);
-  const repoName = fullName.slice(slashIndex + 1);
+  const repositoryName = fullName.slice(0, slashIndex);
+  const imageName = fullName.slice(slashIndex + 1);
 
-  if (!projectName || !repoName) {
+  if (!repositoryName || !imageName) {
     return null;
   }
 
-  return { projectName, repoName };
+  return { repositoryName, imageName };
 }

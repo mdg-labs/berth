@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
   const sessionId = await createSession(user.id);
 
   const redirectPath =
-    authState === "pending_deletion" ? "/reactivate-account" : "/projects";
+    authState === "pending_deletion" ? "/reactivate-account" : "/repositories";
 
   const response = NextResponse.redirect(new URL(redirectPath, getAppUrl()));
   response.headers.append("Set-Cookie", buildSessionCookie(sessionId));

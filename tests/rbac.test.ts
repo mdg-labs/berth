@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  canPerformProjectAction,
+  canPerformRepositoryAction,
   filterScopeActionsForPublicPull,
   filterScopeActionsForRole,
   isPublicPullOnlyAccess,
@@ -15,7 +15,7 @@ import {
   roleAllowsAction,
   roleAllowsScopeAction,
 } from "@/lib/rbac/matrix";
-import type { ProjectAction, ProjectRole } from "@/lib/rbac/types";
+import type { RepositoryAction, RepositoryRole } from "@/lib/rbac/types";
 
 const ALL_SCOPE_ACTIONS = ["pull", "push", "delete"] as const;
 
@@ -28,21 +28,21 @@ describe("RBAC matrix", () => {
       expect(roleAllowsAction(row.role, "manage_members")).toBe(
         row.manageMembers,
       );
-      expect(roleAllowsAction(row.role, "delete_project")).toBe(
-        row.deleteProject,
+      expect(roleAllowsAction(row.role, "delete_repository")).toBe(
+        row.deleteRepository,
       );
     }
   });
 
   it("returns false for null role on all actions", () => {
-    const actions: ProjectAction[] = [
+    const actions: RepositoryAction[] = [
       "pull",
       "push",
       "delete",
       "manage_members",
-      "delete_project",
-      "view_project",
-      "update_project",
+      "delete_repository",
+      "view_repository",
+      "update_repository",
     ];
 
     for (const action of actions) {
@@ -58,7 +58,7 @@ describe("RBAC matrix", () => {
 });
 
 describe("RBAC role × action × public/private", () => {
-  const roles: ProjectRole[] = [
+  const roles: RepositoryRole[] = [
     "guest",
     "developer",
     "maintainer",
@@ -84,19 +84,19 @@ describe("RBAC role × action × public/private", () => {
   it("system admin bypasses project action checks", () => {
     expect(isSystemAdmin("admin")).toBe(true);
     expect(
-      canPerformProjectAction("admin", null, "delete_project"),
+      canPerformRepositoryAction("admin", null, "delete_repository"),
     ).toBe(true);
     expect(
-      canPerformProjectAction("admin", null, "manage_members"),
+      canPerformRepositoryAction("admin", null, "manage_members"),
     ).toBe(true);
   });
 
   it("non-admin requires project role for manage_members", () => {
     expect(
-      canPerformProjectAction("user", "developer", "manage_members"),
+      canPerformRepositoryAction("user", "developer", "manage_members"),
     ).toBe(false);
     expect(
-      canPerformProjectAction("user", "admin", "manage_members"),
+      canPerformRepositoryAction("user", "admin", "manage_members"),
     ).toBe(true);
   });
 });
@@ -139,12 +139,12 @@ describe("scope action filtering", () => {
 
 describe("project name validation", () => {
   it("accepts DNS-like slugs", async () => {
-    const { isValidProjectName } = await import(
-      "@/lib/projects/validation"
+    const { isValidRepositoryName } = await import(
+      "@/lib/repositories/validation"
     );
-    expect(isValidProjectName("my-project")).toBe(true);
-    expect(isValidProjectName("ab")).toBe(true);
-    expect(isValidProjectName("1bad")).toBe(false);
-    expect(isValidProjectName("a")).toBe(false);
+    expect(isValidRepositoryName("my-project")).toBe(true);
+    expect(isValidRepositoryName("ab")).toBe(true);
+    expect(isValidRepositoryName("1bad")).toBe(false);
+    expect(isValidRepositoryName("a")).toBe(false);
   });
 });

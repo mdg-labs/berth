@@ -10,13 +10,13 @@ import { RegistryAccessError } from "./auth";
 
 export async function issueUserRegistryDeleteToken(
   user: RegistryAuthUser,
-  projectName: string,
-  repoName: string,
+  repositoryName: string,
+  imageName: string,
 ): Promise<string> {
   const access: RegistryAccess[] = [
     {
       type: "repository",
-      name: `${projectName}/${repoName}`,
+      name: `${repositoryName}/${imageName}`,
       actions: ["pull", "delete"],
     },
   ];

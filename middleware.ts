@@ -9,7 +9,7 @@ import { getSessionIdFromCookie } from "@/lib/session/cookie";
 
 const PUBLIC_PATHS = new Set(["/login"]);
 const AUTH_ONLY_PATHS = new Set(["/change-password"]);
-const PROTECTED_PREFIXES = ["/projects", "/p", "/admin"];
+const PROTECTED_PREFIXES = ["/repositories", "/r", "/admin"];
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
@@ -50,7 +50,7 @@ export function middleware(request: NextRequest) {
   const sessionPresent = hasSession(request);
 
   if (PUBLIC_PATHS.has(pathname) && sessionPresent) {
-    return NextResponse.redirect(new URL("/projects", request.url));
+    return NextResponse.redirect(new URL("/repositories", request.url));
   }
 
   if (AUTH_ONLY_PATHS.has(pathname) && !sessionPresent) {
@@ -61,16 +61,6 @@ export function middleware(request: NextRequest) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  const legacyImagePath = pathname.match(/^\/p\/([^/]+)\/r(?:\/(.*))?$/);
-  if (legacyImagePath) {
-    const project = legacyImagePath[1]!;
-    const rest = legacyImagePath[2];
-    const target = rest
-      ? `/p/${project}/i/${rest}`
-      : `/p/${project}`;
-    return NextResponse.redirect(new URL(target, request.url));
   }
 
   return NextResponse.next();

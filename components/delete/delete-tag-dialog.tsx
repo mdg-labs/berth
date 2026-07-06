@@ -60,7 +60,7 @@ export function DeleteTagDialog({
                 reference; sibling tags remain until they are deleted separately.
               </>
             ) : (
-              "This removes the tag reference from the repository. The action cannot be undone."
+              "This removes the tag reference from the image. The action cannot be undone."
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>

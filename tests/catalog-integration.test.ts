@@ -34,8 +34,8 @@ async function loginSession(): Promise<string | null> {
   return extractSetCookie(login, SESSION_COOKIE);
 }
 
-async function createProject(sessionId: string, name: string): Promise<string | null> {
-  const response = await fetch(`${INTEGRATION_BASE_URL}/api/projects`, {
+async function createRepository(sessionId: string, name: string): Promise<string | null> {
+  const response = await fetch(`${INTEGRATION_BASE_URL}/api/repositories`, {
     method: "POST",
     headers: {
       ...csrfHeaders(CLIENT_IP),
@@ -48,8 +48,8 @@ async function createProject(sessionId: string, name: string): Promise<string | 
     return null;
   }
 
-  const body = (await response.json()) as { project: { id: string; name: string } };
-  return body.project.id;
+  const body = (await response.json()) as { repository: { id: string; name: string } };
+  return body.repository.id;
 }
 
 describe("catalog API integration", () => {
@@ -73,14 +73,14 @@ describe("catalog API integration", () => {
     }
 
     const suffix = Date.now().toString(36);
-    const projectName = `cat${suffix}`.slice(0, 20);
-    const projectId = await createProject(sessionId, projectName);
-    if (!projectId) {
+    const repositoryName = `cat${suffix}`.slice(0, 20);
+    const repositoryId = await createRepository(sessionId, repositoryName);
+    if (!repositoryId) {
       return;
     }
 
     const catalogResponse = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/catalog`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/catalog`,
       {
         headers: cookieHeader(SESSION_COOKIE, sessionId),
       },
@@ -88,12 +88,12 @@ describe("catalog API integration", () => {
 
     expect(catalogResponse.status).toBe(200);
     const catalog = (await catalogResponse.json()) as {
-      repositories: { name: string; tagCount: number }[];
+      images: { name: string; tagCount: number }[];
     };
-    expect(Array.isArray(catalog.repositories)).toBe(true);
+    expect(Array.isArray(catalog.images)).toBe(true);
 
     const tagsResponse = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${projectId}/images/hello/tags`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags`,
       {
         headers: cookieHeader(SESSION_COOKIE, sessionId),
       },

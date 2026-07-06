@@ -2,16 +2,16 @@
 
 export type SystemRole = "admin" | "user";
 
-export type ProjectRole = "guest" | "developer" | "maintainer" | "admin";
+export type RepositoryRole = "guest" | "developer" | "maintainer" | "admin";
 
-export type ProjectAction =
+export type RepositoryAction =
   | "pull"
   | "push"
   | "delete"
   | "manage_members"
-  | "delete_project"
-  | "view_project"
-  | "update_project"
-  | "create_project";
+  | "delete_repository"
+  | "view_repository"
+  | "update_repository"
+  | "create_repository";
 
 export type RegistryScopeAction = "pull" | "push" | "delete";

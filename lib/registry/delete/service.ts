@@ -15,8 +15,8 @@ type TagsPage = {
   tags?: string[];
 };
 
-function fullRepoName(projectName: string, repoName: string): string {
-  return `${projectName}/${repoName}`;
+function fullImageName(repositoryName: string, imageName: string): string {
+  return `${repositoryName}/${imageName}`;
 }
 
 async function fetchAllTagNames(
@@ -44,14 +44,14 @@ export type DeleteTagResult = {
 
 export async function deleteTag(
   user: RegistryAuthUser,
-  projectName: string,
-  repoName: string,
+  repositoryName: string,
+  imageName: string,
   tag: string,
 ): Promise<DeleteTagResult> {
-  const token = await issueUserRegistryDeleteToken(user, projectName, repoName);
-  const fullName = fullRepoName(projectName, repoName);
+  const token = await issueUserRegistryDeleteToken(user, repositoryName, imageName);
+  const fullName = fullImageName(repositoryName, imageName);
 
-  const siblingsResponse = await getTagSiblings(user, projectName, repoName, tag);
+  const siblingsResponse = await getTagSiblings(user, repositoryName, imageName, tag);
   const siblings = siblingsResponse.siblings.map((entry) => entry.name);
 
   await deleteManifestReference(fullName, tag, token);
@@ -59,7 +59,7 @@ export async function deleteTag(
   await writeAuditLog({
     userId: user.id,
     action: "tag.delete",
-    resource: `project:${projectName}/${repoName}:tag:${tag}`,
+    resource: `repository:${repositoryName}/${imageName}:tag:${tag}`,
   });
 
   return { tag, siblings };
@@ -72,12 +72,12 @@ export type BulkDeleteResult = {
 
 export async function bulkDeleteTags(
   user: RegistryAuthUser,
-  projectName: string,
-  repoName: string,
+  repositoryName: string,
+  imageName: string,
   tags: string[],
 ): Promise<BulkDeleteResult> {
-  const token = await issueUserRegistryDeleteToken(user, projectName, repoName);
-  const fullName = fullRepoName(projectName, repoName);
+  const token = await issueUserRegistryDeleteToken(user, repositoryName, imageName);
+  const fullName = fullImageName(repositoryName, imageName);
 
   const uniqueTags = [...new Set(tags.map((entry) => entry.trim()).filter(Boolean))];
   const digestToTags = new Map<string, string[]>();
@@ -106,25 +106,25 @@ export async function bulkDeleteTags(
     await writeAuditLog({
       userId: user.id,
       action: "tag.bulk_delete",
-      resource: `project:${projectName}/${repoName}:tags:${deletedTags.join(",")}`,
+      resource: `repository:${repositoryName}/${imageName}:tags:${deletedTags.join(",")}`,
     });
   }
 
   return { deletedTags, deletedDigests };
 }
 
-export type DeleteRepositoryResult = {
+export type DeleteImageResult = {
   deletedTags: string[];
   deletedDigests: string[];
 };
 
-export async function deleteRepository(
+export async function deleteImage(
   user: RegistryAuthUser,
-  projectName: string,
-  repoName: string,
-): Promise<DeleteRepositoryResult> {
-  const token = await issueUserRegistryDeleteToken(user, projectName, repoName);
-  const fullName = fullRepoName(projectName, repoName);
+  repositoryName: string,
+  imageName: string,
+): Promise<DeleteImageResult> {
+  const token = await issueUserRegistryDeleteToken(user, repositoryName, imageName);
+  const fullName = fullImageName(repositoryName, imageName);
 
   const allTags = await fetchAllTagNames(fullName, token);
   const digestSet = new Set<string>();
@@ -146,7 +146,7 @@ export async function deleteRepository(
     await writeAuditLog({
       userId: user.id,
       action: "repository.delete",
-      resource: `project:${projectName}/${repoName}`,
+      resource: `repository:${repositoryName}/${imageName}`,
     });
   }
 

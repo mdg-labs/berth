@@ -19,13 +19,13 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Kbd } from "@/components/ui/kbd";
-import { useProjectByName, useProjectsList } from "@/lib/hooks/use-project";
+import { useRepositoryByName, useRepositoriesList } from "@/lib/hooks/use-repository";
 import { apiFetch } from "@/lib/api/client";
 import type { CatalogResponse } from "@/lib/registry/client/types";
 import { imagePathSegments } from "@/lib/catalog/format";
 
 type CommandPaletteProps = {
-  currentProject?: string;
+  currentRepository?: string;
 };
 
 type PaletteItem = {
@@ -35,47 +35,47 @@ type PaletteItem = {
   group: string;
 };
 
-export function CommandPalette({ currentProject }: CommandPaletteProps) {
+export function CommandPalette({ currentRepository }: CommandPaletteProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const projectsQuery = useProjectsList();
-  const projectQuery = useProjectByName(currentProject ?? "");
+  const repositoriesQuery = useRepositoriesList();
+  const repositoryQuery = useRepositoryByName(currentRepository ?? "");
 
   const catalogQuery = useQuery({
-    queryKey: ["catalog", projectQuery.data?.id],
+    queryKey: ["catalog", repositoryQuery.data?.id],
     queryFn: () =>
       apiFetch<CatalogResponse>(
-        `/api/projects/${projectQuery.data!.id}/catalog`,
+        `/api/repositories/${repositoryQuery.data!.id}/catalog`,
       ),
-    enabled: Boolean(currentProject && projectQuery.data?.id),
+    enabled: Boolean(currentRepository && repositoryQuery.data?.id),
     staleTime: 30_000,
   });
 
   const items = useMemo<PaletteItem[]>(() => {
     const palette: PaletteItem[] = [];
 
-    for (const project of projectsQuery.data?.projects ?? []) {
+    for (const repository of repositoriesQuery.data?.repositories ?? []) {
       palette.push({
-        id: `project:${project.id}`,
-        label: project.name,
-        href: `/p/${project.name}`,
-        group: "Projects",
+        id: `repository:${repository.id}`,
+        label: repository.name,
+        href: `/r/${repository.name}`,
+        group: "Repositories",
       });
     }
 
-    if (currentProject && catalogQuery.data) {
-      for (const repo of catalogQuery.data.repositories) {
+    if (currentRepository && catalogQuery.data) {
+      for (const image of catalogQuery.data.images) {
         palette.push({
-          id: `repo:${currentProject}/${repo.name}`,
-          label: repo.name,
-          href: `/p/${currentProject}/i/${imagePathSegments(repo.name)}`,
-          group: `Repositories in ${currentProject}`,
+          id: `image:${currentRepository}/${image.name}`,
+          label: image.name,
+          href: `/r/${currentRepository}/i/${imagePathSegments(image.name)}`,
+          group: `Images in ${currentRepository}`,
         });
       }
     }
 
     return palette;
-  }, [catalogQuery.data, currentProject, projectsQuery.data?.projects]);
+  }, [catalogQuery.data, currentRepository, repositoriesQuery.data?.repositories]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -128,13 +128,13 @@ export function CommandPalette({ currentProject }: CommandPaletteProps) {
               router.push(selected.href);
             }}
           >
-            <CommandInput placeholder="Jump to project or repository…" />
+            <CommandInput placeholder="Jump to repository or image…" />
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
-                <CommandGroupLabel>Projects</CommandGroupLabel>
+                <CommandGroupLabel>Repositories</CommandGroupLabel>
                 {items
-                  .filter((item) => item.group === "Projects")
+                  .filter((item) => item.group === "Repositories")
                   .map((item) => (
                     <CommandItem
                       key={item.id}
@@ -149,13 +149,13 @@ export function CommandPalette({ currentProject }: CommandPaletteProps) {
                     </CommandItem>
                   ))}
               </CommandGroup>
-              {currentProject ? (
+              {currentRepository ? (
                 <CommandGroup>
                   <CommandGroupLabel>
-                    Repositories in {currentProject}
+                    Images in {currentRepository}
                   </CommandGroupLabel>
                   {items
-                    .filter((item) => item.group.startsWith("Repositories"))
+                    .filter((item) => item.group.startsWith("Images"))
                     .map((item) => (
                       <CommandItem
                         key={item.id}

@@ -10,9 +10,9 @@ import { BreadcrumbNav } from "@/components/layout/breadcrumb-nav";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-function currentProjectFromPath(pathname: string): string | undefined {
+function currentRepositoryFromPath(pathname: string): string | undefined {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments[0] === "p" && segments[1]) {
+  if (segments[0] === "r" && segments[1]) {
     return decodeURIComponent(segments[1]);
   }
   return undefined;
@@ -20,7 +20,7 @@ function currentProjectFromPath(pathname: string): string | undefined {
 
 export function PortalHeader() {
   const pathname = usePathname();
-  const currentProject = currentProjectFromPath(pathname);
+  const currentRepository = currentRepositoryFromPath(pathname);
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
@@ -30,7 +30,7 @@ export function PortalHeader() {
         <BreadcrumbNav />
       </div>
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-        <CommandPalette currentProject={currentProject} />
+        <CommandPalette currentRepository={currentRepository} />
         <ThemeToggle />
       </div>
     </header>

@@ -6,8 +6,8 @@ import {
   roleAllowsScopeAction,
 } from "./matrix";
 import type {
-  ProjectAction,
-  ProjectRole,
+  RepositoryAction,
+  RepositoryRole,
   RegistryScopeAction,
   SystemRole,
 } from "./types";
@@ -16,10 +16,10 @@ export function isSystemAdmin(systemRole: SystemRole): boolean {
   return systemRole === "admin";
 }
 
-export function canPerformProjectAction(
+export function canPerformRepositoryAction(
   systemRole: SystemRole,
-  projectRole: ProjectRole | null,
-  action: ProjectAction,
+  projectRole: RepositoryRole | null,
+  action: RepositoryAction,
 ): boolean {
   if (isSystemAdmin(systemRole)) {
     return true;
@@ -30,7 +30,7 @@ export function canPerformProjectAction(
 
 export function filterScopeActionsForRole(
   actions: string[],
-  role: ProjectRole | null,
+  role: RepositoryRole | null,
 ): string[] {
   const filtered: string[] = [];
 

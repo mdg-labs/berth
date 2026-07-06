@@ -40,7 +40,7 @@ export function ReactivateAccountCard() {
         title: "Account reactivated",
         description: "Your account has been restored.",
       });
-      router.replace("/projects");
+      router.replace("/repositories");
     },
     onError: () => {
       toastManager.add({

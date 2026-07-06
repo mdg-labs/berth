@@ -39,12 +39,12 @@ import {
   formatDigest,
   imagePathSegments,
 } from "@/lib/catalog/format";
-import { useProjectByName } from "@/lib/hooks/use-project";
+import { useRepositoryByName } from "@/lib/hooks/use-repository";
 import type { SiblingsResponse, TagDetail } from "@/lib/registry/client/types";
 
 type TagDetailPageProps = {
-  projectName: string;
-  repoName: string;
+  repositoryName: string;
+  imageName: string;
   tag: string;
 };
 
@@ -62,53 +62,53 @@ function DetailSkeleton() {
   );
 }
 
-function encodeRepoPath(repoName: string): string {
-  return repoName
+function encodeRepoPath(imageName: string): string {
+  return imageName
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
 }
 
-export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps) {
+export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const authQuery = useAuthUser();
-  const projectQuery = useProjectByName(projectName);
+  const repositoryQuery = useRepositoryByName(repositoryName);
   const copyButtonRef = useRef<HTMLButtonElement>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [showGcInfo, setShowGcInfo] = useState(false);
 
-  const encodedRepo = encodeRepoPath(repoName);
+  const encodedRepo = encodeRepoPath(imageName);
   const encodedTag = encodeURIComponent(tag);
 
   const detailQuery = useQuery({
-    queryKey: ["tag-detail", projectQuery.data?.id, repoName, tag],
+    queryKey: ["tag-detail", repositoryQuery.data?.id, imageName, tag],
     queryFn: () =>
       apiFetch<TagDetailResponse>(
-        `/api/projects/${projectQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}`,
+        `/api/repositories/${repositoryQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}`,
       ),
-    enabled: Boolean(projectQuery.data?.id),
+    enabled: Boolean(repositoryQuery.data?.id),
     refetchInterval: 30_000,
   });
 
   const siblingsQuery = useQuery({
-    queryKey: ["tag-siblings", projectQuery.data?.id, repoName, tag],
+    queryKey: ["tag-siblings", repositoryQuery.data?.id, imageName, tag],
     queryFn: () =>
       apiFetch<SiblingsResponse>(
-        `/api/projects/${projectQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}/siblings`,
+        `/api/repositories/${repositoryQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}/siblings`,
       ),
-    enabled: Boolean(projectQuery.data?.id && detailQuery.data),
+    enabled: Boolean(repositoryQuery.data?.id && detailQuery.data),
   });
 
   const canDelete = canDeleteRegistryContent(
     authQuery.data?.user.systemRole ?? "user",
-    projectQuery.data?.role ?? null,
+    repositoryQuery.data?.role ?? null,
   );
 
   const deleteMutation = useMutation({
     mutationFn: () =>
       apiFetch<{ deleted: boolean }>(
-        `/api/projects/${projectQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}`,
+        `/api/repositories/${repositoryQuery.data!.id}/images/${encodedRepo}/tags/${encodedTag}`,
         { method: "DELETE" },
       ),
     onSuccess: () => {
@@ -118,9 +118,9 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
       toastManager.add({
         type: "success",
         title: "Tag deleted",
-        description: `${tag} was removed from the repository.`,
+        description: `${tag} was removed from the image.`,
       });
-      router.push(`/p/${projectName}/i/${imagePathSegments(repoName)}`);
+      router.push(`/r/${repositoryName}/i/${imagePathSegments(imageName)}`);
     },
     onError: (error) => {
       toastManager.add({
@@ -133,8 +133,8 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
 
   const pullCommand = buildPullCommand(
     typeof window !== "undefined" ? window.location.origin : "localhost:8080",
-    projectName,
-    repoName,
+    repositoryName,
+    imageName,
     tag,
   );
 
@@ -152,8 +152,8 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
     });
   }
 
-  const isLoading = projectQuery.isLoading || detailQuery.isLoading;
-  const error = projectQuery.error ?? detailQuery.error;
+  const isLoading = repositoryQuery.isLoading || detailQuery.isLoading;
+  const error = repositoryQuery.error ?? detailQuery.error;
   const detail = detailQuery.data?.tag;
   const siblings = siblingsQuery.data?.siblings.map((entry) => entry.name) ?? [];
 
@@ -165,7 +165,7 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
         <ErrorAlert
           message={error instanceof Error ? error.message : "Failed to load tag"}
           onRetry={() => {
-            void projectQuery.refetch();
+            void repositoryQuery.refetch();
             void detailQuery.refetch();
           }}
         />
@@ -179,7 +179,7 @@ export function TagDetailPage({ projectName, repoName, tag }: TagDetailPageProps
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">{detail.name}</h1>
               <p className="text-sm text-muted-foreground">
-                {projectName}/{repoName}
+                {repositoryName}/{imageName}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

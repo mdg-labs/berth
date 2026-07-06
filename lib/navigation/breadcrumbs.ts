@@ -14,12 +14,12 @@ function titleCase(segment: string): string {
     .join(" ");
 }
 
-function parseProjectRepositoryRoute(rest: string[]): {
+function parseRepositoryImageRoute(rest: string[]): {
   kind: "list";
-  repoName: string;
+  imageName: string;
 } | {
   kind: "detail";
-  repoName: string;
+  imageName: string;
   tag: string;
 } | null {
   if (rest.length === 0) {
@@ -31,44 +31,44 @@ function parseProjectRepositoryRoute(rest: string[]): {
   if (tagMarkerIndex > 0 && tagMarkerIndex === rest.length - 2) {
     return {
       kind: "detail",
-      repoName: rest.slice(0, tagMarkerIndex).join("/"),
+      imageName: rest.slice(0, tagMarkerIndex).join("/"),
       tag: rest[tagMarkerIndex + 1]!,
     };
   }
 
   return {
     kind: "list",
-    repoName: rest.join("/"),
+    imageName: rest.join("/"),
   };
 }
 
-function buildProjectBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
+function buildRepositoryBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
   if (segments.length < 2) {
-    return [{ label: "Projects", href: "/projects" }];
+    return [{ label: "Repositories", href: "/repositories" }];
   }
 
-  const project = decodeURIComponent(segments[1]!);
-  const projectPath = `/p/${encodeURIComponent(project)}`;
+  const repository = decodeURIComponent(segments[1]!);
+  const repositoryPath = `/r/${encodeURIComponent(repository)}`;
   const items: BreadcrumbItemData[] = [
-    { label: "Projects", href: "/projects" },
+    { label: "Repositories", href: "/repositories" },
   ];
 
   const tail = segments.slice(2);
 
   if (tail.length === 0) {
-    items.push({ label: titleCase(project) });
+    items.push({ label: titleCase(repository) });
     return items;
   }
 
   if (tail[0] === "settings" && tail.length === 1) {
-    items.push({ label: titleCase(project), href: projectPath });
+    items.push({ label: titleCase(repository), href: repositoryPath });
     items.push({ label: "Settings" });
     return items;
   }
 
   if (tail[0] === "i" || tail[0] === "r") {
     const imageSegments = tail.slice(1).map(decodeURIComponent);
-    items.push({ label: titleCase(project), href: projectPath });
+    items.push({ label: titleCase(repository), href: repositoryPath });
 
     if (imageSegments.length === 0) {
       items.push({ label: "Images" });
@@ -77,36 +77,36 @@ function buildProjectBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
 
     if (imageSegments.at(-1) === "settings" && imageSegments.length >= 2) {
       const imageName = imageSegments.slice(0, -1).join("/");
-      const imageHref = `/p/${encodeURIComponent(project)}/i/${imagePathSegments(imageName)}`;
+      const imageHref = `/r/${encodeURIComponent(repository)}/i/${imagePathSegments(imageName)}`;
       items.push({ label: imageName, href: imageHref });
       items.push({ label: "Settings" });
       return items;
     }
 
-    const parsed = parseProjectRepositoryRoute(imageSegments);
+    const parsed = parseRepositoryImageRoute(imageSegments);
     if (!parsed) {
       items.push({ label: "Images" });
       return items;
     }
 
-    const imageHref = `/p/${encodeURIComponent(project)}/i/${imagePathSegments(parsed.repoName)}`;
+    const imageHref = `/r/${encodeURIComponent(repository)}/i/${imagePathSegments(parsed.imageName)}`;
 
     if (parsed.kind === "detail") {
-      items.push({ label: parsed.repoName, href: imageHref });
+      items.push({ label: parsed.imageName, href: imageHref });
       items.push({ label: parsed.tag });
       return items;
     }
 
-    items.push({ label: parsed.repoName });
+    items.push({ label: parsed.imageName });
     return items;
   }
 
-  items.push({ label: titleCase(project), href: projectPath });
+  items.push({ label: titleCase(repository), href: repositoryPath });
   for (const [index, segment] of tail.entries()) {
     const isLast = index === tail.length - 1;
     const href = isLast
       ? undefined
-      : `${projectPath}/${tail.slice(0, index + 1).join("/")}`;
+      : `${repositoryPath}/${tail.slice(0, index + 1).join("/")}`;
     items.push({
       label: titleCase(decodeURIComponent(segment)),
       href,
@@ -123,8 +123,8 @@ export function buildBreadcrumbItems(pathname: string): BreadcrumbItemData[] {
     return [];
   }
 
-  if (segments[0] === "p") {
-    return buildProjectBreadcrumbs(segments);
+  if (segments[0] === "r") {
+    return buildRepositoryBreadcrumbs(segments);
   }
 
   if (segments[0] === "admin") {

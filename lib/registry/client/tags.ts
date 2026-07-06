@@ -23,8 +23,8 @@ export type TagsQuery = {
   pageSize?: number;
 };
 
-function fullRepoName(projectName: string, repoName: string): string {
-  return `${projectName}/${repoName}`;
+function fullImageName(repositoryName: string, imageName: string): string {
+  return `${repositoryName}/${imageName}`;
 }
 
 async function fetchAllTagNames(
@@ -63,14 +63,46 @@ function filterTags(tags: string[], search?: string): string[] {
   return tags.filter((tag) => tag.toLowerCase().includes(query));
 }
 
-export async function listRepositoryTags(
+export function buildSiblingMapForTags(
+  tagDigests: Array<{ name: string; digest: string }>,
+): Map<string, string[]> {
+  const tagsByDigest = new Map<string, string[]>();
+
+  for (const { name, digest } of tagDigests) {
+    if (!digest) {
+      continue;
+    }
+
+    const group = tagsByDigest.get(digest) ?? [];
+    group.push(name);
+    tagsByDigest.set(digest, group);
+  }
+
+  const siblingsByTag = new Map<string, string[]>();
+
+  for (const { name, digest } of tagDigests) {
+    if (!digest) {
+      siblingsByTag.set(name, []);
+      continue;
+    }
+
+    siblingsByTag.set(
+      name,
+      (tagsByDigest.get(digest) ?? []).filter((candidate) => candidate !== name),
+    );
+  }
+
+  return siblingsByTag;
+}
+
+export async function listImageTags(
   user: RegistryAuthUser,
-  projectName: string,
-  repoName: string,
+  repositoryName: string,
+  imageName: string,
   query: TagsQuery = {},
 ): Promise<TagsListResponse> {
-  const token = await issueUserRegistryToken(user, projectName, repoName);
-  const fullName = fullRepoName(projectName, repoName);
+  const token = await issueUserRegistryToken(user, repositoryName, imageName);
+  const fullName = fullImageName(repositoryName, imageName);
 
   const allTags = await fetchAllTagNames(fullName, token);
   const filtered = filterTags(allTags, query.search);
@@ -79,19 +111,34 @@ export async function listRepositoryTags(
   const page = Math.max(1, query.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 25));
   const start = (page - 1) * pageSize;
+
+  const manifestEntries = await Promise.all(
+    sorted.map(async (tagName) => {
+      const manifest = await getManifestDigest(fullName, tagName, token);
+      return {
+        name: tagName,
+        digest: manifest?.digest ?? "",
+        size: manifest?.size ?? 0,
+      };
+    }),
+  );
+
+  const siblingsByTag = buildSiblingMapForTags(manifestEntries);
+  const manifestByTag = new Map(
+    manifestEntries.map((entry) => [entry.name, entry] as const),
+  );
   const pageTags = sorted.slice(start, start + pageSize);
 
-  const summaries: TagSummary[] = [];
-
-  for (const tagName of pageTags) {
-    const manifest = await getManifestDigest(fullName, tagName, token);
-    summaries.push({
+  const summaries: TagSummary[] = pageTags.map((tagName) => {
+    const entry = manifestByTag.get(tagName);
+    return {
       name: tagName,
-      digest: manifest?.digest ?? "",
-      size: manifest?.size ?? 0,
+      digest: entry?.digest ?? "",
+      size: entry?.size ?? 0,
       pushedAt: null,
-    });
-  }
+      siblings: siblingsByTag.get(tagName) ?? [],
+    };
+  });
 
   return {
     tags: summaries,
@@ -103,12 +150,12 @@ export async function listRepositoryTags(
 
 export async function getTagDetail(
   user: RegistryAuthUser,
-  projectName: string,
-  repoName: string,
+  repositoryName: string,
+  imageName: string,
   tag: string,
 ): Promise<TagDetail | null> {
-  const token = await issueUserRegistryToken(user, projectName, repoName);
-  const fullName = fullRepoName(projectName, repoName);
+  const token = await issueUserRegistryToken(user, repositoryName, imageName);
+  const fullName = fullImageName(repositoryName, imageName);
 
   try {
     const resolved = await resolveManifest(fullName, tag, token);
@@ -129,12 +176,12 @@ export async function getTagDetail(
 
 export async function getTagSiblings(
   user: RegistryAuthUser,
-  projectName: string,
-  repoName: string,
+  repositoryName: string,
+  imageName: string,
   tag: string,
 ): Promise<SiblingsResponse> {
-  const token = await issueUserRegistryToken(user, projectName, repoName);
-  const fullName = fullRepoName(projectName, repoName);
+  const token = await issueUserRegistryToken(user, repositoryName, imageName);
+  const fullName = fullImageName(repositoryName, imageName);
 
   const target = await getManifestDigest(fullName, tag, token);
   if (!target?.digest) {

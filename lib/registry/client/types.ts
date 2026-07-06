@@ -1,14 +1,16 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-export type CatalogRepository = {
+export type CatalogImage = {
   name: string;
   tagCount: number;
+  pullCount?: number;
   anonymousPull?: "inherit" | "allow" | "deny";
   effectiveAnonymousPull?: boolean;
 };
 
 export type CatalogResponse = {
-  repositories: CatalogRepository[];
+  images: CatalogImage[];
+  repositoryPullCount?: number;
 };
 
 export type TagSummary = {
@@ -16,6 +18,8 @@ export type TagSummary = {
   digest: string;
   size: number;
   pushedAt: string | null;
+  siblings: string[];
+  pullCount?: number;
 };
 
 export type TagsListResponse = {

@@ -4,8 +4,8 @@ export const BULK_DELETE_CONFIRM_THRESHOLD = 5;
 
 export const BULK_DELETE_CONFIRM_PHRASE = "delete tags";
 
-export function repositoryDeleteConfirmPhrase(repoName: string): string {
-  return `delete ${repoName}`;
+export function imageDeleteConfirmPhrase(imageName: string): string {
+  return `delete ${imageName}`;
 }
 
 export { GC_INFO_MESSAGE } from "@/lib/registry/delete/constants";

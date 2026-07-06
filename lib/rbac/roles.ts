@@ -3,62 +3,62 @@
 import { and, eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { projectMembers, projects } from "@/lib/db/schema";
+import { repositoryMembers, repositories } from "@/lib/db/schema";
 
-import type { ProjectRole, SystemRole } from "./types";
+import type { RepositoryRole, SystemRole } from "./types";
 
-export type ProjectContext = {
+export type RepositoryContext = {
   id: string;
   name: string;
   isPublic: boolean;
 };
 
-export async function getProjectById(
-  projectId: string,
-): Promise<ProjectContext | null> {
+export async function getRepositoryById(
+  repositoryId: string,
+): Promise<RepositoryContext | null> {
   const db = getDb();
   const [row] = await db
     .select({
-      id: projects.id,
-      name: projects.name,
-      isPublic: projects.isPublic,
+      id: repositories.id,
+      name: repositories.name,
+      isPublic: repositories.isPublic,
     })
-    .from(projects)
-    .where(eq(projects.id, projectId))
+    .from(repositories)
+    .where(eq(repositories.id, repositoryId))
     .limit(1);
 
   return row ?? null;
 }
 
-export async function getProjectByName(
-  projectName: string,
-): Promise<ProjectContext | null> {
+export async function getRepositoryByName(
+  repositoryName: string,
+): Promise<RepositoryContext | null> {
   const db = getDb();
   const [row] = await db
     .select({
-      id: projects.id,
-      name: projects.name,
-      isPublic: projects.isPublic,
+      id: repositories.id,
+      name: repositories.name,
+      isPublic: repositories.isPublic,
     })
-    .from(projects)
-    .where(eq(projects.name, projectName))
+    .from(repositories)
+    .where(eq(repositories.name, repositoryName))
     .limit(1);
 
   return row ?? null;
 }
 
-export async function getProjectMemberRole(
+export async function getRepositoryMemberRole(
   userId: string,
-  projectId: string,
-): Promise<ProjectRole | null> {
+  repositoryId: string,
+): Promise<RepositoryRole | null> {
   const db = getDb();
   const [row] = await db
-    .select({ role: projectMembers.role })
-    .from(projectMembers)
+    .select({ role: repositoryMembers.role })
+    .from(repositoryMembers)
     .where(
       and(
-        eq(projectMembers.projectId, projectId),
-        eq(projectMembers.userId, userId),
+        eq(repositoryMembers.repositoryId, repositoryId),
+        eq(repositoryMembers.userId, userId),
       ),
     )
     .limit(1);
@@ -66,21 +66,21 @@ export async function getProjectMemberRole(
   return row?.role ?? null;
 }
 
-export async function getEffectiveProjectRole(
+export async function getEffectiveRepositoryRole(
   userId: string,
   systemRole: SystemRole,
-  project: ProjectContext,
-): Promise<ProjectRole | "bypass" | null> {
+  repository: RepositoryContext,
+): Promise<RepositoryRole | "bypass" | null> {
   if (systemRole === "admin") {
     return "bypass";
   }
 
-  const memberRole = await getProjectMemberRole(userId, project.id);
+  const memberRole = await getRepositoryMemberRole(userId, repository.id);
   if (memberRole) {
     return memberRole;
   }
 
-  if (project.isPublic) {
+  if (repository.isPublic) {
     return "guest";
   }
 

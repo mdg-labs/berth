@@ -22,7 +22,7 @@ export function ChangePasswordForm() {
       <ChangePasswordSection
         embedded
         requireCurrentPassword={false}
-        onSuccess={() => router.replace("/projects")}
+        onSuccess={() => router.replace("/repositories")}
       />
     </div>
   );

@@ -16,10 +16,12 @@ export function PortalShell({ children }: PortalShellProps) {
     <TooltipProvider>
       <SidebarProvider>
         <PortalSidebar />
-        <SidebarInset>
+        <SidebarInset className="min-h-0">
           <PortalHeader />
-          <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
-            <div className="w-full min-w-0">{children}</div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
+            <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+              {children}
+            </div>
           </div>
         </SidebarInset>
       </SidebarProvider>

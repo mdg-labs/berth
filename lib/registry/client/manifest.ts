@@ -55,12 +55,12 @@ export type ResolvedManifest = {
 };
 
 export async function resolveManifest(
-  fullRepoName: string,
+  fullImageName: string,
   tag: string,
   token: string,
 ): Promise<ResolvedManifest> {
   const headResponse = await registryFetch(
-    `/v2/${fullRepoName}/manifests/${encodeURIComponent(tag)}`,
+    `/v2/${fullImageName}/manifests/${encodeURIComponent(tag)}`,
     token,
     {
       method: "HEAD",
@@ -84,7 +84,7 @@ export async function resolveManifest(
   }
 
   const getResponse = await registryFetch(
-    `/v2/${fullRepoName}/manifests/${digest}`,
+    `/v2/${fullImageName}/manifests/${digest}`,
     token,
     {
       headers: { Accept: MANIFEST_ACCEPT },
@@ -103,7 +103,7 @@ export async function resolveManifest(
   }
 
   return resolveImageManifest(
-    fullRepoName,
+    fullImageName,
     digest,
     mediaType,
     manifest as ImageManifest,
@@ -143,7 +143,7 @@ function resolveManifestList(
 }
 
 async function resolveImageManifest(
-  fullRepoName: string,
+  fullImageName: string,
   digest: string,
   mediaType: string,
   manifest: ImageManifest,
@@ -162,7 +162,7 @@ async function resolveImageManifest(
 
   if (manifest.config?.digest) {
     const config = await fetchConfigBlob(
-      fullRepoName,
+      fullImageName,
       manifest.config.digest,
       token,
     );
@@ -183,12 +183,12 @@ async function resolveImageManifest(
 }
 
 async function fetchConfigBlob(
-  fullRepoName: string,
+  fullImageName: string,
   digest: string,
   token: string,
 ): Promise<ImageConfig | null> {
   const response = await registryFetch(
-    `/v2/${fullRepoName}/blobs/${digest}`,
+    `/v2/${fullImageName}/blobs/${digest}`,
     token,
   );
 
@@ -209,12 +209,12 @@ function parseHistory(config: ImageConfig): HistoryEntry[] {
 }
 
 export async function getManifestDigest(
-  fullRepoName: string,
+  fullImageName: string,
   tag: string,
   token: string,
 ): Promise<{ digest: string; size: number } | null> {
   const response = await registryFetch(
-    `/v2/${fullRepoName}/manifests/${encodeURIComponent(tag)}`,
+    `/v2/${fullImageName}/manifests/${encodeURIComponent(tag)}`,
     token,
     {
       method: "HEAD",
@@ -240,12 +240,12 @@ export async function getManifestDigest(
 }
 
 export async function deleteManifestReference(
-  fullRepoName: string,
+  fullImageName: string,
   reference: string,
   token: string,
 ): Promise<void> {
   const response = await registryFetch(
-    `/v2/${fullRepoName}/manifests/${encodeURIComponent(reference)}`,
+    `/v2/${fullImageName}/manifests/${encodeURIComponent(reference)}`,
     token,
     {
       method: "DELETE",

@@ -12,8 +12,8 @@ import { CSRF_HEADER, CSRF_VALUE } from "@/lib/csrf/constants";
 describe("csrf", () => {
   it("requires CSRF on mutating /api routes", () => {
     expect(requiresCsrfHeader("POST", "/api/auth/login")).toBe(true);
-    expect(requiresCsrfHeader("PATCH", "/api/projects/1")).toBe(true);
-    expect(requiresCsrfHeader("DELETE", "/api/projects/1")).toBe(true);
+    expect(requiresCsrfHeader("PATCH", "/api/repositories/1")).toBe(true);
+    expect(requiresCsrfHeader("DELETE", "/api/repositories/1")).toBe(true);
   });
 
   it("exempts token endpoint and /v2 proxy", () => {

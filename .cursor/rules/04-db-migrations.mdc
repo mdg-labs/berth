@@ -1,0 +1,39 @@
+---
+description: Drizzle migrations — schema-first only; never hand-write SQL or journal entries
+alwaysApply: true
+---
+
+# Database migrations (Drizzle)
+
+Berth uses **Drizzle Kit** with a tracked migration journal (`drizzle/meta/_journal.json`) and snapshots. Hand-written migrations break the chain and are **silently skipped** at apply time.
+
+## Required workflow
+
+1. **Edit schema only** — change `lib/db/schema.ts` (tables, columns, enums, indexes, FKs).
+2. **Generate** — run `pnpm db:generate` (alias: `drizzle-kit generate`).
+3. **Review** the generated file under `drizzle/` (do not rewrite from scratch).
+4. **Apply locally** — run `pnpm db:migrate` and confirm it succeeds.
+
+## Forbidden
+
+- Creating or editing `drizzle/*.sql` migration files by hand
+- Manually adding entries to `drizzle/meta/_journal.json`
+- Manually creating or editing `drizzle/meta/*_snapshot.json`
+- Renaming migration tags without regenerating through Drizzle Kit
+- Skipping `db:generate` because the SQL “looks obvious”
+
+## If generation looks wrong
+
+- Do **not** hand-fix SQL as the default fix.
+- Check that `drizzle/meta/` snapshots match applied migrations (journal + DB state).
+- Prefer resetting/rebasing the migration chain with the user’s approval over patching SQL by hand.
+
+## Scope in commits
+
+When schema changes are part of a task, stage:
+
+- `lib/db/schema.ts`
+- Generated `drizzle/*.sql`
+- Updated `drizzle/meta/_journal.json` and `drizzle/meta/*_snapshot.json`
+
+Never commit schema changes without the matching generated migration artifacts.

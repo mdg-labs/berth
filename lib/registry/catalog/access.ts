@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
 import { apiError } from "@/lib/api/errors";
-import { getProjectDetail, type ProjectDetail } from "@/lib/projects/service";
+import { getRepositoryDetail, type RepositoryDetail } from "@/lib/repositories/service";
 import { RegistryAccessError } from "@/lib/registry/client/auth";
 import { RegistryUpstreamError } from "@/lib/registry/client/fetch";
 import { getSessionUserFromRequest } from "@/lib/session/request";
@@ -14,9 +14,9 @@ type CatalogAuthUser = {
   systemRole: "admin" | "user";
 };
 
-type ProjectAccessResult =
+type RepositoryAccessResult =
   | { error: NextResponse }
-  | { user: CatalogAuthUser; project: ProjectDetail };
+  | { user: CatalogAuthUser; repository: RepositoryDetail };
 
 export async function requireCatalogUser(request: NextRequest): Promise<
   | { error: NextResponse }
@@ -35,23 +35,19 @@ export async function requireCatalogUser(request: NextRequest): Promise<
   };
 }
 
-export async function requireProjectAccess(
+export async function requireRepositoryAccess(
   request: NextRequest,
-  projectId: string,
-): Promise<ProjectAccessResult> {
+  repositoryId: string,
+): Promise<RepositoryAccessResult> {
   const auth = await requireCatalogUser(request);
   if ("error" in auth) {
     return auth;
   }
 
-  const project = await getProjectDetail(
-    projectId,
-    auth.user.id,
-    auth.user.systemRole,
-  );
+  const repository = await getRepositoryDetail(repositoryId, auth.user);
 
-  if (!project) {
-    return { error: apiError("not_found", "Project not found", 404) };
+  if (!repository) {
+    return { error: apiError("not_found", "Repository not found", 404) };
   }
 
   return {
@@ -60,18 +56,18 @@ export async function requireProjectAccess(
       email: auth.user.email,
       systemRole: auth.user.systemRole,
     },
-    project,
+    repository,
   };
 }
 
-export function joinRepoName(segments: string[]): string {
+export function joinImageName(segments: string[]): string {
   return segments.map(decodeURIComponent).join("/");
 }
 
 export function handleRegistryRouteError(error: unknown) {
   if (error instanceof RegistryAccessError) {
-    if (error.code === "project_not_found") {
-      return apiError("project_not_found", error.message, 403);
+    if (error.code === "repository_not_found") {
+      return apiError("repository_not_found", error.message, 403);
     }
     return apiError("forbidden", error.message, 403);
   }

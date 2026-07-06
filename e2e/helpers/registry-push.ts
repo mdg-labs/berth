@@ -80,13 +80,13 @@ async function uploadBlob(
 
 /** Push a minimal OCI manifest via the registry API (no Docker CLI required). */
 export async function pushHelloTag(
-  projectName: string,
-  repoName: string,
+  repositoryName: string,
+  imageName: string,
   tag: string,
   credentials: { email: string; password: string },
 ): Promise<void> {
   const basicAuth = `Basic ${Buffer.from(`${credentials.email}:${credentials.password}`).toString("base64")}`;
-  const repository = `${projectName}/${repoName}`;
+  const repository = `${repositoryName}/${imageName}`;
   const scope = `repository:${repository}:push,pull`;
   const token = await fetchRegistryToken(scope, basicAuth);
 

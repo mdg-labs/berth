@@ -12,9 +12,9 @@ export type RegistryAuthUser = {
 };
 
 export class RegistryAccessError extends Error {
-  readonly code: "forbidden" | "project_not_found";
+  readonly code: "forbidden" | "repository_not_found";
 
-  constructor(code: "forbidden" | "project_not_found", message: string) {
+  constructor(code: "forbidden" | "repository_not_found", message: string) {
     super(message);
     this.name = "RegistryAccessError";
     this.code = code;
@@ -22,8 +22,8 @@ export class RegistryAccessError extends Error {
 }
 
 function buildAccess(
-  projectName: string,
-  repoName?: string,
+  repositoryName: string,
+  imageName?: string,
   options?: { catalog?: boolean },
 ): RegistryAccess[] {
   const access: RegistryAccess[] = [];
@@ -36,13 +36,13 @@ function buildAccess(
     });
   }
 
-  const repositoryName = repoName
-    ? `${projectName}/${repoName}`
-    : `${projectName}/*`;
+  const scopeName = imageName
+    ? `${repositoryName}/${imageName}`
+    : `${repositoryName}/*`;
 
   access.push({
     type: "repository",
-    name: repositoryName,
+    name: scopeName,
     actions: ["pull"],
   });
 
@@ -51,11 +51,50 @@ function buildAccess(
 
 export async function issueUserRegistryToken(
   user: RegistryAuthUser,
-  projectName: string,
-  repoName?: string,
+  repositoryName: string,
+  imageName?: string,
   options?: { catalog?: boolean },
 ): Promise<string> {
-  const access = buildAccess(projectName, repoName, options);
+  const access = buildAccess(repositoryName, imageName, options);
+  const authorized = await authorizeTokenAccess(user, access);
+
+  if (!authorized.ok) {
+    throw new RegistryAccessError(authorized.code, authorized.message);
+  }
+
+  const issued = await issueRegistryToken(
+    user.email,
+    getTokenService(),
+    authorized.access,
+  );
+
+  return issued.token;
+}
+
+export async function issueRepositoriesRegistryToken(
+  user: RegistryAuthUser,
+  repositoryNames: string[],
+  options?: { catalog?: boolean; actions?: string[] },
+): Promise<string> {
+  const actions = options?.actions ?? ["pull"];
+  const access: RegistryAccess[] = [];
+
+  if (options?.catalog ?? true) {
+    access.push({
+      type: "registry",
+      name: "catalog",
+      actions: ["*"],
+    });
+  }
+
+  for (const repositoryName of repositoryNames) {
+    access.push({
+      type: "repository",
+      name: `${repositoryName}/*`,
+      actions,
+    });
+  }
+
   const authorized = await authorizeTokenAccess(user, access);
 
   if (!authorized.ok) {

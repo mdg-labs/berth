@@ -96,8 +96,8 @@ export async function GET(request: NextRequest) {
 
     const authorized = await authorizeTokenAccess(null, access);
     if (!authorized.ok) {
-      if (authorized.code === "project_not_found") {
-        return apiError("project_not_found", authorized.message, 403);
+      if (authorized.code === "repository_not_found") {
+        return apiError("repository_not_found", authorized.message, 403);
       }
       return apiError("forbidden", authorized.message, 403);
     }
@@ -122,8 +122,8 @@ export async function GET(request: NextRequest) {
 
   const authorized = await authorizeTokenAccess(identity.user, access);
   if (!authorized.ok) {
-    if (authorized.code === "project_not_found") {
-      return apiError("project_not_found", authorized.message, 403);
+    if (authorized.code === "repository_not_found") {
+      return apiError("repository_not_found", authorized.message, 403);
     }
     return apiError("forbidden", authorized.message, 403);
   }

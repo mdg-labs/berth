@@ -40,7 +40,7 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
           ? "/change-password"
           : data.user.pendingDeletion
             ? "/reactivate-account"
-            : "/projects",
+            : "/repositories",
       );
     },
     onError: (error) => {

@@ -1,7 +1,9 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
 import {
+  bigint,
   boolean,
+  index,
   pgEnum,
   pgTable,
   primaryKey,
@@ -13,7 +15,7 @@ import {
 
 export const systemRoleEnum = pgEnum("system_role", ["admin", "user"]);
 
-export const projectMemberRoleEnum = pgEnum("project_member_role", [
+export const repositoryMemberRoleEnum = pgEnum("repository_member_role", [
   "guest",
   "developer",
   "maintainer",
@@ -24,6 +26,12 @@ export const anonymousPullOverrideEnum = pgEnum("anonymous_pull_override", [
   "inherit",
   "allow",
   "deny",
+]);
+
+export const pullCounterScopeEnum = pgEnum("pull_counter_scope", [
+  "tag",
+  "image",
+  "repository",
 ]);
 
 export const users = pgTable("users", {
@@ -41,7 +49,7 @@ export const users = pgTable("users", {
     .defaultNow(),
 });
 
-export const projects = pgTable("projects", {
+export const repositories = pgTable("repositories", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   isPublic: boolean("is_public").notNull().default(false),
@@ -51,22 +59,22 @@ export const projects = pgTable("projects", {
     .defaultNow(),
 });
 
-export const projectMembers = pgTable(
-  "project_members",
+export const repositoryMembers = pgTable(
+  "repository_members",
   {
-    projectId: uuid("project_id")
+    repositoryId: uuid("repository_id")
       .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
+      .references(() => repositories.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    role: projectMemberRoleEnum("role").notNull(),
+    role: repositoryMemberRoleEnum("role").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.projectId, table.userId] }),
+    pk: primaryKey({ columns: [table.repositoryId, table.userId] }),
   }),
 );
 
@@ -79,13 +87,13 @@ export const sessions = pgTable("sessions", {
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 });
 
-export const projectInvites = pgTable("project_invites", {
+export const repositoryInvites = pgTable("repository_invites", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: uuid("project_id")
+  repositoryId: uuid("repository_id")
     .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
+    .references(() => repositories.id, { onDelete: "cascade" }),
   email: varchar("email", { length: 255 }).notNull(),
-  role: projectMemberRoleEnum("role").notNull(),
+  role: repositoryMemberRoleEnum("role").notNull(),
   invitedBy: uuid("invited_by")
     .notNull()
     .references(() => users.id),
@@ -105,12 +113,12 @@ export const auditLog = pgTable("audit_log", {
     .defaultNow(),
 });
 
-export const repositorySettings = pgTable(
-  "repository_settings",
+export const imageSettings = pgTable(
+  "image_settings",
   {
-    projectId: uuid("project_id")
+    repositoryId: uuid("repository_id")
       .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
+      .references(() => repositories.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
     anonymousPull: anonymousPullOverrideEnum("anonymous_pull")
       .notNull()
@@ -120,6 +128,60 @@ export const repositorySettings = pgTable(
       .defaultNow(),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.projectId, table.name] }),
+    pk: primaryKey({ columns: [table.repositoryId, table.name] }),
+  }),
+);
+
+export const pullEvents = pgTable(
+  "pull_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repositoryId: uuid("repository_id")
+      .notNull()
+      .references(() => repositories.id, { onDelete: "cascade" }),
+    imageName: varchar("image_name", { length: 255 }).notNull(),
+    tagReference: varchar("tag_reference", { length: 255 }),
+    digest: varchar("digest", { length: 255 }).notNull(),
+    userId: uuid("user_id").references(() => users.id),
+    anonymous: boolean("anonymous").notNull().default(false),
+    pulledAt: timestamp("pulled_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    repositoryImageTagIdx: index("pull_events_repository_image_tag_idx").on(
+      table.repositoryId,
+      table.imageName,
+      table.tagReference,
+    ),
+    repositoryImageDigestPulledAtIdx: index(
+      "pull_events_repository_image_digest_pulled_at_idx",
+    ).on(table.repositoryId, table.imageName, table.digest, table.pulledAt),
+    repositoryDigestPulledAtIdx: index(
+      "pull_events_repository_digest_pulled_at_idx",
+    ).on(table.repositoryId, table.digest, table.pulledAt),
+  }),
+);
+
+export const pullCounters = pgTable(
+  "pull_counters",
+  {
+    repositoryId: uuid("repository_id")
+      .notNull()
+      .references(() => repositories.id, { onDelete: "cascade" }),
+    scope: pullCounterScopeEnum("scope").notNull(),
+    imageName: varchar("image_name", { length: 255 }).notNull().default(""),
+    tagReference: varchar("tag_reference", { length: 255 }).notNull().default(""),
+    count: bigint("count", { mode: "number" }).notNull().default(0),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [
+        table.repositoryId,
+        table.scope,
+        table.imageName,
+        table.tagReference,
+      ],
+    }),
   }),
 );

@@ -27,9 +27,9 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-function currentProjectFromPath(pathname: string): string | undefined {
+function currentRepositoryFromPath(pathname: string): string | undefined {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments[0] === "p" && segments[1]) {
+  if (segments[0] === "r" && segments[1]) {
     return decodeURIComponent(segments[1]);
   }
   return undefined;
@@ -46,17 +46,17 @@ export function PortalSidebar() {
   const pathname = usePathname();
   const { data } = useAuthUser();
   const user = data?.user;
-  const projectName = currentProjectFromPath(pathname);
-  const projectPath = projectName
-    ? `/p/${encodeURIComponent(projectName)}`
+  const repositoryName = currentRepositoryFromPath(pathname);
+  const repositoryPath = repositoryName
+    ? `/r/${encodeURIComponent(repositoryName)}`
     : undefined;
 
-  const isProjectsActive = pathname === "/projects";
+  const isRepositoriesActive = pathname === "/repositories";
   const isCatalogActive = Boolean(
-    projectPath && (pathname === projectPath || pathname.startsWith(`${projectPath}/r`)),
+    repositoryPath && (pathname === repositoryPath || pathname.startsWith(`${repositoryPath}/i`)),
   );
   const isSettingsActive = Boolean(
-    projectPath && pathname === `${projectPath}/settings`,
+    repositoryPath && pathname === `${repositoryPath}/settings`,
   );
   const isAdminUsersActive = pathname === "/admin";
   const isAdminGcActive = pathname === "/admin/gc";
@@ -68,7 +68,7 @@ export function PortalSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              render={<Link href="/projects" />}
+              render={<Link href="/repositories" />}
               tooltip="Berth"
             >
               <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
@@ -86,37 +86,37 @@ export function PortalSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={isProjectsActive}
-                  render={<Link href="/projects" />}
-                  tooltip="Projects"
+                  isActive={isRepositoriesActive}
+                  render={<Link href="/repositories" />}
+                  tooltip="Repositories"
                 >
                   <FolderKanbanIcon />
-                  <span>Projects</span>
+                  <span>Repositories</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {projectName && projectPath ? (
+        {repositoryName && repositoryPath ? (
           <SidebarGroup>
-            <SidebarGroupLabel>{titleCase(projectName)}</SidebarGroupLabel>
+            <SidebarGroupLabel>{titleCase(repositoryName)}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={isCatalogActive}
-                    render={<Link href={projectPath} />}
-                    tooltip="Catalog"
+                    render={<Link href={repositoryPath} />}
+                    tooltip="Images"
                   >
                     <PackageIcon />
-                    <span>Catalog</span>
+                    <span>Images</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={isSettingsActive}
-                    render={<Link href={`${projectPath}/settings`} />}
+                    render={<Link href={`${repositoryPath}/settings`} />}
                     tooltip="Settings"
                   >
                     <SettingsIcon />

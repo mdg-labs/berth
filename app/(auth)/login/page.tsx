@@ -9,7 +9,7 @@ import { getSessionUser } from "@/lib/session/server";
 export default async function LoginPage() {
   const user = await getSessionUser();
   if (user) {
-    redirect(user.mustChangePassword ? "/change-password" : "/projects");
+    redirect(user.mustChangePassword ? "/change-password" : "/repositories");
   }
 
   return <LoginForm oidcEnabled={isOidcConfigured()} />;

@@ -11,7 +11,7 @@ async function signIn(page: import("@playwright/test").Page): Promise<void> {
   await page.getByLabel("Email").fill(ADMIN_EMAIL);
   await page.getByLabel("Password").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/projects$/);
+  await expect(page).toHaveURL(/\/repositories$/);
 }
 
 test.describe("accessibility spot-check", () => {
@@ -26,7 +26,7 @@ test.describe("accessibility spot-check", () => {
     expect(critical).toEqual([]);
   });
 
-  test("projects page has no critical axe violations", async ({ page }) => {
+  test("repositories page has no critical axe violations", async ({ page }) => {
     await signIn(page);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

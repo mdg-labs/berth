@@ -3,7 +3,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
-import { projectInvites, projectMembers } from "@/lib/db/schema";
+import { repositoryInvites, repositoryMembers } from "@/lib/db/schema";
 
 export async function acceptPendingInvitesForEmail(
   userId: string,
@@ -19,11 +19,11 @@ export async function acceptPendingInvitesForEmail(
 
   const invites = await db
     .select()
-    .from(projectInvites)
+    .from(repositoryInvites)
     .where(
       and(
-        eq(projectInvites.email, normalizedEmail),
-        isNull(projectInvites.acceptedAt),
+        eq(repositoryInvites.email, normalizedEmail),
+        isNull(repositoryInvites.acceptedAt),
       ),
     );
 
@@ -35,18 +35,18 @@ export async function acceptPendingInvitesForEmail(
 
   for (const invite of invites) {
     await db
-      .insert(projectMembers)
+      .insert(repositoryMembers)
       .values({
-        projectId: invite.projectId,
+        repositoryId: invite.repositoryId,
         userId,
         role: invite.role,
       })
       .onConflictDoNothing();
 
     await db
-      .update(projectInvites)
+      .update(repositoryInvites)
       .set({ acceptedAt: new Date() })
-      .where(eq(projectInvites.id, invite.id));
+      .where(eq(repositoryInvites.id, invite.id));
 
     accepted += 1;
   }

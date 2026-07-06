@@ -1,31 +1,31 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-import type { ProjectAction, ProjectRole, RegistryScopeAction } from "./types";
+import type { RepositoryAction, RepositoryRole, RegistryScopeAction } from "./types";
 
-const ROLE_ACTIONS: Record<ProjectRole, ReadonlySet<ProjectAction>> = {
-  guest: new Set(["pull", "view_project"]),
-  developer: new Set(["pull", "push", "view_project"]),
-  maintainer: new Set(["pull", "push", "delete", "view_project"]),
+const ROLE_ACTIONS: Record<RepositoryRole, ReadonlySet<RepositoryAction>> = {
+  guest: new Set(["pull", "view_repository"]),
+  developer: new Set(["pull", "push", "view_repository"]),
+  maintainer: new Set(["pull", "push", "delete", "view_repository"]),
   admin: new Set([
     "pull",
     "push",
     "delete",
     "manage_members",
-    "delete_project",
-    "view_project",
-    "update_project",
+    "delete_repository",
+    "view_repository",
+    "update_repository",
   ]),
 };
 
-const SCOPE_TO_ACTION: Record<RegistryScopeAction, ProjectAction> = {
+const SCOPE_TO_ACTION: Record<RegistryScopeAction, RepositoryAction> = {
   pull: "pull",
   push: "push",
   delete: "delete",
 };
 
 export function roleAllowsAction(
-  role: ProjectRole | null,
-  action: ProjectAction,
+  role: RepositoryRole | null,
+  action: RepositoryAction,
 ): boolean {
   if (!role) {
     return false;
@@ -35,7 +35,7 @@ export function roleAllowsAction(
 }
 
 export function roleAllowsScopeAction(
-  role: ProjectRole | null,
+  role: RepositoryRole | null,
   scopeAction: RegistryScopeAction,
 ): boolean {
   return roleAllowsAction(role, SCOPE_TO_ACTION[scopeAction]);
@@ -48,12 +48,12 @@ export function publicGuestAllowsScopeAction(
 }
 
 export const RBAC_MATRIX: {
-  role: ProjectRole;
+  role: RepositoryRole;
   pull: boolean;
   push: boolean;
   delete: boolean;
   manageMembers: boolean;
-  deleteProject: boolean;
+  deleteRepository: boolean;
 }[] = [
   {
     role: "guest",
@@ -61,7 +61,7 @@ export const RBAC_MATRIX: {
     push: false,
     delete: false,
     manageMembers: false,
-    deleteProject: false,
+    deleteRepository: false,
   },
   {
     role: "developer",
@@ -69,7 +69,7 @@ export const RBAC_MATRIX: {
     push: true,
     delete: false,
     manageMembers: false,
-    deleteProject: false,
+    deleteRepository: false,
   },
   {
     role: "maintainer",
@@ -77,7 +77,7 @@ export const RBAC_MATRIX: {
     push: true,
     delete: true,
     manageMembers: false,
-    deleteProject: false,
+    deleteRepository: false,
   },
   {
     role: "admin",
@@ -85,6 +85,6 @@ export const RBAC_MATRIX: {
     push: true,
     delete: true,
     manageMembers: true,
-    deleteProject: true,
+    deleteRepository: true,
   },
 ];

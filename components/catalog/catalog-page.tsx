@@ -26,12 +26,12 @@ import {
 } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api/client";
-import { useProjectByName } from "@/lib/hooks/use-project";
+import { useRepositoryByName } from "@/lib/hooks/use-repository";
 import type { CatalogResponse } from "@/lib/registry/client/types";
 import { imagePathSegments } from "@/lib/catalog/format";
 
 type CatalogPageProps = {
-  projectName: string;
+  repositoryName: string;
 };
 
 function CatalogSkeleton() {
@@ -44,21 +44,21 @@ function CatalogSkeleton() {
   );
 }
 
-function visibilityBadgeLabel(repo: CatalogResponse["repositories"][number]) {
-  if (repo.anonymousPull === "allow") {
+function visibilityBadgeLabel(image: CatalogResponse["images"][number]) {
+  if (image.anonymousPull === "allow") {
     return "Public override";
   }
 
-  if (repo.anonymousPull === "deny") {
+  if (image.anonymousPull === "deny") {
     return "Private override";
   }
 
-  return repo.effectiveAnonymousPull ? "Public" : "Private";
+  return image.effectiveAnonymousPull ? "Public" : "Private";
 }
 
-export function CatalogPage({ projectName }: CatalogPageProps) {
+export function CatalogPage({ repositoryName }: CatalogPageProps) {
   const { data: authData } = useAuthUser();
-  const projectQuery = useProjectByName(projectName);
+  const repositoryQuery = useRepositoryByName(repositoryName);
   const [search, setSearch] = useQueryState(
     "search",
     parseAsString.withDefault(""),
@@ -67,10 +67,10 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
 
   const canManage =
     authData?.user.systemRole === "admin" ||
-    projectQuery.data?.role === "admin";
+    repositoryQuery.data?.role === "admin";
 
   const catalogQuery = useQuery({
-    queryKey: ["catalog", projectQuery.data?.id, debouncedSearch],
+    queryKey: ["catalog", repositoryQuery.data?.id, debouncedSearch],
     queryFn: () => {
       const params = new URLSearchParams();
       if (debouncedSearch.trim()) {
@@ -78,23 +78,27 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
       }
       const query = params.toString();
       return apiFetch<CatalogResponse>(
-        `/api/projects/${projectQuery.data!.id}/catalog${query ? `?${query}` : ""}`,
+        `/api/repositories/${repositoryQuery.data!.id}/catalog${query ? `?${query}` : ""}`,
       );
     },
-    enabled: Boolean(projectQuery.data?.id),
+    enabled: Boolean(repositoryQuery.data?.id),
     refetchInterval: 30_000,
   });
 
-  const isLoading = projectQuery.isLoading || catalogQuery.isLoading;
-  const error = projectQuery.error ?? catalogQuery.error;
+  const isLoading = repositoryQuery.isLoading || catalogQuery.isLoading;
+  const error = repositoryQuery.error ?? catalogQuery.error;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{projectName}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{repositoryName}</h1>
           <p className="text-sm text-muted-foreground">
-            Browse images in this project.
+            Browse images in this repository
+            {catalogQuery.data?.repositoryPullCount !== undefined
+              ? ` · ${catalogQuery.data.repositoryPullCount} pull${catalogQuery.data.repositoryPullCount === 1 ? "" : "s"}`
+              : ""}
+            .
           </p>
         </div>
         <InputGroup className="max-w-sm">
@@ -117,13 +121,13 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
             error instanceof Error ? error.message : "Failed to load catalog"
           }
           onRetry={() => {
-            void projectQuery.refetch();
+            void repositoryQuery.refetch();
             void catalogQuery.refetch();
           }}
         />
       ) : null}
 
-      {!isLoading && !error && catalogQuery.data?.repositories.length === 0 ? (
+      {!isLoading && !error && catalogQuery.data?.images.length === 0 ? (
         <Empty className="rounded-lg border border-dashed">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -131,35 +135,38 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
             </EmptyMedia>
             <EmptyTitle>No images yet</EmptyTitle>
             <EmptyDescription>
-              Push an image to this project to see it here.
+              Push an image to this repository to see it here.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : null}
 
-      {!isLoading && !error && (catalogQuery.data?.repositories.length ?? 0) > 0 ? (
+      {!isLoading && !error && (catalogQuery.data?.images.length ?? 0) > 0 ? (
         <ul className="divide-y rounded-lg border">
-          {catalogQuery.data!.repositories.map((repo) => (
-            <li key={repo.name} className="flex items-center gap-2 px-4 py-4">
+          {catalogQuery.data!.images.map((image) => (
+            <li key={image.name} className="flex items-center gap-2 px-4 py-4">
               <Link
-                href={`/p/${projectName}/i/${imagePathSegments(repo.name)}`}
+                href={`/r/${repositoryName}/i/${imagePathSegments(image.name)}`}
                 className="flex min-w-0 flex-1 items-center justify-between gap-4 transition-colors hover:text-primary"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium">{repo.name}</p>
+                  <p className="truncate font-medium">{image.name}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {canManage ? (
                     <Badge
                       variant={
-                        repo.effectiveAnonymousPull ? "secondary" : "outline"
+                        image.effectiveAnonymousPull ? "secondary" : "outline"
                       }
                     >
-                      {visibilityBadgeLabel(repo)}
+                      {visibilityBadgeLabel(image)}
                     </Badge>
                   ) : null}
                   <Badge variant="secondary">
-                    {repo.tagCount} tag{repo.tagCount === 1 ? "" : "s"}
+                    {image.tagCount} tag{image.tagCount === 1 ? "" : "s"}
+                  </Badge>
+                  <Badge variant="outline">
+                    {image.pullCount ?? 0} pull{(image.pullCount ?? 0) === 1 ? "" : "s"}
                   </Badge>
                 </div>
               </Link>
@@ -167,10 +174,10 @@ export function CatalogPage({ projectName }: CatalogPageProps) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Settings for ${repo.name}`}
+                  aria-label={`Settings for ${image.name}`}
                   render={
                     <Link
-                      href={`/p/${encodeURIComponent(projectName)}/i/${imagePathSegments(repo.name)}/settings`}
+                      href={`/r/${encodeURIComponent(repositoryName)}/i/${imagePathSegments(image.name)}/settings`}
                     />
                   }
                 >

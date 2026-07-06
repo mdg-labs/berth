@@ -6,14 +6,14 @@ import { writeAuditLog } from "@/lib/audit/log";
 import { findUserByEmail } from "@/lib/auth/credentials";
 import { getDb } from "@/lib/db";
 import {
-  projectInvites,
-  projectMembers,
-  projects,
+  repositoryInvites,
+  repositoryMembers,
+  repositories,
   users,
 } from "@/lib/db/schema";
-import { canPerformProjectAction } from "@/lib/rbac/check";
-import { getProjectMemberRole } from "@/lib/rbac/roles";
-import type { ProjectRole, SystemRole } from "@/lib/rbac/types";
+import { canPerformRepositoryAction } from "@/lib/rbac/check";
+import { getRepositoryMemberRole } from "@/lib/rbac/roles";
+import type { RepositoryRole, SystemRole } from "@/lib/rbac/types";
 
 export type MemberListEntry =
   | {
@@ -21,34 +21,34 @@ export type MemberListEntry =
       userId: string;
       email: string;
       name: string;
-      role: ProjectRole;
+      role: RepositoryRole;
       joinedAt: string;
     }
   | {
       type: "invite";
       inviteId: string;
       email: string;
-      role: ProjectRole;
+      role: RepositoryRole;
       invitedAt: string;
     };
 
 export async function listProjectMembers(
-  projectId: string,
+  repositoryId: string,
   userId: string,
   systemRole: SystemRole,
 ): Promise<MemberListEntry[] | { error: "not_found" | "forbidden" }> {
   const db = getDb();
   const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.id, projectId))
+    .select({ id: repositories.id })
+    .from(repositories)
+    .where(eq(repositories.id, repositoryId))
     .limit(1);
 
   if (!project) {
     return { error: "not_found" };
   }
 
-  const memberRole = await getProjectMemberRole(userId, projectId);
+  const memberRole = await getRepositoryMemberRole(userId, repositoryId);
   const canView =
     systemRole === "admin" || memberRole !== null;
 
@@ -61,25 +61,25 @@ export async function listProjectMembers(
       userId: users.id,
       email: users.email,
       name: users.name,
-      role: projectMembers.role,
-      joinedAt: projectMembers.createdAt,
+      role: repositoryMembers.role,
+      joinedAt: repositoryMembers.createdAt,
     })
-    .from(projectMembers)
-    .innerJoin(users, eq(projectMembers.userId, users.id))
-    .where(eq(projectMembers.projectId, projectId));
+    .from(repositoryMembers)
+    .innerJoin(users, eq(repositoryMembers.userId, users.id))
+    .where(eq(repositoryMembers.repositoryId, repositoryId));
 
   const inviteRows = await db
     .select({
-      inviteId: projectInvites.id,
-      email: projectInvites.email,
-      role: projectInvites.role,
-      invitedAt: projectInvites.createdAt,
+      inviteId: repositoryInvites.id,
+      email: repositoryInvites.email,
+      role: repositoryInvites.role,
+      invitedAt: repositoryInvites.createdAt,
     })
-    .from(projectInvites)
+    .from(repositoryInvites)
     .where(
       and(
-        eq(projectInvites.projectId, projectId),
-        isNull(projectInvites.acceptedAt),
+        eq(repositoryInvites.repositoryId, repositoryId),
+        isNull(repositoryInvites.acceptedAt),
       ),
     );
 
@@ -106,29 +106,29 @@ export async function listProjectMembers(
 }
 
 export async function addProjectMember(
-  projectId: string,
+  repositoryId: string,
   actorId: string,
   systemRole: SystemRole,
-  input: { email: string; role: ProjectRole },
+  input: { email: string; role: RepositoryRole },
 ): Promise<
-  | { type: "user"; userId: string; email: string; role: ProjectRole }
-  | { type: "invite"; inviteId: string; email: string; role: ProjectRole }
+  | { type: "user"; userId: string; email: string; role: RepositoryRole }
+  | { type: "invite"; inviteId: string; email: string; role: RepositoryRole }
   | { error: "not_found" | "forbidden" | "invalid_role" | "already_member" }
 > {
   const db = getDb();
   const [project] = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.id, projectId))
+    .select({ id: repositories.id })
+    .from(repositories)
+    .where(eq(repositories.id, repositoryId))
     .limit(1);
 
   if (!project) {
     return { error: "not_found" };
   }
 
-  const actorRole = await getProjectMemberRole(actorId, projectId);
+  const actorRole = await getRepositoryMemberRole(actorId, repositoryId);
   if (
-    !canPerformProjectAction(systemRole, actorRole, "manage_members")
+    !canPerformRepositoryAction(systemRole, actorRole, "manage_members")
   ) {
     return { error: "forbidden" };
   }
@@ -141,16 +141,16 @@ export async function addProjectMember(
   const existingUser = await findUserByEmail(email);
 
   if (existingUser) {
-    const existingRole = await getProjectMemberRole(
+    const existingRole = await getRepositoryMemberRole(
       existingUser.id,
-      projectId,
+      repositoryId,
     );
     if (existingRole) {
       return { error: "already_member" };
     }
 
-    await db.insert(projectMembers).values({
-      projectId,
+    await db.insert(repositoryMembers).values({
+      repositoryId,
       userId: existingUser.id,
       role: input.role,
     });
@@ -164,13 +164,13 @@ export async function addProjectMember(
   }
 
   const [pendingInvite] = await db
-    .select({ id: projectInvites.id })
-    .from(projectInvites)
+    .select({ id: repositoryInvites.id })
+    .from(repositoryInvites)
     .where(
       and(
-        eq(projectInvites.projectId, projectId),
-        eq(projectInvites.email, email),
-        isNull(projectInvites.acceptedAt),
+        eq(repositoryInvites.repositoryId, repositoryId),
+        eq(repositoryInvites.email, email),
+        isNull(repositoryInvites.acceptedAt),
       ),
     )
     .limit(1);
@@ -180,14 +180,14 @@ export async function addProjectMember(
   }
 
   const [invite] = await db
-    .insert(projectInvites)
+    .insert(repositoryInvites)
     .values({
-      projectId,
+      repositoryId,
       email,
       role: input.role,
       invitedBy: actorId,
     })
-    .returning({ id: projectInvites.id });
+    .returning({ id: repositoryInvites.id });
 
   if (!invite) {
     throw new Error("Failed to create invite");
@@ -201,27 +201,27 @@ export async function addProjectMember(
   };
 }
 
-export async function updateProjectMemberRole(
-  projectId: string,
+export async function updateRepositoryMemberRole(
+  repositoryId: string,
   targetUserId: string,
   actorId: string,
   systemRole: SystemRole,
-  role: ProjectRole,
+  role: RepositoryRole,
 ): Promise<{ ok: true } | { error: "not_found" | "forbidden" | "invalid_role" }> {
   const db = getDb();
   const [project] = await db
-    .select({ id: projects.id, name: projects.name })
-    .from(projects)
-    .where(eq(projects.id, projectId))
+    .select({ id: repositories.id, name: repositories.name })
+    .from(repositories)
+    .where(eq(repositories.id, repositoryId))
     .limit(1);
 
   if (!project) {
     return { error: "not_found" };
   }
 
-  const actorRole = await getProjectMemberRole(actorId, projectId);
+  const actorRole = await getRepositoryMemberRole(actorId, repositoryId);
   if (
-    !canPerformProjectAction(systemRole, actorRole, "manage_members")
+    !canPerformRepositoryAction(systemRole, actorRole, "manage_members")
   ) {
     return { error: "forbidden" };
   }
@@ -230,109 +230,109 @@ export async function updateProjectMemberRole(
     return { error: "invalid_role" };
   }
 
-  const targetRole = await getProjectMemberRole(targetUserId, projectId);
+  const targetRole = await getRepositoryMemberRole(targetUserId, repositoryId);
   if (!targetRole) {
     return { error: "not_found" };
   }
 
   await db
-    .update(projectMembers)
+    .update(repositoryMembers)
     .set({ role })
     .where(
       and(
-        eq(projectMembers.projectId, projectId),
-        eq(projectMembers.userId, targetUserId),
+        eq(repositoryMembers.repositoryId, repositoryId),
+        eq(repositoryMembers.userId, targetUserId),
       ),
     );
 
   await writeAuditLog({
     userId: actorId,
     action: "member.role_change",
-    resource: `project:${project.name}/user:${targetUserId}:${targetRole}->${role}`,
+    resource: `repository:${project.name}/user:${targetUserId}:${targetRole}->${role}`,
   });
 
   return { ok: true };
 }
 
 export async function removeProjectMember(
-  projectId: string,
+  repositoryId: string,
   targetUserId: string,
   actorId: string,
   systemRole: SystemRole,
 ): Promise<{ ok: true } | { error: "not_found" | "forbidden" }> {
   const db = getDb();
   const [project] = await db
-    .select({ id: projects.id, name: projects.name })
-    .from(projects)
-    .where(eq(projects.id, projectId))
+    .select({ id: repositories.id, name: repositories.name })
+    .from(repositories)
+    .where(eq(repositories.id, repositoryId))
     .limit(1);
 
   if (!project) {
     return { error: "not_found" };
   }
 
-  const actorRole = await getProjectMemberRole(actorId, projectId);
+  const actorRole = await getRepositoryMemberRole(actorId, repositoryId);
   if (
-    !canPerformProjectAction(systemRole, actorRole, "manage_members")
+    !canPerformRepositoryAction(systemRole, actorRole, "manage_members")
   ) {
     return { error: "forbidden" };
   }
 
-  const targetRole = await getProjectMemberRole(targetUserId, projectId);
+  const targetRole = await getRepositoryMemberRole(targetUserId, repositoryId);
   if (!targetRole) {
     return { error: "not_found" };
   }
 
   await db
-    .delete(projectMembers)
+    .delete(repositoryMembers)
     .where(
       and(
-        eq(projectMembers.projectId, projectId),
-        eq(projectMembers.userId, targetUserId),
+        eq(repositoryMembers.repositoryId, repositoryId),
+        eq(repositoryMembers.userId, targetUserId),
       ),
     );
 
   await writeAuditLog({
     userId: actorId,
     action: "member.remove",
-    resource: `project:${project.name}/user:${targetUserId}:${targetRole}`,
+    resource: `repository:${project.name}/user:${targetUserId}:${targetRole}`,
   });
 
   return { ok: true };
 }
 
 export async function removeProjectInvite(
-  projectId: string,
+  repositoryId: string,
   inviteId: string,
   actorId: string,
   systemRole: SystemRole,
 ): Promise<{ ok: true } | { error: "not_found" | "forbidden" }> {
   const db = getDb();
   const [project] = await db
-    .select({ id: projects.id, name: projects.name })
-    .from(projects)
-    .where(eq(projects.id, projectId))
+    .select({ id: repositories.id, name: repositories.name })
+    .from(repositories)
+    .where(eq(repositories.id, repositoryId))
     .limit(1);
 
   if (!project) {
     return { error: "not_found" };
   }
 
-  const actorRole = await getProjectMemberRole(actorId, projectId);
+  const actorRole = await getRepositoryMemberRole(actorId, repositoryId);
   if (
-    !canPerformProjectAction(systemRole, actorRole, "manage_members")
+    !canPerformRepositoryAction(systemRole, actorRole, "manage_members")
   ) {
     return { error: "forbidden" };
   }
 
   const [invite] = await db
-    .select({ id: projectInvites.id, email: projectInvites.email })
-    .from(projectInvites)
+    .select({ id: repositoryInvites.id, email: repositoryInvites.email })
+    .from(repositoryInvites)
     .where(
       and(
-        eq(projectInvites.id, inviteId),
-        eq(projectInvites.projectId, projectId),
-        isNull(projectInvites.acceptedAt),
+        eq(repositoryInvites.id, inviteId),
+        eq(repositoryInvites.repositoryId, repositoryId),
+        isNull(repositoryInvites.acceptedAt),
       ),
     )
     .limit(1);
@@ -341,18 +341,18 @@ export async function removeProjectInvite(
     return { error: "not_found" };
   }
 
-  await db.delete(projectInvites).where(eq(projectInvites.id, inviteId));
+  await db.delete(repositoryInvites).where(eq(repositoryInvites.id, inviteId));
 
   await writeAuditLog({
     userId: actorId,
     action: "member.invite_remove",
-    resource: `project:${project.name}/invite:${invite.email}`,
+    resource: `repository:${project.name}/invite:${invite.email}`,
   });
 
   return { ok: true };
 }
 
-function isValidMemberRole(role: string): role is ProjectRole {
+function isValidMemberRole(role: string): role is RepositoryRole {
   return (
     role === "guest" ||
     role === "developer" ||

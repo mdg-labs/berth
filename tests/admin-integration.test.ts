@@ -212,19 +212,19 @@ describe("project settings members integration", () => {
       return;
     }
 
-    const projectName = `p9settings${Date.now()}`;
-    const createProject = await fetch(`${INTEGRATION_BASE_URL}/api/projects`, {
+    const repositoryName = `p9settings${Date.now()}`;
+    const createRepository = await fetch(`${INTEGRATION_BASE_URL}/api/repositories`, {
       method: "POST",
       headers: {
         ...csrfHeaders(CLIENT_IP),
         ...cookieHeader(SESSION_COOKIE, sessionId),
       },
-      body: JSON.stringify({ name: projectName }),
+      body: JSON.stringify({ name: repositoryName }),
     });
 
-    expect(createProject.status).toBe(201);
-    const { project } = (await createProject.json()) as {
-      project: { id: string };
+    expect(createRepository.status).toBe(201);
+    const { repository } = (await createRepository.json()) as {
+      repository: { id: string };
     };
 
     const memberEmail = `p9-member-${Date.now()}@example.com`;
@@ -247,7 +247,7 @@ describe("project settings members integration", () => {
     };
 
     const addMember = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${project.id}/members`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repository.id}/members`,
       {
         method: "POST",
         headers: {
@@ -263,7 +263,7 @@ describe("project settings members integration", () => {
     expect(addMember.status).toBe(201);
 
     const patchRole = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${project.id}/members/${createdUser.user.id}`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repository.id}/members/${createdUser.user.id}`,
       {
         method: "PATCH",
         headers: {
@@ -276,7 +276,7 @@ describe("project settings members integration", () => {
     expect(patchRole.status).toBe(200);
 
     const members = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${project.id}/members`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repository.id}/members`,
       { headers: cookieHeader(SESSION_COOKIE, sessionId) },
     );
     expect(members.status).toBe(200);
@@ -289,7 +289,7 @@ describe("project settings members integration", () => {
     expect(member?.role).toBe("maintainer");
 
     const removeMember = await fetch(
-      `${INTEGRATION_BASE_URL}/api/projects/${project.id}/members/${createdUser.user.id}`,
+      `${INTEGRATION_BASE_URL}/api/repositories/${repository.id}/members/${createdUser.user.id}`,
       {
         method: "DELETE",
         headers: {

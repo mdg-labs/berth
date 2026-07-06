@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-export type ParsedRepoApiPath =
-  | { kind: "tags-list"; repoName: string }
-  | { kind: "tag-detail"; repoName: string; tag: string }
-  | { kind: "tag-siblings"; repoName: string; tag: string }
-  | { kind: "bulk-delete"; repoName: string };
+export type ParsedImageApiPath =
+  | { kind: "tags-list"; imageName: string }
+  | { kind: "tag-detail"; imageName: string; tag: string }
+  | { kind: "tag-siblings"; imageName: string; tag: string }
+  | { kind: "bulk-delete"; imageName: string };
 
-export function parseRepoDeletePath(
+export function parseImageDeletePath(
   segments: string[] | undefined,
-): { repoName: string } | null {
+): { imageName: string } | null {
   if (!segments || segments.length === 0) {
     return null;
   }
@@ -18,12 +18,12 @@ export function parseRepoDeletePath(
     return null;
   }
 
-  return { repoName: decoded.join("/") };
+  return { imageName: decoded.join("/") };
 }
 
-export function parseRepoApiPath(
+export function parseImageApiPath(
   segments: string[] | undefined,
-): ParsedRepoApiPath | null {
+): ParsedImageApiPath | null {
   if (!segments || segments.length < 2) {
     return null;
   }
@@ -34,22 +34,22 @@ export function parseRepoApiPath(
     return null;
   }
 
-  const repoName = decoded.slice(0, tagsIndex).join("/");
+  const imageName = decoded.slice(0, tagsIndex).join("/");
   const afterTags = decoded.slice(tagsIndex + 1);
 
   if (afterTags.length === 0) {
-    return { kind: "tags-list", repoName };
+    return { kind: "tags-list", imageName };
   }
 
   if (afterTags.length === 1) {
     if (afterTags[0] === "bulk-delete") {
-      return { kind: "bulk-delete", repoName };
+      return { kind: "bulk-delete", imageName };
     }
-    return { kind: "tag-detail", repoName, tag: afterTags[0]! };
+    return { kind: "tag-detail", imageName, tag: afterTags[0]! };
   }
 
   if (afterTags.length === 2 && afterTags[1] === "siblings") {
-    return { kind: "tag-siblings", repoName, tag: afterTags[0]! };
+    return { kind: "tag-siblings", imageName, tag: afterTags[0]! };
   }
 
   return null;

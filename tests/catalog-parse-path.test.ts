@@ -2,45 +2,45 @@
 
 import { describe, expect, it } from "vitest";
 
-import { parseRepoApiPath, parseRepoDeletePath } from "@/lib/registry/catalog/parse-path";
+import { parseImageApiPath, parseImageDeletePath } from "@/lib/registry/catalog/parse-path";
 
-describe("parseRepoApiPath", () => {
+describe("parseImageApiPath", () => {
   it("parses tag list paths", () => {
-    expect(parseRepoApiPath(["hello", "tags"])).toEqual({
+    expect(parseImageApiPath(["hello", "tags"])).toEqual({
       kind: "tags-list",
-      repoName: "hello",
+      imageName: "hello",
     });
-    expect(parseRepoApiPath(["team", "app", "tags"])).toEqual({
+    expect(parseImageApiPath(["team", "app", "tags"])).toEqual({
       kind: "tags-list",
-      repoName: "team/app",
+      imageName: "team/app",
     });
   });
 
   it("parses tag detail and sibling paths", () => {
-    expect(parseRepoApiPath(["hello", "tags", "v1.0"])).toEqual({
+    expect(parseImageApiPath(["hello", "tags", "v1.0"])).toEqual({
       kind: "tag-detail",
-      repoName: "hello",
+      imageName: "hello",
       tag: "v1.0",
     });
-    expect(parseRepoApiPath(["hello", "tags", "v1.0", "siblings"])).toEqual({
+    expect(parseImageApiPath(["hello", "tags", "v1.0", "siblings"])).toEqual({
       kind: "tag-siblings",
-      repoName: "hello",
+      imageName: "hello",
       tag: "v1.0",
     });
-    expect(parseRepoApiPath(["hello", "tags", "bulk-delete"])).toEqual({
+    expect(parseImageApiPath(["hello", "tags", "bulk-delete"])).toEqual({
       kind: "bulk-delete",
-      repoName: "hello",
+      imageName: "hello",
     });
   });
 });
 
-describe("parseRepoDeletePath", () => {
+describe("parseImageDeletePath", () => {
   it("parses repository delete paths without tags segment", () => {
-    expect(parseRepoDeletePath(["hello"])).toEqual({ repoName: "hello" });
-    expect(parseRepoDeletePath(["team", "app"])).toEqual({
-      repoName: "team/app",
+    expect(parseImageDeletePath(["hello"])).toEqual({ imageName: "hello" });
+    expect(parseImageDeletePath(["team", "app"])).toEqual({
+      imageName: "team/app",
     });
-    expect(parseRepoDeletePath(["hello", "tags", "v1.0"])).toBeNull();
-    expect(parseRepoDeletePath(undefined)).toBeNull();
+    expect(parseImageDeletePath(["hello", "tags", "v1.0"])).toBeNull();
+    expect(parseImageDeletePath(undefined)).toBeNull();
   });
 });
