@@ -3,26 +3,12 @@
 import type { RegistryAuthUser } from "./auth";
 import { issueUserRegistryToken } from "./auth";
 import { registryJson } from "./fetch";
+import { countTagNames } from "./tag-names";
 import type { CatalogImage, CatalogResponse } from "./types";
 
 type CatalogPage = {
   repositories?: string[];
 };
-
-async function countTags(
-  fullImageName: string,
-  token: string,
-): Promise<number> {
-  try {
-    const body = await registryJson<{ tags?: string[] }>(
-      `/v2/${fullImageName}/tags/list?n=1`,
-      token,
-    );
-    return body.tags?.length ?? 0;
-  } catch {
-    return 0;
-  }
-}
 
 export async function listRepositoryCatalog(
   user: RegistryAuthUser,
@@ -58,7 +44,7 @@ export async function listRepositoryCatalog(
       repositoryName,
       shortName,
     );
-    const tagCount = await countTags(`${repositoryName}/${shortName}`, repoToken);
+    const tagCount = await countTagNames(`${repositoryName}/${shortName}`, repoToken);
     if (tagCount > 0) {
       images.push({ name: shortName, tagCount });
     }

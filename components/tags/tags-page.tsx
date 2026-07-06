@@ -55,9 +55,9 @@ import {
 } from "@/components/ui/pagination";
 import {
   Select,
-  SelectButton,
   SelectItem,
   SelectPopup,
+  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -506,9 +506,9 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
                   });
                 }}
               >
-                <SelectButton size="sm" className="w-auto min-w-16">
+                <SelectTrigger size="sm" className="w-auto min-w-16">
                   <SelectValue />
-                </SelectButton>
+                </SelectTrigger>
                 <SelectPopup>
                   {PAGE_SIZE_OPTIONS.map((option) => (
                     <SelectItem key={option} value={String(option)}>

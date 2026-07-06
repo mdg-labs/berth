@@ -14,14 +14,14 @@ describe("buildBreadcrumbItems", () => {
   it("maps project catalog routes through /repositories", () => {
     expect(buildBreadcrumbItems("/r/demo-app")).toEqual([
       { label: "Repositories", href: "/repositories" },
-      { label: "Demo App" },
+      { label: "demo-app" },
     ]);
   });
 
   it("maps project settings routes", () => {
     expect(buildBreadcrumbItems("/r/demo-app/settings")).toEqual([
       { label: "Repositories", href: "/repositories" },
-      { label: "Demo App", href: "/r/demo-app" },
+      { label: "demo-app", href: "/r/demo-app" },
       { label: "Settings" },
     ]);
   });
@@ -29,7 +29,7 @@ describe("buildBreadcrumbItems", () => {
   it("maps image tag list routes without the /i segment", () => {
     expect(buildBreadcrumbItems("/r/demo-app/i/my-image")).toEqual([
       { label: "Repositories", href: "/repositories" },
-      { label: "Demo App", href: "/r/demo-app" },
+      { label: "demo-app", href: "/r/demo-app" },
       { label: "my-image" },
     ]);
   });
@@ -37,7 +37,7 @@ describe("buildBreadcrumbItems", () => {
   it("maps image tag detail routes", () => {
     expect(buildBreadcrumbItems("/r/demo-app/i/my-image/t/latest")).toEqual([
       { label: "Repositories", href: "/repositories" },
-      { label: "Demo App", href: "/r/demo-app" },
+      { label: "demo-app", href: "/r/demo-app" },
       { label: "my-image", href: "/r/demo-app/i/my-image" },
       { label: "latest" },
     ]);
@@ -70,7 +70,7 @@ describe("buildBreadcrumbItems", () => {
   it("maps image settings routes", () => {
     expect(buildBreadcrumbItems("/r/demo-app/i/my-image/settings")).toEqual([
       { label: "Repositories", href: "/repositories" },
-      { label: "Demo App", href: "/r/demo-app" },
+      { label: "demo-app", href: "/r/demo-app" },
       { label: "my-image", href: "/r/demo-app/i/my-image" },
       { label: "Settings" },
     ]);

@@ -38,13 +38,15 @@ test.describe("portal happy path", () => {
       password: ADMIN_PASSWORD,
     });
 
+    const imageTitle = `${repositoryName}/${imageName}`;
+
     await page.getByRole("link", { name: repositoryName }).click();
     await expect(page.getByRole("heading", { name: repositoryName })).toBeVisible();
 
-    await expect(page.getByRole("link", { name: imageName })).toBeVisible({
+    await expect(page.getByRole("link", { name: imageTitle })).toBeVisible({
       timeout: 45_000,
     });
-    await page.getByRole("link", { name: imageName }).click();
+    await page.getByRole("link", { name: imageTitle }).click();
 
     await expect(page.getByRole("link", { name: tagName })).toBeVisible({
       timeout: 45_000,

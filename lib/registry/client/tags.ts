@@ -2,19 +2,14 @@
 
 import type { RegistryAuthUser } from "./auth";
 import { issueUserRegistryToken } from "./auth";
-import { registryJson } from "./fetch";
-import { RegistryUpstreamError } from "./fetch";
 import { getManifestDigest, resolveManifest } from "./manifest";
+import { fetchAllTagNames } from "./tag-names";
 import type {
   SiblingsResponse,
   TagDetail,
   TagsListResponse,
   TagSummary,
 } from "./types";
-
-type TagsPage = {
-  tags?: string[];
-};
 
 export type TagsQuery = {
   search?: string;
@@ -25,24 +20,6 @@ export type TagsQuery = {
 
 function fullImageName(repositoryName: string, imageName: string): string {
   return `${repositoryName}/${imageName}`;
-}
-
-async function fetchAllTagNames(
-  fullName: string,
-  token: string,
-): Promise<string[]> {
-  try {
-    const body = await registryJson<TagsPage>(
-      `/v2/${fullName}/tags/list?n=1000`,
-      token,
-    );
-    return body.tags ?? [];
-  } catch (error) {
-    if (error instanceof RegistryUpstreamError && error.status === 404) {
-      return [];
-    }
-    throw error;
-  }
 }
 
 function sortTags(tags: string[], sort: TagsQuery["sort"]): string[] {

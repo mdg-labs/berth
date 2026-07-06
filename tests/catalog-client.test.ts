@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listRepositoryCatalog } from "@/lib/registry/client/catalog";
 import { issueUserRegistryToken } from "@/lib/registry/client/auth";
 import { registryJson } from "@/lib/registry/client/fetch";
+import { countTagNames } from "@/lib/registry/client/tag-names";
 
 vi.mock("@/lib/registry/client/auth", () => ({
   issueUserRegistryToken: vi.fn(),
@@ -12,6 +13,10 @@ vi.mock("@/lib/registry/client/auth", () => ({
 
 vi.mock("@/lib/registry/client/fetch", () => ({
   registryJson: vi.fn(),
+}));
+
+vi.mock("@/lib/registry/client/tag-names", () => ({
+  countTagNames: vi.fn(),
 }));
 
 const user = {
@@ -24,16 +29,17 @@ describe("listRepositoryCatalog", () => {
   beforeEach(() => {
     vi.mocked(issueUserRegistryToken).mockReset();
     vi.mocked(registryJson).mockReset();
+    vi.mocked(countTagNames).mockReset();
     vi.mocked(issueUserRegistryToken).mockResolvedValue("token-abc");
   });
 
   it("filters repositories to the project prefix and counts tags", async () => {
-    vi.mocked(registryJson)
-      .mockResolvedValueOnce({
-        repositories: ["demo/app", "demo/web", "other/x"],
-      })
-      .mockResolvedValueOnce({ tags: ["latest"] })
-      .mockResolvedValueOnce({ tags: ["1.0", "1.1"] });
+    vi.mocked(registryJson).mockResolvedValueOnce({
+      repositories: ["demo/app", "demo/web", "other/x"],
+    });
+    vi.mocked(countTagNames)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(2);
 
     const result = await listRepositoryCatalog(user, "demo");
 

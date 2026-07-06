@@ -1,116 +1,39 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-import {
-  issueRepositoriesRegistryToken,
-  type RegistryAuthUser,
-} from "@/lib/registry/client/auth";
-import { registryFetch, registryJson } from "@/lib/registry/client/fetch";
-
-async function fetchCatalogRepositories(token: string): Promise<string[]> {
-  try {
-    const body = await registryJson<{ repositories?: string[] }>(
-      "/v2/_catalog?n=1000",
-      token,
-    );
-    return body.repositories ?? [];
-  } catch {
-    return [];
-  }
-}
-
-async function listNonEmptyImagesByRepositories(
-  user: RegistryAuthUser,
-  repositoryNames: ReadonlySet<string>,
-  options?: { actions?: string[] },
-): Promise<Map<string, string[]>> {
-  const result = new Map<string, string[]>();
-  for (const name of repositoryNames) {
-    result.set(name, []);
-  }
-
-  if (repositoryNames.size === 0) {
-    return result;
-  }
-
-  const token = await issueRepositoriesRegistryToken(
-    user,
-    [...repositoryNames],
-    { actions: options?.actions },
-  );
-  const catalog = await fetchCatalogRepositories(token);
-
-  const candidates: {
-    repositoryName: string;
-    fullName: string;
-    shortName: string;
-  }[] = [];
-
-  for (const fullName of catalog) {
-    const slashIndex = fullName.indexOf("/");
-    if (slashIndex === -1) {
-      continue;
-    }
-
-    const repositoryName = fullName.slice(0, slashIndex);
-    if (!repositoryNames.has(repositoryName)) {
-      continue;
-    }
-
-    const shortName = fullName.slice(slashIndex + 1);
-    if (!shortName) {
-      continue;
-    }
-
-    candidates.push({ repositoryName, fullName, shortName });
-  }
-
-  for (const { repositoryName, fullName, shortName } of candidates) {
-    const hasTags = await repositoryHasTags(token, fullName);
-    if (hasTags) {
-      result.get(repositoryName)!.push(shortName);
-    }
-  }
-
-  return result;
-}
+import { listRepositoryCatalog } from "@/lib/registry/client/catalog";
+import { issueRepositoriesRegistryToken, type RegistryAuthUser } from "@/lib/registry/client/auth";
+import { registryFetch } from "@/lib/registry/client/fetch";
+import { fetchAllTagNames } from "@/lib/registry/client/tag-names";
 
 export async function countNonEmptyImagesForRepositories(
   user: RegistryAuthUser,
   repositoryNames: string[],
 ): Promise<Map<string, number>> {
-  const imagesByRepository = await listNonEmptyImagesByRepositories(
-    user,
-    new Set(repositoryNames),
+  const counts = new Map(repositoryNames.map((name) => [name, 0]));
+
+  await Promise.all(
+    repositoryNames.map(async (repositoryName) => {
+      try {
+        const catalog = await listRepositoryCatalog(user, repositoryName);
+        counts.set(repositoryName, catalog.images.length);
+      } catch {
+        // Registry unreachable or forbidden — leave at 0.
+      }
+    }),
   );
 
-  return new Map(
-    repositoryNames.map((name) => [name, imagesByRepository.get(name)?.length ?? 0]),
-  );
+  return counts;
 }
 
 export async function listNonEmptyImagesInRepository(
   user: RegistryAuthUser,
   repositoryName: string,
 ): Promise<string[]> {
-  const imagesByRepository = await listNonEmptyImagesByRepositories(
-    user,
-    new Set([repositoryName]),
-  );
-  return imagesByRepository.get(repositoryName) ?? [];
-}
-
-async function repositoryHasTags(
-  token: string,
-  repository: string,
-): Promise<boolean> {
   try {
-    const body = await registryJson<{ tags?: string[] }>(
-      `/v2/${repository}/tags/list?n=1`,
-      token,
-    );
-    return (body.tags?.length ?? 0) > 0;
+    const catalog = await listRepositoryCatalog(user, repositoryName);
+    return catalog.images.map((image) => image.name);
   } catch {
-    return false;
+    return [];
   }
 }
 
@@ -132,11 +55,7 @@ async function deleteImage(token: string, repository: string): Promise<void> {
   let tags: string[] = [];
 
   try {
-    const body = await registryJson<{ tags?: string[] }>(
-      `/v2/${repository}/tags/list?n=1000`,
-      token,
-    );
-    tags = body.tags ?? [];
+    tags = await fetchAllTagNames(repository, token);
   } catch {
     return;
   }

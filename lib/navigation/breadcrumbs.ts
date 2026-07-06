@@ -56,19 +56,19 @@ function buildRepositoryBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
   const tail = segments.slice(2);
 
   if (tail.length === 0) {
-    items.push({ label: titleCase(repository) });
+    items.push({ label: repository });
     return items;
   }
 
   if (tail[0] === "settings" && tail.length === 1) {
-    items.push({ label: titleCase(repository), href: repositoryPath });
+    items.push({ label: repository, href: repositoryPath });
     items.push({ label: "Settings" });
     return items;
   }
 
   if (tail[0] === "i" || tail[0] === "r") {
     const imageSegments = tail.slice(1).map(decodeURIComponent);
-    items.push({ label: titleCase(repository), href: repositoryPath });
+    items.push({ label: repository, href: repositoryPath });
 
     if (imageSegments.length === 0) {
       items.push({ label: "Images" });
@@ -101,7 +101,7 @@ function buildRepositoryBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
     return items;
   }
 
-  items.push({ label: titleCase(repository), href: repositoryPath });
+  items.push({ label: repository, href: repositoryPath });
   for (const [index, segment] of tail.entries()) {
     const isLast = index === tail.length - 1;
     const href = isLast
