@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
+import { RepositorySettingsPage } from "@/components/settings/repository-settings-page";
 import { TagDetailPage } from "@/components/tags/tag-detail-page";
 import { TagsPage } from "@/components/tags/tags-page";
 
@@ -8,6 +9,9 @@ type PageProps = {
 };
 
 function parseRepositoryRoute(rest: string[] | undefined): {
+  kind: "settings";
+  repoName: string;
+} | {
   kind: "list";
   repoName: string;
 } | {
@@ -20,12 +24,21 @@ function parseRepositoryRoute(rest: string[] | undefined): {
   }
 
   const segments = rest.map(decodeURIComponent);
+
+  if (segments.at(-1) === "settings") {
+    if (segments.length < 2) {
+      return null;
+    }
+
+    return {
+      kind: "settings",
+      repoName: segments.slice(0, -1).join("/"),
+    };
+  }
+
   const tagMarkerIndex = segments.lastIndexOf("t");
 
-  if (
-    tagMarkerIndex > 0 &&
-    tagMarkerIndex === segments.length - 2
-  ) {
+  if (tagMarkerIndex > 0 && tagMarkerIndex === segments.length - 2) {
     return {
       kind: "detail",
       repoName: segments.slice(0, tagMarkerIndex).join("/"),
@@ -49,6 +62,15 @@ export default async function RepositoryRoutePage({ params }: PageProps) {
       <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
         Select a repository from the project catalog.
       </div>
+    );
+  }
+
+  if (parsed.kind === "settings") {
+    return (
+      <RepositorySettingsPage
+        projectName={projectName}
+        repoName={parsed.repoName}
+      />
     );
   }
 

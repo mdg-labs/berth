@@ -3,7 +3,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { apiFetch } from "@/lib/api/client";
@@ -29,7 +29,9 @@ export function AuthGuard({
   requirePasswordChange?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data, error, isLoading } = useAuthUser();
+  const onReactivatePage = pathname === "/reactivate-account";
 
   useEffect(() => {
     if (isLoading) {
@@ -50,8 +52,27 @@ export function AuthGuard({
 
     if (data.user.mustChangePassword) {
       router.replace("/change-password");
+      return;
     }
-  }, [data, error, isLoading, requirePasswordChange, router]);
+
+    if (onReactivatePage) {
+      if (!data.user.pendingDeletion) {
+        router.replace("/projects");
+      }
+      return;
+    }
+
+    if (data.user.pendingDeletion) {
+      router.replace("/reactivate-account");
+    }
+  }, [
+    data,
+    error,
+    isLoading,
+    onReactivatePage,
+    requirePasswordChange,
+    router,
+  ]);
 
   if (isLoading || error || !data?.user) {
     return null;
@@ -62,6 +83,17 @@ export function AuthGuard({
   }
 
   if (!requirePasswordChange && data.user.mustChangePassword) {
+    return null;
+  }
+
+  if (onReactivatePage) {
+    if (!data.user.pendingDeletion) {
+      return null;
+    }
+    return <>{children}</>;
+  }
+
+  if (data.user.pendingDeletion) {
     return null;
   }
 

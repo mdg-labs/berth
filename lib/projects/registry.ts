@@ -4,10 +4,9 @@ import { getRegistryInternalUrl } from "@/lib/registry/health";
 
 const CATALOG_TIMEOUT_MS = 10_000;
 
-export async function listNonEmptyReposInProject(
-  projectName: string,
+async function fetchCatalogRepositories(
+  registryUrl: string,
 ): Promise<string[]> {
-  const registryUrl = getRegistryInternalUrl().replace(/\/$/, "");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CATALOG_TIMEOUT_MS);
 
@@ -22,26 +21,83 @@ export async function listNonEmptyReposInProject(
     }
 
     const body = (await response.json()) as { repositories?: string[] };
-    const prefix = `${projectName}/`;
-    const candidates = (body.repositories ?? []).filter((name) =>
-      name.startsWith(prefix),
-    );
-
-    const nonEmpty: string[] = [];
-
-    for (const repo of candidates) {
-      const hasTags = await repositoryHasTags(registryUrl, repo);
-      if (hasTags) {
-        nonEmpty.push(repo.slice(prefix.length));
-      }
-    }
-
-    return nonEmpty;
+    return body.repositories ?? [];
   } catch {
     return [];
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function listNonEmptyReposByProjects(
+  projectNames: ReadonlySet<string>,
+): Promise<Map<string, string[]>> {
+  const result = new Map<string, string[]>();
+  for (const name of projectNames) {
+    result.set(name, []);
+  }
+
+  if (projectNames.size === 0) {
+    return result;
+  }
+
+  const registryUrl = getRegistryInternalUrl().replace(/\/$/, "");
+  const catalog = await fetchCatalogRepositories(registryUrl);
+
+  const candidates: {
+    projectName: string;
+    fullName: string;
+    shortName: string;
+  }[] = [];
+
+  for (const fullName of catalog) {
+    const slashIndex = fullName.indexOf("/");
+    if (slashIndex === -1) {
+      continue;
+    }
+
+    const projectName = fullName.slice(0, slashIndex);
+    if (!projectNames.has(projectName)) {
+      continue;
+    }
+
+    const shortName = fullName.slice(slashIndex + 1);
+    if (!shortName) {
+      continue;
+    }
+
+    candidates.push({ projectName, fullName, shortName });
+  }
+
+  for (const { projectName, fullName, shortName } of candidates) {
+    const hasTags = await repositoryHasTags(registryUrl, fullName);
+    if (hasTags) {
+      result.get(projectName)!.push(shortName);
+    }
+  }
+
+  return result;
+}
+
+export async function countNonEmptyReposForProjects(
+  projectNames: string[],
+): Promise<Map<string, number>> {
+  const reposByProject = await listNonEmptyReposByProjects(
+    new Set(projectNames),
+  );
+
+  return new Map(
+    projectNames.map((name) => [name, reposByProject.get(name)?.length ?? 0]),
+  );
+}
+
+export async function listNonEmptyReposInProject(
+  projectName: string,
+): Promise<string[]> {
+  const reposByProject = await listNonEmptyReposByProjects(
+    new Set([projectName]),
+  );
+  return reposByProject.get(projectName) ?? [];
 }
 
 async function repositoryHasTags(

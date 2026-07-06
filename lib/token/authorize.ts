@@ -10,8 +10,12 @@ import {
   getEffectiveProjectRole,
   getProjectByName,
 } from "@/lib/rbac/roles";
+import {
+  computeEffectiveAnonymousPull,
+  getRepositoryOverridesForProject,
+} from "@/lib/repositories/settings";
 import type { RegistryAccess } from "@/lib/token/scope";
-import { extractProjectNames } from "@/lib/token/scope";
+import { parseRepositoryScopeName } from "@/lib/token/scope";
 
 import { findMissingProjects } from "./projects";
 
@@ -64,14 +68,75 @@ async function authorizePublicPullAccess(
     };
   }
 
-  const projectNames = extractProjectNames(access);
-  for (const projectName of projectNames) {
-    const project = await getProjectByName(projectName);
-    if (!project?.isPublic) {
+  const repoScopes = access
+    .filter((entry) => entry.type === "repository")
+    .map((entry) => {
+      const parsed = parseRepositoryScopeName(entry.name);
+      return parsed ? { entry, ...parsed } : null;
+    })
+    .filter((scope): scope is NonNullable<typeof scope> => scope !== null);
+
+  const projectsByName = new Map<
+    string,
+    Awaited<ReturnType<typeof getProjectByName>>
+  >();
+
+  for (const scope of repoScopes) {
+    if (projectsByName.has(scope.projectName)) {
+      continue;
+    }
+
+    const project = await getProjectByName(scope.projectName);
+    if (!project) {
       return {
         ok: false,
         code: "forbidden",
-        message: `Project is not public: ${projectName}`,
+        message: `Project is not public: ${scope.projectName}`,
+      };
+    }
+
+    projectsByName.set(scope.projectName, project);
+  }
+
+  const reposByProjectId = new Map<string, string[]>();
+  for (const scope of repoScopes) {
+    const project = projectsByName.get(scope.projectName);
+    if (!project) {
+      continue;
+    }
+
+    const existing = reposByProjectId.get(project.id) ?? [];
+    existing.push(scope.repoName);
+    reposByProjectId.set(project.id, existing);
+  }
+
+  const overridesByProjectId = new Map<
+    string,
+    Awaited<ReturnType<typeof getRepositoryOverridesForProject>>
+  >();
+
+  for (const [projectId, repoNames] of reposByProjectId) {
+    overridesByProjectId.set(
+      projectId,
+      await getRepositoryOverridesForProject(projectId, repoNames),
+    );
+  }
+
+  for (const scope of repoScopes) {
+    const project = projectsByName.get(scope.projectName);
+    if (!project) {
+      continue;
+    }
+
+    const override =
+      overridesByProjectId.get(project.id)?.get(scope.repoName) ?? "inherit";
+    const allowed = computeEffectiveAnonymousPull(project.isPublic, override);
+
+    if (!allowed) {
+      return {
+        ok: false,
+        code: "forbidden",
+        message: `Anonymous pull is not allowed for repository: ${scope.entry.name}`,
       };
     }
   }
@@ -96,9 +161,8 @@ async function authorizeAuthenticatedAccess(
       continue;
     }
 
-    const slashIndex = entry.name.indexOf("/");
-    const projectName =
-      slashIndex === -1 ? entry.name : entry.name.slice(0, slashIndex);
+    const parsed = parseRepositoryScopeName(entry.name);
+    const projectName = parsed?.projectName ?? entry.name;
 
     if (!projectName) {
       continue;

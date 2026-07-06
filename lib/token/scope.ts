@@ -70,14 +70,29 @@ export function extractProjectNames(access: RegistryAccess[]): string[] {
       continue;
     }
 
-    const slashIndex = entry.name.indexOf("/");
-    const projectName =
-      slashIndex === -1 ? entry.name : entry.name.slice(0, slashIndex);
-
-    if (projectName) {
-      projects.add(projectName);
+    const parsed = parseRepositoryScopeName(entry.name);
+    if (parsed?.projectName) {
+      projects.add(parsed.projectName);
     }
   }
 
   return [...projects];
+}
+
+export function parseRepositoryScopeName(
+  fullName: string,
+): { projectName: string; repoName: string } | null {
+  const slashIndex = fullName.indexOf("/");
+  if (slashIndex === -1) {
+    return null;
+  }
+
+  const projectName = fullName.slice(0, slashIndex);
+  const repoName = fullName.slice(slashIndex + 1);
+
+  if (!projectName || !repoName) {
+    return null;
+  }
+
+  return { projectName, repoName };
 }

@@ -5,8 +5,15 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import {
+  hardDeleteUser,
+  purgeExpiredDeletedUsers,
+  resolveUserForAuthentication,
+} from "@/lib/users/lifecycle";
 
 export async function findUserByEmail(email: string) {
+  await purgeExpiredDeletedUsers();
+
   const db = getDb();
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -16,7 +23,16 @@ export async function findUserByEmail(email: string) {
     .where(eq(users.email, normalizedEmail))
     .limit(1);
 
-  return user ?? null;
+  if (!user) {
+    return null;
+  }
+
+  const authState = await resolveUserForAuthentication(user);
+  if (authState === "purged") {
+    return null;
+  }
+
+  return user;
 }
 
 export async function verifyPassword(

@@ -6,6 +6,10 @@ export type AuthUser = {
   name: string;
   systemRole: "admin" | "user";
   mustChangePassword: boolean;
+  hasPassword: boolean;
+  pendingDeletion: boolean;
+  deletedAt: string | null;
+  purgesAt: string | null;
 };
 
 export type ProjectSummary = {
@@ -14,4 +18,5 @@ export type ProjectSummary = {
   isPublic: boolean;
   createdAt: string;
   role: "guest" | "developer" | "maintainer" | "admin" | null;
+  repositoryCount: number;
 };

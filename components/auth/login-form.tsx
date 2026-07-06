@@ -36,7 +36,11 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
         description: `Welcome back, ${data.user.name}.`,
       });
       router.replace(
-        data.user.mustChangePassword ? "/change-password" : "/projects",
+        data.user.mustChangePassword
+          ? "/change-password"
+          : data.user.pendingDeletion
+            ? "/reactivate-account"
+            : "/projects",
       );
     },
     onError: (error) => {

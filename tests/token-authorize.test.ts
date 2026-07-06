@@ -8,10 +8,12 @@ const {
   findMissingProjectsMock,
   getProjectByNameMock,
   getEffectiveProjectRoleMock,
+  getRepositoryOverridesForProjectMock,
 } = vi.hoisted(() => ({
   findMissingProjectsMock: vi.fn(),
   getProjectByNameMock: vi.fn(),
   getEffectiveProjectRoleMock: vi.fn(),
+  getRepositoryOverridesForProjectMock: vi.fn(),
 }));
 
 vi.mock("@/lib/token/projects", () => ({
@@ -26,9 +28,19 @@ vi.mock("@/lib/rbac/roles", () => ({
   getProjectById: vi.fn(),
 }));
 
+vi.mock("@/lib/repositories/settings", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/repositories/settings")>();
+  return {
+    ...actual,
+    getRepositoryOverridesForProject: getRepositoryOverridesForProjectMock,
+  };
+});
+
 describe("token authorization", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    getRepositoryOverridesForProjectMock.mockResolvedValue(new Map());
   });
 
   it("rejects missing projects", async () => {
@@ -143,6 +155,49 @@ describe("token authorization", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("forbidden");
+    }
+  });
+
+  it("rejects anonymous pull when repository override is deny", async () => {
+    findMissingProjectsMock.mockResolvedValue([]);
+    getProjectByNameMock.mockResolvedValue({
+      id: "p1",
+      name: "public-proj",
+      isPublic: true,
+    });
+    getRepositoryOverridesForProjectMock.mockResolvedValue(
+      new Map([["repo", "deny"]]),
+    );
+
+    const result = await authorizeTokenAccess(null, [
+      { type: "repository", name: "public-proj/repo", actions: ["pull"] },
+    ]);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("forbidden");
+      expect(result.message).toContain("public-proj/repo");
+    }
+  });
+
+  it("allows anonymous pull when repository override is allow on private project", async () => {
+    findMissingProjectsMock.mockResolvedValue([]);
+    getProjectByNameMock.mockResolvedValue({
+      id: "p1",
+      name: "private-proj",
+      isPublic: false,
+    });
+    getRepositoryOverridesForProjectMock.mockResolvedValue(
+      new Map([["repo", "allow"]]),
+    );
+
+    const result = await authorizeTokenAccess(null, [
+      { type: "repository", name: "private-proj/repo", actions: ["pull"] },
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.access[0]?.actions).toEqual(["pull"]);
     }
   });
 });

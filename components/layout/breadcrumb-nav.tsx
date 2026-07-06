@@ -14,47 +14,33 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-
-function titleCase(segment: string): string {
-  return segment
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
+import { buildBreadcrumbItems } from "@/lib/navigation/breadcrumbs";
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
-  const segments = pathname.split("/").filter(Boolean);
+  const items = buildBreadcrumbItems(pathname);
 
-  if (segments.length === 0) {
+  if (items.length === 0) {
     return null;
   }
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink render={<Link href="/projects" />}>Berth</BreadcrumbLink>
-        </BreadcrumbItem>
-        {segments.map((segment, index) => {
-          const href = `/${segments.slice(0, index + 1).join("/")}`;
-          const isLast = index === segments.length - 1;
-
-          return (
-            <Fragment key={href}>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                {isLast ? (
-                  <BreadcrumbPage>{titleCase(segment)}</BreadcrumbPage>
-                ) : (
-                  <BreadcrumbLink render={<Link href={href} />}>
-                    {titleCase(segment)}
-                  </BreadcrumbLink>
-                )}
-              </BreadcrumbItem>
-            </Fragment>
-          );
-        })}
+        {items.map((item, index) => (
+          <Fragment key={`${item.label}-${index}`}>
+            {index > 0 ? <BreadcrumbSeparator /> : null}
+            <BreadcrumbItem>
+              {item.href ? (
+                <BreadcrumbLink render={<Link href={item.href} />}>
+                  {item.label}
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+          </Fragment>
+        ))}
       </BreadcrumbList>
     </Breadcrumb>
   );

@@ -9,7 +9,7 @@ import { getSessionIdFromCookie } from "@/lib/session/cookie";
 
 const PUBLIC_PATHS = new Set(["/login"]);
 const AUTH_ONLY_PATHS = new Set(["/change-password"]);
-const PROTECTED_PREFIXES = ["/projects"];
+const PROTECTED_PREFIXES = ["/projects", "/p", "/admin"];
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(

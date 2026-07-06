@@ -13,6 +13,8 @@ import {
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { getSessionUserFromRequest } from "@/lib/session/request";
+import { getUserDeletionState } from "@/lib/users/presentation";
+import { toAuthUser } from "@/lib/users/serialize";
 
 type ChangePasswordBody = {
   currentPassword?: string;
@@ -72,13 +74,19 @@ export async function POST(request: NextRequest) {
     })
     .where(eq(users.id, user.id));
 
+  const deletion = getUserDeletionState(user.deletedAt ?? null);
+
   return NextResponse.json({
-    user: {
+    user: toAuthUser({
       id: user.id,
       email: user.email,
       name: user.name,
       systemRole: user.systemRole,
       mustChangePassword: false,
-    },
+      hasPassword: true,
+      pendingDeletion: deletion.pendingDeletion,
+      deletedAt: deletion.deletedAt,
+      purgesAt: deletion.purgesAt,
+    }),
   });
 }

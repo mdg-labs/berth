@@ -20,6 +20,12 @@ export const projectMemberRoleEnum = pgEnum("project_member_role", [
   "admin",
 ]);
 
+export const anonymousPullOverrideEnum = pgEnum("anonymous_pull_override", [
+  "inherit",
+  "allow",
+  "deny",
+]);
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
@@ -29,6 +35,7 @@ export const users = pgTable("users", {
   oidcSub: varchar("oidc_sub", { length: 255 }),
   systemRole: systemRoleEnum("system_role").notNull().default("user"),
   mustChangePassword: boolean("must_change_password").notNull().default(false),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -97,3 +104,22 @@ export const auditLog = pgTable("audit_log", {
     .notNull()
     .defaultNow(),
 });
+
+export const repositorySettings = pgTable(
+  "repository_settings",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    anonymousPull: anonymousPullOverrideEnum("anonymous_pull")
+      .notNull()
+      .default("inherit"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.projectId, table.name] }),
+  }),
+);

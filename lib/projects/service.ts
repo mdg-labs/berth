@@ -10,6 +10,7 @@ import { getProjectMemberRole } from "@/lib/rbac/roles";
 import type { SystemRole } from "@/lib/rbac/types";
 
 import {
+  countNonEmptyReposForProjects,
   deleteAllReposInProject,
   listNonEmptyReposInProject,
 } from "./registry";
@@ -21,6 +22,7 @@ export type ProjectSummary = {
   isPublic: boolean;
   createdAt: string;
   role: "guest" | "developer" | "maintainer" | "admin" | null;
+  repositoryCount: number;
 };
 
 export type ProjectDetail = ProjectSummary & {
@@ -43,12 +45,21 @@ export async function listProjectsForUser(
       })
       .from(projects);
 
-    return rows.map((row) => ({
+    const summaries = rows.map((row) => ({
       id: row.id,
       name: row.name,
       isPublic: row.isPublic,
       createdAt: row.createdAt.toISOString(),
       role: null,
+    }));
+
+    const repositoryCounts = await countNonEmptyReposForProjects(
+      summaries.map((summary) => summary.name),
+    );
+
+    return summaries.map((summary) => ({
+      ...summary,
+      repositoryCount: repositoryCounts.get(summary.name) ?? 0,
     }));
   }
 
@@ -76,13 +87,15 @@ export async function listProjectsForUser(
     .from(projects)
     .where(eq(projects.isPublic, true));
 
-  const summaries: ProjectSummary[] = memberRows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    isPublic: row.isPublic,
-    createdAt: row.createdAt.toISOString(),
-    role: row.role,
-  }));
+  const summaries: Omit<ProjectSummary, "repositoryCount">[] = memberRows.map(
+    (row) => ({
+      id: row.id,
+      name: row.name,
+      isPublic: row.isPublic,
+      createdAt: row.createdAt.toISOString(),
+      role: row.role,
+    }),
+  );
 
   for (const row of publicRows) {
     if (!memberProjectIds.has(row.id)) {
@@ -97,7 +110,15 @@ export async function listProjectsForUser(
   }
 
   summaries.sort((a, b) => a.name.localeCompare(b.name));
-  return summaries;
+
+  const repositoryCounts = await countNonEmptyReposForProjects(
+    summaries.map((summary) => summary.name),
+  );
+
+  return summaries.map((summary) => ({
+    ...summary,
+    repositoryCount: repositoryCounts.get(summary.name) ?? 0,
+  }));
 }
 
 export async function getProjectDetail(
@@ -132,6 +153,8 @@ export async function getProjectDetail(
     return null;
   }
 
+  const repositoryCounts = await countNonEmptyReposForProjects([row.name]);
+
   return {
     id: row.id,
     name: row.name,
@@ -139,6 +162,7 @@ export async function getProjectDetail(
     createdBy: row.createdBy,
     createdAt: row.createdAt.toISOString(),
     role: memberRole,
+    repositoryCount: repositoryCounts.get(row.name) ?? 0,
   };
 }
 
@@ -195,6 +219,7 @@ export async function createProject(
     createdBy: created.createdBy,
     createdAt: created.createdAt.toISOString(),
     role: "admin",
+    repositoryCount: 0,
   };
 }
 
@@ -252,6 +277,8 @@ export async function updateProject(
   }
 
   if (Object.keys(updates).length === 0) {
+    const repositoryCounts = await countNonEmptyReposForProjects([existing.name]);
+
     return {
       id: existing.id,
       name: existing.name,
@@ -259,6 +286,7 @@ export async function updateProject(
       createdBy: existing.createdBy,
       createdAt: existing.createdAt.toISOString(),
       role: memberRole,
+      repositoryCount: repositoryCounts.get(existing.name) ?? 0,
     };
   }
 
@@ -278,6 +306,8 @@ export async function updateProject(
     return { error: "not_found" };
   }
 
+  const repositoryCounts = await countNonEmptyReposForProjects([updated.name]);
+
   return {
     id: updated.id,
     name: updated.name,
@@ -285,6 +315,7 @@ export async function updateProject(
     createdBy: updated.createdBy,
     createdAt: updated.createdAt.toISOString(),
     role: memberRole,
+    repositoryCount: repositoryCounts.get(updated.name) ?? 0,
   };
 }
 

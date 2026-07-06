@@ -15,6 +15,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   SearchIcon,
+  SettingsIcon,
   Trash2Icon,
 } from "lucide-react";
 import {
@@ -143,6 +144,9 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
     authQuery.data?.user.systemRole ?? "user",
     projectQuery.data?.role ?? null,
   );
+  const canManage =
+    authQuery.data?.user.systemRole === "admin" ||
+    projectQuery.data?.role === "admin";
 
   const bulkDeleteMutation = useMutation({
     mutationFn: (tagNames: string[]) =>
@@ -355,6 +359,20 @@ export function TagsPage({ projectName, repoName }: TagsPageProps) {
             {query.sort === "name_desc" ? <ArrowDownIcon /> : <ArrowUpIcon />}
             Sort
           </Button>
+          {canManage ? (
+            <Button
+              variant="outline"
+              size="sm"
+              render={
+                <Link
+                  href={`/p/${encodeURIComponent(projectName)}/r/${repoPathSegments(repoName)}/settings`}
+                />
+              }
+            >
+              <SettingsIcon />
+              Settings
+            </Button>
+          ) : null}
           {canDelete ? (
             <Button
               variant="destructive-outline"

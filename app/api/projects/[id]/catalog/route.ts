@@ -8,6 +8,7 @@ import {
   handleRegistryRouteError,
   requireProjectAccess,
 } from "@/lib/registry/catalog/access";
+import { enrichRepositoriesWithVisibility } from "@/lib/repositories/settings";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -28,7 +29,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       access.project.name,
       search,
     );
-    return NextResponse.json(catalog);
+    const repositories = await enrichRepositoriesWithVisibility(
+      access.project.id,
+      access.project.isPublic,
+      catalog.repositories,
+    );
+    return NextResponse.json({ repositories });
   } catch (error) {
     return handleRegistryRouteError(error);
   }

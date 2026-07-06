@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: berth
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - berth-internal
     healthcheck:
@@ -27,11 +29,13 @@ services:
       - ./registry/certs/rootcert.pem:/etc/registry/certs/rootcert.pem:ro
     environment:
       REGISTRY_AUTH: token
-      REGISTRY_AUTH_TOKEN_REALM: http://localhost:8080/api/auth/token
+      REGISTRY_AUTH_TOKEN_REALM: http://localhost:3000/api/auth/token
       REGISTRY_AUTH_TOKEN_SERVICE: registry
       REGISTRY_AUTH_TOKEN_ISSUER: registry
       REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE: /etc/registry/certs/rootcert.pem
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
+    ports:
+      - "5000:5000"
     networks:
       - berth-internal
     healthcheck:

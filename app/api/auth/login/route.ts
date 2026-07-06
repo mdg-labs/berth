@@ -13,6 +13,9 @@ import {
 import { checkLoginRateLimit } from "@/lib/rate-limit/login";
 import { buildSessionCookie } from "@/lib/session/cookie";
 import { createSession } from "@/lib/session/store";
+import { getUserDeletionState } from "@/lib/users/presentation";
+import { resolveUserForAuthentication } from "@/lib/users/lifecycle";
+import { toAuthUser } from "@/lib/users/serialize";
 
 type LoginBody = {
   email?: string;
@@ -45,21 +48,31 @@ export async function POST(request: NextRequest) {
     return apiError("invalid_credentials", "Invalid email or password", 401);
   }
 
+  const authState = await resolveUserForAuthentication(user);
+  if (authState === "purged") {
+    return apiError("invalid_credentials", "Invalid email or password", 401);
+  }
+
   await acceptPendingInvitesForEmail(user.id, user.email, {
     requireEmailVerified: false,
   });
 
   const sessionId = await createSession(user.id);
+  const deletion = getUserDeletionState(user.deletedAt);
 
   return NextResponse.json(
     {
-      user: {
+      user: toAuthUser({
         id: user.id,
         email: user.email,
         name: user.name,
         systemRole: user.systemRole,
         mustChangePassword: user.mustChangePassword,
-      },
+        hasPassword: user.passwordHash !== null,
+        pendingDeletion: deletion.pendingDeletion,
+        deletedAt: deletion.deletedAt,
+        purgesAt: deletion.purgesAt,
+      }),
     },
     {
       status: 200,

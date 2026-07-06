@@ -18,6 +18,7 @@ import {
 } from "@/lib/oidc/state";
 import { buildSessionCookie } from "@/lib/session/cookie";
 import { createSession } from "@/lib/session/store";
+import { resolveUserForAuthentication } from "@/lib/users/lifecycle";
 
 function claimString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -76,6 +77,13 @@ export async function GET(request: NextRequest) {
     emailVerified,
   });
 
+  const authState = await resolveUserForAuthentication(user);
+  if (authState === "purged") {
+    const response = NextResponse.redirect(new URL("/login", getAppUrl()));
+    response.headers.append("Set-Cookie", buildClearOidcStateCookie());
+    return response;
+  }
+
   await acceptPendingInvitesForEmail(user.id, user.email, {
     requireEmailVerified: true,
     emailVerified,
@@ -83,7 +91,10 @@ export async function GET(request: NextRequest) {
 
   const sessionId = await createSession(user.id);
 
-  const response = NextResponse.redirect(new URL("/", getAppUrl()));
+  const redirectPath =
+    authState === "pending_deletion" ? "/reactivate-account" : "/projects";
+
+  const response = NextResponse.redirect(new URL(redirectPath, getAppUrl()));
   response.headers.append("Set-Cookie", buildSessionCookie(sessionId));
   response.headers.append("Set-Cookie", buildClearOidcStateCookie());
   return response;

@@ -3,6 +3,8 @@
 export type CatalogRepository = {
   name: string;
   tagCount: number;
+  anonymousPull?: "inherit" | "allow" | "deny";
+  effectiveAnonymousPull?: boolean;
 };
 
 export type CatalogResponse = {

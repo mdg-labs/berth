@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { createLocalUser, listUsers } from "@/lib/admin/users";
+import { getUserDeleteGracePeriodDays } from "@/lib/users/config";
 import { isSessionSystemAdmin } from "@/lib/admin/guard";
 import { apiError } from "@/lib/api/errors";
 import type { SystemRole } from "@/lib/rbac/types";
@@ -27,7 +28,10 @@ export async function GET(request: NextRequest) {
   }
 
   const users = await listUsers();
-  return NextResponse.json({ users });
+  return NextResponse.json({
+    users,
+    meta: { deleteGracePeriodDays: getUserDeleteGracePeriodDays() },
+  });
 }
 
 export async function POST(request: NextRequest) {

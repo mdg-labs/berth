@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { AuthGuard } from "@/components/providers/auth-guard";
-import { PortalHeader } from "@/components/layout/portal-header";
+import { PortalShell } from "@/components/layout/portal-shell";
 import { getSessionUser } from "@/lib/session/server";
 
 export default async function PortalLayout({
@@ -22,10 +22,7 @@ export default async function PortalLayout({
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background text-foreground">
-        <PortalHeader />
-        <main className="mx-auto max-w-6xl px-3 py-6 sm:px-4 sm:py-8">{children}</main>
-      </div>
+      <PortalShell>{children}</PortalShell>
     </AuthGuard>
   );
 }

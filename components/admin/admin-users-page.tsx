@@ -22,10 +22,14 @@ export type AdminUserRow = {
   hasPassword: boolean;
   mustChangePassword: boolean;
   createdAt: string;
+  status: "active" | "pending_deletion";
+  deletedAt: string | null;
+  purgesAt: string | null;
 };
 
 type UsersResponse = {
   users: AdminUserRow[];
+  meta: { deleteGracePeriodDays: number };
 };
 
 export function AdminUsersPage() {
@@ -78,7 +82,10 @@ export function AdminUsersPage() {
       ) : null}
 
       {usersQuery.data ? (
-        <AdminUsersTable users={usersQuery.data.users} />
+        <AdminUsersTable
+          users={usersQuery.data.users}
+          deleteGracePeriodDays={usersQuery.data.meta.deleteGracePeriodDays}
+        />
       ) : null}
 
       <CreateUserDialog

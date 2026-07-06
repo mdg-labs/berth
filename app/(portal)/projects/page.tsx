@@ -147,6 +147,9 @@ export default function ProjectsPage() {
               >
                 <p className="font-medium">{project.name}</p>
                 <p className="text-xs text-muted-foreground">
+                  {project.repositoryCount}{" "}
+                  {project.repositoryCount === 1 ? "repository" : "repositories"}
+                  {" · "}
                   Created {new Date(project.createdAt).toLocaleDateString()}
                 </p>
               </Link>

@@ -12,8 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FieldDescription } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { toastManager } from "@/components/ui/toast";
@@ -31,16 +30,16 @@ export function ProjectVisibilitySection({
   const switchId = useId();
 
   const visibilityMutation = useMutation({
-    mutationFn: (nextPublic: boolean) =>
-      apiFetch(`/api/projects/${projectId}`, {
+    mutationFn: (anonymousPullDefault: boolean) =>
+      apiFetch(`/api/projects/${projectId}/settings`, {
         method: "PATCH",
-        body: { isPublic: nextPublic },
+        body: { anonymousPullDefault },
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
       toastManager.add({
         type: "success",
-        title: "Visibility updated",
+        title: "Default visibility updated",
       });
     },
     onError: (error) => {
@@ -56,20 +55,21 @@ export function ProjectVisibilitySection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Visibility</CardTitle>
+        <CardTitle>Default anonymous pull</CardTitle>
         <CardDescription>
-          Public projects allow anonymous pull access.
+          Applies to all repositories unless overridden on an individual image
+          settings page.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={switchId}>Public project</Label>
+          <Field className="flex-1">
+            <FieldLabel htmlFor={switchId}>Allow anonymous pull</FieldLabel>
             <FieldDescription>
-              When enabled, unauthenticated clients can pull images from this
-              project.
+              When enabled, unauthenticated clients can pull repositories that
+              inherit this project default.
             </FieldDescription>
-          </div>
+          </Field>
           <Switch
             id={switchId}
             checked={isPublic}

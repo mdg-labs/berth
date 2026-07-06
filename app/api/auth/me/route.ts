@@ -5,6 +5,7 @@ import type { NextRequest } from "next/server";
 
 import { apiError } from "@/lib/api/errors";
 import { getSessionUserFromRequest } from "@/lib/session/request";
+import { toAuthUser } from "@/lib/users/serialize";
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
@@ -13,13 +14,5 @@ export async function GET(request: NextRequest) {
     return apiError("not_authenticated", "Not authenticated", 401);
   }
 
-  return NextResponse.json({
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      systemRole: user.systemRole,
-      mustChangePassword: user.mustChangePassword,
-    },
-  });
+  return NextResponse.json({ user: toAuthUser(user) });
 }
