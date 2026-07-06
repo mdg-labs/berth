@@ -1,46 +1,56 @@
 ---
-description: When and how to use the Berth orchestrator skill — ROADMAP phases P0–P11
+description: When and how to use the Berth orchestrator skill — ROADMAP + GitHub/Kaneo issues
 alwaysApply: true
 ---
 
 # Orchestrator & task tracking
 
-Berth greenfield MVP is built via **roadmap phases** tracked in `workspace-notes.md`.
+Berth has **two work modes**:
 
 | Mode | ID | When |
 |------|-----|------|
-| **Roadmap (greenfield MVP)** | `P0` … `P11`, `P0-T03` | `orchestrate P0`, `implement P6` |
+| **Roadmap (greenfield MVP)** | `P0` … `P11` | `orchestrate P0`, `implement P6` — progress in `workspace-notes.md` |
+| **GitHub issue (bugs/iteration)** | `#N` | `implement #1` — Kaneo MCP status + GitHub `mdg-labs/berth` |
 
 ## Use the orchestrator skill when
 
-- The user asks to "orchestrate", "delegate", or implement a roadmap phase (`P6`, `P0-T03`)
-- Multi-step work spans several linked phases
-- Autonomous Berth MVP development is requested
+- The user asks to "orchestrate", "delegate", or implement a roadmap phase (`P6`) or GitHub issue (`#N`) with verifier gate
+- Multi-step work spans several linked tasks
 
-Follow `.cursor/skills/orchestrator/SKILL.md`. Do not improvise dispatch rules.
+Follow `.cursor/skills/orchestrator/SKILL.md`. Do not improvise.
 
 ## Task lifecycle
 
+### Roadmap mode
+
 | Stage | Who | Meaning |
 |-------|-----|---------|
-| In Progress | **Execution** | Working (`TASK: P6 — In Progress`) |
-| In Review | **Execution** | Implemented + CI + **committed** — awaiting verifier |
+| In Progress | **Execution** | `TASK: P6 — In Progress` |
+| In Review | **Execution** | Implemented + CI + **committed** |
 | Done | **Verifier** + **Orchestrator** | PASS — update `workspace-notes.md` |
+
+### GitHub issue mode
+
+| Stage | Kaneo status | GitHub | Who |
+|-------|--------------|--------|-----|
+| In Progress | `in-progress` | `status:in-progress` | **Execution** |
+| In Review | `in-review` | `status:in-review` | **Execution** (after commit) |
+| Done | `done` | `closed` | **Verifier** + **Orchestrator** |
+
+**Commits:** GitHub `#N` only — `[#1]` + `fixes #1`. **Never** Kaneo task IDs in git.
 
 ## Orchestrator dispatch rules
 
 - Present **batch plan** before first `Task` dispatch (unless `plan only` / `wait`)
-- **Parallel:** only P5 + P6 after P4 (Lane P, max 2, `best-of-n-runner` worktrees)
-- **Scoped CI (sub-agents):** lint / typecheck / test per prompt-templates — not full E2E unless AC requires
-- **Execution prompts** → paste **TASK FIRST** as first lines — see `prompt-templates.md`
-- **Execution agents** → implement → **CI gate** → **one commit** → verifier
-- **Orchestrator** → after verifier PASS: **commit-linkage audit** before marking Done
-- **Forbidden:** orchestrator reading `docs/spec.md` bodies or implementation files
+- **Parallel:** only P5 + P6 after P4 (Lane P, max 2, `best-of-n-runner`)
+- **Issue mode:** Lane S default; Kaneo MCP for status; `gh` for read/close
+- **Execution prompts** → **TASK FIRST** (roadmap) or **STATUS FIRST** (issue) — see `prompt-templates.md`
+- **Verifier** → `readonly: false` in issue mode
+- **Orchestrator** → commit-linkage audit after every verifier PASS
+- **Forbidden:** Kaneo IDs in commits; condensed ISSUE SYNC one-liners
 
-## Universal acceptance criteria (every task)
+## Universal acceptance criteria
 
-- Conventional commits with `[P<phase>]` linkage (`02-git-workflow.mdc`)
-- TypeScript strict; no `any`; no `console.log` in production paths
-- Drizzle: schema edit + `db:generate` + commit migrations
-- spec §0: no Harbor / joxit/docker-registry-ui; no bulk `@coss/ui`
-- Record decisions in `DECISIONS.md`
+- Roadmap commits: `02-git-workflow.mdc`
+- Issue commits: `03-issue-commit-linking.mdc`
+- spec §0 constraints; `DECISIONS.md` for open choices

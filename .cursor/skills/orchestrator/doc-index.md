@@ -20,6 +20,7 @@ Sub-agents read these files themselves — never paste full doc bodies into prom
 | `coss` | `.agents/skills/coss/SKILL.md` | coss UI primitives, composition rules |
 | `coss-particles` | `.agents/skills/coss-particles/SKILL.md` | Particle JSON URLs |
 | `orchestrator` | `docs/ORCHESTRATOR-GUIDE.md` | Invocation, gates, verifier checklist |
+| `kaneo` | `.cursor/skills/orchestrator/kaneo-issues.md` | GitHub `#N` + Kaneo MCP issue workflow |
 
 Reference sections as `spec §4.3`, `roadmap P6`, `spec Appendix B`.
 
@@ -112,3 +113,15 @@ Mark `n/a` only when the command does not exist yet (early scaffold).
 - `/v2/*` always proxied through app — no dev registry port shortcut (spec Appendix C)
 - Registry tokens include `x5c` header (spec §4.2)
 - New decisions recorded in `DECISIONS.md`
+- **Issue mode:** commits use `fixes #N` only — never Kaneo task IDs (`03-issue-commit-linking.mdc`)
+
+## GitHub + Kaneo issue tracking
+
+| Field | Value |
+|-------|-------|
+| GitHub | `mdg-labs/berth` — `#N` in commits |
+| Kaneo project | Berth (`odf06mcdzi4l40gb0aa0laps`) |
+| Kaneo `taskId` | MCP status only — parse from GitHub issue body `Task: <id>` |
+| Workflow doc | `kaneo-issues.md` |
+
+Bidirectional sync: Kaneo task `number` = GitHub issue `number`.

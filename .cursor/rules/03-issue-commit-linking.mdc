@@ -1,0 +1,61 @@
+---
+description: Link GitHub issue commits — [#N] + fixes #N (issue mode only)
+alwaysApply: true
+---
+
+# Issue commit linking (GitHub)
+
+Applies to **GitHub issue mode** commits. **Roadmap mode** uses `[P<n>]` + `Task: P<n>` instead — see `02-git-workflow.mdc`.
+
+Every **issue-related** commit must reference **GitHub `#N` only** — never Kaneo task IDs.
+
+Bidirectional Kaneo ↔ GitHub sync is active for `mdg-labs/berth`. Kaneo task IDs are for MCP status updates only; they must not appear in git.
+
+## Required subject format
+
+```
+<type>(<scope>)[#N]: <imperative summary>
+```
+
+| Part | Rule |
+|------|------|
+| `<type>` | Conventional Commits: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `ci`, `build`, `perf` |
+| `<scope>` | Allowed scopes from `02-git-workflow.mdc` |
+| `[#N]` | **Mandatory** — GitHub issue number on `mdg-labs/berth` |
+| Summary | Imperative mood; whole subject ≤72 chars |
+
+## Required body format
+
+```
+fixes #N
+```
+
+Place on its own line. Repo default `mdg-labs/berth` — no need for full `owner/repo#N` in body when working in this repo.
+
+## Forbidden
+
+- Kaneo task IDs in subject or body (`d4fd7ibt0agftmlv0bi8lcze`)
+- `Task: …` Kaneo footers in commits
+- Referencing Kaneo task `number` instead of GitHub issue number when they differ (they should match for synced tasks)
+
+## Epic (parent) issues
+
+When orchestrator passes `PARENT: #P`:
+
+| Commit | Subject | Body |
+|--------|---------|------|
+| Subtask | `[#<leaf>][#<P>]` | `fixes #<leaf>` + `refs #<P>` |
+| Final child closing epic | `[#<leaf>][#<P>]` | + `fixes #<P>` when P in `CLOSE_PARENTS` |
+
+## Verifier / orchestrator audit
+
+```bash
+git log <base>..HEAD --grep='fixes #N'
+```
+
+Missing → **FAIL** — do not mark Done.
+
+## Exceptions (no issue key)
+
+- Roadmap commits: `[P6]` format
+- Pure repo hygiene outside orchestrator (rare)

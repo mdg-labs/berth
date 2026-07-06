@@ -2,10 +2,10 @@
 name: orchestrator
 description: >-
   Run a chat as a pure orchestrator for Berth (registry-ui). Greenfield MVP uses
-  roadmap phase IDs (P0, P0-T03, orchestrate P5) from ROADMAP.md. Dispatches
-  sub-agents, verifies, tracks progress in workspace-notes. Use when the user
-  asks to orchestrate Berth, delegate end-to-end, implement P0–P11, or build
-  the registry MVP autonomously.
+  roadmap phase IDs (P0, orchestrate P5) from ROADMAP.md. Bugs/iteration use
+  GitHub issue IDs (#N) with Kaneo MCP status sync. Dispatches sub-agents,
+  verifies, tracks progress. Use when the user asks to orchestrate Berth,
+  implement P0–P11, implement #N, or delegate end-to-end.
 ---
 
 # Orchestrator (Berth)
@@ -17,11 +17,14 @@ The main agent in this chat is a **dispatcher only**. It loads the named roadmap
 | Work | Target | Tracking |
 |------|--------|----------|
 | **Greenfield roadmap** (`orchestrate P0`, `implement P6`) | `ROADMAP.md` | `workspace-notes.md` |
+| **GitHub issue (bugs/iteration)** (`implement #1`) | `mdg-labs/berth` + Kaneo | Issue closed + Kaneo `done` |
 | **Ad-hoc / no target** | Chat | `TodoWrite` only |
 
-**Default:** **Roadmap mode** — operator names `P<phase>` or `P<phase>-T<nn>`.
+**Default for MVP build:** **Roadmap mode** — operator names `P<phase>`.
 
-Post-MVP bugs may use GitLab issues later; greenfield MVP does **not** file roadmap work as issues.
+**Default for bugs/fixes:** **Issue mode** — operator names `#N` (GitHub issue number). Kaneo syncs bidirectionally; **commits use `#N` only**, never Kaneo task IDs.
+
+Greenfield MVP does **not** file roadmap phases as GitHub issues.
 
 ## Workspace
 
@@ -35,15 +38,23 @@ Post-MVP bugs may use GitLab issues later; greenfield MVP does **not** file road
 | Spec | `docs/spec.md` — [doc-index.md](doc-index.md) |
 | Progress | `.cursor/skills/workspace-notes.md` |
 | Prompt templates | [prompt-templates.md](prompt-templates.md) |
-| Git / commit rules | `.cursor/rules/02-git-workflow.mdc` |
+| Kaneo + GitHub issues | [kaneo-issues.md](kaneo-issues.md) |
+| Git / commit rules | `02-git-workflow.mdc`, `03-issue-commit-linking.mdc` |
 
-## Task identifiers
+## Two identifiers
 
 | Context | ID | Example |
 |---------|-----|---------|
-| Whole phase | `P<phase>` | `P0`, `P6`, `P11` |
-| Sub-task (checkbox N in ROADMAP) | `P<phase>-T<nn>` | `P0-T03`, `P4-T07` |
-| Git commit | Task key in subject | `[P6]`, body `Task: P6` |
+| Greenfield orchestrator, plans, roadmap commits | `P<phase>[-T<nn>]` | `P6`, `P0-T03` |
+| Bugs/iteration orchestrator, plans, **commits** | GitHub `#N` | `#1` |
+| Kaneo MCP status only | Kaneo `taskId` | `d4fd7ibt…` — **never in git** |
+
+| Context | Roadmap commit | Issue commit |
+|---------|----------------|--------------|
+| Subject | `feat(scope)[P6]: …` | `fix(scope)[#1]: …` |
+| Body | `Task: P6` | `fixes #1` |
+
+**Forbidden:** `#N` as primary ref for roadmap tasks; Kaneo IDs in any commit.
 
 Sub-task numbers = **1-indexed checkbox order** under `### Tasks` in each phase section of `ROADMAP.md`.
 
@@ -53,11 +64,12 @@ Sub-task numbers = **1-indexed checkbox order** under `### Tasks` in each phase 
 
 - Read `ROADMAP.md`, `docs/ORCHESTRATOR-GUIDE.md`
 - Read/write `.cursor/skills/workspace-notes.md`
-- Read [doc-index.md](doc-index.md), [prompt-templates.md](prompt-templates.md)
+- Read [doc-index.md](doc-index.md), [prompt-templates.md](prompt-templates.md), [kaneo-issues.md](kaneo-issues.md)
 - Use `TodoWrite` in chat mode
 - Launch sub-agents via **Task** tool
 - **Commit-linkage audit** after verifier PASS
-- Shell **only** for: `workspace-notes.md`, commit audit, `git log --grep`
+- Shell **only** for: `workspace-notes.md`, commit audit, `git log --grep`, `gh issue view` (issue mode)
+- Kaneo MCP **only** for issue-mode status confirm (orchestrator may verify sync; sub-agents own transitions)
 
 ### MUST NOT do
 
@@ -110,7 +122,38 @@ Do **not** ask “go?” — the plan is the heads-up; execution follows unless 
 | 1 | P5, P6 | P | disjoint scopes; worktree per agent (≤2) |
 ```
 
-User modifiers: `serial` (force Lane S) · `from P6` · `plan only` · `wait`
+### Issue mode startup
+
+1. `gh issue view <N> --repo mdg-labs/berth` — title, body (AC), state, labels
+2. Confirm issue is ready (`status:to-do` / open) — not already in-review unless resuming
+3. Output batch plan → dispatch batch 1
+4. **On stop:** issue sync confirm → final summary in chat
+
+### Batch plan format (issue)
+
+```markdown
+## Orchestrator plan — #1
+
+**Branch:** main · **GitHub:** mdg-labs/berth · **Commits:** `[#1]` + `fixes #1`
+
+| Batch | Issues | Lane | Notes |
+|-------|--------|------|-------|
+| 1 | #1 | S | Test-Issue |
+
+→ Starting batch 1…
+```
+
+User modifiers: `serial` · `from P6` · `plan only` · `wait`
+
+## Modes
+
+| Mode | Trigger | Progress |
+|------|---------|----------|
+| **Roadmap** | `P0`, `P6`, `orchestrate P8` | `workspace-notes.md` |
+| **Issue** | `#N`, GitHub issue URL | GitHub closed + Kaneo `done` |
+| **Chat** | Ad-hoc | `TodoWrite` |
+
+Default to **Roadmap** during greenfield unless user names `#N`.
 
 ## Roadmap progress (after verifier PASS + commit audit)
 
@@ -141,6 +184,32 @@ git log <base>..HEAD --grep='\[P6\]'
 | Uncommitted changes in WRITE SCOPE | **FAIL** |
 
 **Verifier Layer 3c3:** Confirm task commit in `git log`. Missing → **FAIL** even if AC pass.
+
+### Issue mode audit
+
+```bash
+git log <base>..HEAD --grep='fixes #N'
+gh issue view <N> --repo mdg-labs/berth --json state -q .state   # expect CLOSED
+```
+
+## Issue status ownership (issue mode)
+
+| Stage | Who | Kaneo status | GitHub |
+|-------|-----|--------------|--------|
+| In Progress | **Execution** | `in-progress` | `status:in-progress` (synced) |
+| In Review | **Execution** | `in-review` | `status:in-review` (synced) |
+| Done | **Verifier** + **Orchestrator** | `done` | `closed` |
+
+### Issue sync (mandatory, orchestrator-owned — issue mode)
+
+After every verifier PASS:
+
+1. **Commit-linkage audit** — `git log --grep='fixes #N'` must hit
+2. Confirm GitHub closed: `gh issue view <N> --repo mdg-labs/berth --json state`
+3. Optionally confirm Kaneo `get_task` → `status: done`
+4. If no `fixes #N` in run commits → **FAIL** — do not advance queue
+
+**Verifier dispatch:** `readonly: false` in issue mode (needs `gh` + Kaneo MCP).
 
 ## Dispatching sub-agents
 
@@ -184,9 +253,22 @@ Sub-agents do **not** read skill files unless blocks are pasted.
 5. WORK → **commit mandatory** before handoff
 6. REQUIRED OUTPUT
 
+**Issue execution** — section order:
+
+1. **STATUS FIRST** — Kaneo `in-progress` + `ISSUE STATUS: In Progress on #N`
+2. **ISSUE SYNC — EXECUTION** (full block from [kaneo-issues.md](kaneo-issues.md))
+3. **GITHUB + KANEO TOOLS**
+4. TASK / SESSION / PARENT / CLOSE_PARENTS
+5. ACCEPTANCE CRITERIA + scopes
+6. **SCOPED CI GATE** + **DB MIGRATIONS**
+7. WORK → Kaneo `in-review` → commit `[#N]` / `fixes #N`
+8. REQUIRED OUTPUT
+
 **Verifier:** fresh sub-agent; three layers including 3c3 commit linkage.
 
-**After execution returns:** If output lacks commit SHA → **FAIL**; do not dispatch verifier.
+**After execution returns (issue mode):** If output lacks `ISSUE STATUS: In Progress on #N` → **FAIL**.
+
+**After execution returns (both modes):** If output lacks commit SHA → **FAIL**; do not dispatch verifier.
 
 ## Execution agents
 
@@ -252,11 +334,11 @@ Plus compose integration / e2e when available. Sub-agents must **not** run full 
 ## Orchestrator loop
 
 ```
-read workspace-notes → check gates → batch plan
+load target (roadmap or #N) → batch plan
 → dispatch execution (composer-2.5)
 → confirm commit SHA in output
 → dispatch verifier
-→ on PASS: commit-linkage audit → update workspace-notes → next batch
+→ on PASS: commit-linkage audit → progress update (workspace-notes or issue sync)
 → on FAIL: stop or re-dispatch
 → on stop: final summary in chat
 ```
@@ -293,9 +375,14 @@ For large phases (P0, P4, P7, P10), operator may use sub-tasks: `implement P0-T0
 - Trusting verifier PASS without commit-linkage audit
 - `git add .` / `git add -A`
 - Referencing Harbor or joxit/docker-registry-ui source
+- Kaneo task IDs in commit messages
+- Condensed ISSUE SYNC one-liners — use full blocks from `kaneo-issues.md`
+- Execution prompts closing GitHub issues before verifier
+- Verifier `readonly: true` in issue mode
 
 ## See also
 
 - [ORCHESTRATOR-GUIDE.md](../../../docs/ORCHESTRATOR-GUIDE.md) — operator invocation cheatsheet
 - [ROADMAP.md](../../../ROADMAP.md) — tasks and exit criteria
+- [kaneo-issues.md](kaneo-issues.md) — GitHub `#N` + Kaneo MCP workflow
 - [doc-index.md](doc-index.md) — spec shorthand and gates

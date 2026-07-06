@@ -10,13 +10,14 @@
 
 ### Autonomous development (recommended)
 
-Use the **orchestrator skill** to dispatch phased work with verifier gates:
+Use the **orchestrator skill** for phased greenfield work or GitHub issues:
 
 ```text
-@orchestrator orchestrate P0
+@orchestrator orchestrate P0          # roadmap greenfield
+@orchestrator implement #1            # GitHub issue (Kaneo sync)
 ```
 
-See [`docs/ORCHESTRATOR-GUIDE.md`](docs/ORCHESTRATOR-GUIDE.md) and [`.cursor/skills/orchestrator/SKILL.md`](.cursor/skills/orchestrator/SKILL.md). Progress is tracked in [`.cursor/skills/workspace-notes.md`](.cursor/skills/workspace-notes.md).
+See [`docs/ORCHESTRATOR-GUIDE.md`](docs/ORCHESTRATOR-GUIDE.md), [`.cursor/skills/orchestrator/kaneo-issues.md`](.cursor/skills/orchestrator/kaneo-issues.md).
 
 | Command | Behavior |
 |---------|----------|

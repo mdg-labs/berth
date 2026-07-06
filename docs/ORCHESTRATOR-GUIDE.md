@@ -24,16 +24,18 @@ How to build the MVP by orchestrating against `ROADMAP.md`. Use the **orchestrat
 | Command | Behavior |
 |---------|----------|
 | `orchestrate P0` | All incomplete work in Phase 0 |
-| `implement P3` | Single phase (or resume if partial) |
-| `implement P0-T05` | Single sub-task (5th checkbox in Phase 0 Tasks list) |
-| `orchestrate P5 from P5` | Phase 5 only (same as `orchestrate P5`) |
+| `implement P3` | Single roadmap phase |
+| `implement P0-T05` | Single checkbox task within Phase 0 |
+| `orchestrate through P3` | Sequential P0→P3 |
+| `implement #1` | Single GitHub issue (Kaneo status sync) |
+| `orchestrate #1` | Same as `implement #1` with verifier gate |
 | `orchestrate P5 plan only` | Batch plan, no dispatch |
 | `orchestrate P5 serial` | Force Lane S even if parallel-eligible |
-| `orchestrate through P3` | P0 → P1 → P2 → P3 sequentially until P3 Done or blocked |
 
-**Task ID format:** `P<phase>` (e.g. `P6`) or `P<phase>-T<nn>` (e.g. `P0-T03`).
+**Roadmap IDs:** `P0` … `P11` (or `P0-T03` for sub-tasks).  
+**Issue IDs:** GitHub `#N` on `mdg-labs/berth` — **never Kaneo task IDs in commits**.
 
-**Progress:** `.cursor/skills/workspace-notes.md`
+**Progress:** `workspace-notes.md` (roadmap) · GitHub closed + Kaneo `done` (issue mode)
 
 ---
 
@@ -45,9 +47,27 @@ How to build the MVP by orchestrating against `ROADMAP.md`. Use the **orchestrat
 | `docs/spec.md` | *(sub-agents only — orchestrator uses doc-index)* |
 | `.cursor/skills/workspace-notes.md` | Done / Next / blockers |
 | `.cursor/skills/orchestrator/doc-index.md` | Spec shorthand, gates, hot files |
-| `.cursor/skills/orchestrator/prompt-templates.md` | TASK FIRST, CI GATE, commit WORK steps |
+| `.cursor/skills/orchestrator/prompt-templates.md` | TASK FIRST / STATUS FIRST, CI GATE |
+| `.cursor/skills/orchestrator/kaneo-issues.md` | GitHub `#N` + Kaneo MCP sync blocks |
 
 The orchestrator does **not** read full spec bodies — sub-agents do.
+
+---
+
+## GitHub + Kaneo issue mode
+
+For bugs and post-MVP work (`implement #1`):
+
+1. **GitHub `#N`** is the only ID in plans, prompts, and **commits** (`[#1]` + `fixes #1`)
+2. **Kaneo MCP** drives status: `to-do` → `in-progress` → `in-review` → `done` (syncs to GitHub labels)
+3. Resolve Kaneo `taskId` from GitHub issue body footer (`Task: <id>`) — MCP only, never in git
+4. Close via `gh issue close <N>` after verifier PASS
+
+Test issue: [mdg-labs/berth#1](https://github.com/mdg-labs/berth/issues/1) ↔ Kaneo Berth task #1.
+
+```text
+@orchestrator implement #1
+```
 
 ---
 
@@ -162,8 +182,15 @@ Are WRITE scopes overlapping (compose.yml, layout.tsx)?
 7. No Docker socket mounted in `app` service
 8. No Harbor / joxit/docker-registry-ui references in implementation
 9. coss: Appendix B batch only (UI phases)
+10. **Issue mode:** commit contains `fixes #N` only — no Kaneo task ID; GitHub issue closed after PASS
 
----
+## When to use GitHub issues vs roadmap
+
+| Use GitHub `#N` | Use roadmap `P<n>` |
+|-----------------|---------------------|
+| Bug reports | Greenfield MVP (P0–P11) |
+| Post-MVP features | `orchestrate P0` |
+| `implement #1` | `implement P6` |
 
 ## Getting started
 
@@ -171,10 +198,10 @@ Are WRITE scopes overlapping (compose.yml, layout.tsx)?
 @orchestrator orchestrate P0
 ```
 
-Or invoke the skill and say:
+**Issue (test sync):**
 
 ```text
-orchestrate P0 — build Berth foundation per ROADMAP.md
+@orchestrator implement #1
 ```
 
 ---

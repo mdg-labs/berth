@@ -27,6 +27,8 @@ fix(<scope>)[#12]: <summary>                  # GitLab issue (post-MVP)
 
 **Roadmap:** `[P<phase>[-T<nn>]]` in subject; `Task: P<phase>[-T<nn>]` on its own line in the body.
 
+**GitHub issue (bugs/iteration):** `[#N]` in subject; `fixes #N` in body. **Never** Kaneo task IDs — see `03-issue-commit-linking.mdc`.
+
 **Allowed scopes:** `repo`, `ci`, `api`, `web`, `db`, `docker`, `docs`, `deps`, `auth`, `registry`
 
 ## Commit rules

@@ -36,7 +36,7 @@ Orchestrator fills in `P<phase>` or `P<phase>-T<nn>` and pastes this block **fir
 Your FIRST action:
 1. Output: TASK: P<phase>[-T<nn>] — In Progress
 
-Do not create GitLab issues unless explicitly instructed.
+Do not create GitHub issues unless explicitly instructed (roadmap greenfield).
 
 Pre-handoff: Output TASK: P<phase>[-T<nn>] — In Review ONLY after scoped CI gate passes AND commit created.
 ```
@@ -218,26 +218,128 @@ Then commit-linkage audit before advancing queue.
 
 ---
 
+---
+
+## GitHub issue execution
+
+### Execution prompt section order (mandatory)
+
+1. **STATUS FIRST** — Kaneo `in-progress` + `ISSUE STATUS: In Progress on #N`
+2. **ISSUE SYNC — EXECUTION** — full block from [kaneo-issues.md](kaneo-issues.md#issue-sync-blocks)
+3. **GITHUB + KANEO TOOLS**
+4. MODE / LANE / TASK / SESSION / PARENT / CLOSE_PARENTS
+5. ACCEPTANCE CRITERIA + READ/WRITE SCOPE
+6. **SCOPED CI GATE (SHELL)** + **DB MIGRATIONS**
+7. WORK + **REQUIRED OUTPUT**
+
+### STATUS FIRST — mandatory header (issue execution)
+
+```text
+⚠️ STATUS FIRST — MANDATORY (before session memory, before Read/Grep, before any code)
+
+Your FIRST actions:
+1. gh issue view <N> --repo mdg-labs/berth
+2. Resolve Kaneo taskId from issue body footer (Task: <id>) — session memory ONLY, never commit
+3. Kaneo MCP update_task_status → in-progress
+4. Output: ISSUE STATUS: In Progress on #<N>
+
+If gh or Kaneo MCP fails → ISSUE_SYNC: FAILED and stop.
+
+Pre-handoff: Kaneo update_task_status → in-review
+Confirm ISSUE STATUS: In Review on #<N>
+ONLY after scoped CI gate passes AND commit with fixes #<N> created.
+```
+
+### GITHUB + KANEO TOOLS — mandatory in every issue prompt
+
+```text
+GITHUB + KANEO TOOLS — MANDATORY:
+- github: mdg-labs/berth
+- kaneo projectId: odf06mcdzi4l40gb0aa0laps (status MCP only)
+- Shell required_permissions: ["all"] on FIRST gh attempt
+- Read: gh issue view <N> --repo mdg-labs/berth
+- Kaneo status: update_task_status(taskId, in-progress | in-review | done | to-do)
+- Kaneo comment: create_task_comment(taskId, content)
+- Close: gh issue close <N> --repo mdg-labs/berth (verifier only)
+- Reopen: gh issue reopen <N> --repo mdg-labs/berth (verifier FAIL)
+
+COMMIT FORMAT (GitHub #N ONLY — never Kaneo taskId):
+- Subject: <type>(<scope>)[#<N>] (+ [#<P>] when subtask)
+- Body: fixes #<N>; refs #<P> on subtasks
+
+FORBIDDEN:
+- Kaneo taskId in commit subject or body
+- git add .
+- Close issue during execution (before verifier)
+```
+
+### Issue — Lane S execution template
+
+```text
+⚠️ STATUS FIRST — (paste filled block — MUST be first lines)
+
+ISSUE SYNC — EXECUTION:
+(paste full block from kaneo-issues.md)
+
+GITHUB + KANEO TOOLS — MANDATORY:
+(paste GITHUB + KANEO TOOLS block)
+
+MODE: GitHub issue
+LANE: S
+TARGET REPO: /home/mdguggenbichler/projects/registry-ui
+WORK BRANCH: main
+TASK ID: #<N>
+SESSION ID: issue-<N>-<YYYYMMDD>-<4hex>
+PARENT: #<parent> | none
+CLOSE_PARENTS: [#<parent>] | none
+KANEO_TASK_ID: <resolved> (MCP only — never in commit)
+
+ACCEPTANCE CRITERIA:
+- <from GitHub issue body>
+
+READ SCOPE / WRITE SCOPE:
+- <paths>
+
+WORK:
+1. STATUS FIRST
+2. Implement → scoped CI → Kaneo in-review → commit [#N] / fixes #N
+
+REQUIRED OUTPUT:
+- ISSUE STATUS: In Progress / In Review on #<N>
+- COMMIT: SHA (no Kaneo id in message)
+```
+
+### Issue — Verifier template
+
+```text
+ISSUE SYNC — VERIFIER: (paste from kaneo-issues.md)
+GITHUB + KANEO TOOLS: (paste block)
+MODE: GitHub issue verify · TASK: #<N> · readonly: FALSE
+
+VERIFY: scope + scoped CI + AC + git log --grep='fixes #<N>'
+
+AFTER PASS: Kaneo comment → done → gh issue close <N>
+AFTER FAIL: Kaneo comment → to-do → gh issue reopen if needed
+```
+
+---
+
 ## Orchestrator — pre-dispatch checklist
 
 Before execution Task:
 
-- [ ] Previous phase exit criteria met (see doc-index gates)
+- [ ] Mode: roadmap (**TASK FIRST**) or issue (**STATUS FIRST** + ISSUE SYNC block)
+- [ ] Previous phase exit criteria met (roadmap only)
 - [ ] Batch lane: Lane P (P5+P6 only, ≤2 agents) or Lane S
 - [ ] Lane P: `subagent_type: "best-of-n-runner"` + WORKTREE ISOLATION block
-- [ ] **TASK FIRST** with IDs filled in
 - [ ] **SCOPED CI GATE** + **DB MIGRATIONS** (when schema)
-- [ ] ACCEPTANCE CRITERIA from `ROADMAP.md` exit criteria (+ task checkbox for sub-tasks)
-
-After execution:
-
-- [ ] Output contains commit SHA — else FAIL, do not dispatch verifier
+- [ ] Issue mode: **GITHUB + KANEO TOOLS** pasted; verifier `readonly: false`
 
 After verifier PASS:
 
-- [ ] Lane P: merge task branch(es) to `main` serially
-- [ ] Commit-linkage audit
-- [ ] Update `workspace-notes.md`
+- [ ] Commit-linkage audit (`[P<n>]` or `fixes #N`)
+- [ ] Roadmap: update `workspace-notes.md`
+- [ ] Issue: confirm `gh issue view` state CLOSED
 
 ---
 
