@@ -2,22 +2,20 @@
 
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { ChangePasswordSection } from "@/components/account/change-password-section";
+import { useRouter } from "@/lib/i18n/navigation";
 
 export function ChangePasswordForm() {
   const router = useRouter();
+  const t = useTranslations("auth.changePassword");
 
   return (
     <div className="space-y-6 rounded-xl border bg-card p-6 shadow-xs">
       <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Change your password
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          You must set a new password before continuing.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("description")}</p>
       </div>
       <ChangePasswordSection
         embedded

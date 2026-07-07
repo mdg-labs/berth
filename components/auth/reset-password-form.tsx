@@ -3,18 +3,22 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { toastManager } from "@/components/ui/toast";
+import { formatApiError } from "@/lib/i18n/api-error";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 
 export function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("auth.resetPassword");
+  const tErrors = useTranslations("errors.api");
   const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -38,17 +42,16 @@ export function ResetPasswordForm() {
     onSuccess: () => {
       toastManager.add({
         type: "success",
-        title: "Password updated",
-        description: "You can now sign in with your new password.",
+        title: t("toast.successTitle"),
+        description: t("toast.successDescription"),
       });
       router.replace("/login");
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Reset failed",
-        description:
-          error instanceof ApiError ? error.message : "Something went wrong",
+        title: t("toast.errorTitle"),
+        description: formatApiError(tErrors, error, "generic"),
       });
     },
   });
@@ -56,8 +59,10 @@ export function ResetPasswordForm() {
   if (!token) {
     return (
       <div className="space-y-4 rounded-xl border bg-card p-6 text-center shadow-xs">
-        <p className="text-sm text-muted-foreground">Invalid reset link.</p>
-        <Button render={<Link href="/forgot-password" />}>Request a new link</Button>
+        <p className="text-sm text-muted-foreground">{t("invalidLink")}</p>
+        <Button render={<Link href="/forgot-password" />}>
+          {t("requestNewLink")}
+        </Button>
       </div>
     );
   }
@@ -73,10 +78,10 @@ export function ResetPasswordForm() {
   if (validationQuery.isError) {
     return (
       <div className="space-y-4 rounded-xl border bg-card p-6 text-center shadow-xs">
-        <p className="text-sm text-muted-foreground">
-          This reset link is invalid or has expired.
-        </p>
-        <Button render={<Link href="/forgot-password" />}>Request a new link</Button>
+        <p className="text-sm text-muted-foreground">{t("expiredLink")}</p>
+        <Button render={<Link href="/forgot-password" />}>
+          {t("requestNewLink")}
+        </Button>
       </div>
     );
   }
@@ -84,9 +89,9 @@ export function ResetPasswordForm() {
   return (
     <div className="space-y-6 rounded-xl border bg-card p-6 shadow-xs">
       <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Reset password</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Set a new password for {validationQuery.data?.email}.
+          {t("description", { email: validationQuery.data?.email ?? "" })}
         </p>
       </div>
 
@@ -97,7 +102,7 @@ export function ResetPasswordForm() {
           if (password !== confirmPassword) {
             toastManager.add({
               type: "error",
-              title: "Passwords do not match",
+              title: t("toast.passwordMismatchTitle"),
             });
             return;
           }
@@ -106,7 +111,7 @@ export function ResetPasswordForm() {
       >
         <div className="space-y-2">
           <label htmlFor="reset-password" className="text-sm font-medium">
-            New password
+            {t("newPassword")}
           </label>
           <input
             id="reset-password"
@@ -122,7 +127,7 @@ export function ResetPasswordForm() {
         </div>
         <div className="space-y-2">
           <label htmlFor="reset-password-confirm" className="text-sm font-medium">
-            Confirm password
+            {t("confirmPassword")}
           </label>
           <input
             id="reset-password-confirm"
@@ -143,7 +148,7 @@ export function ResetPasswordForm() {
           data-loading={mutation.isPending ? "" : undefined}
         >
           {mutation.isPending ? <Spinner /> : null}
-          Update password
+          {t("submit")}
         </Button>
       </form>
     </div>

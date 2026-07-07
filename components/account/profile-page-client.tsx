@@ -2,6 +2,8 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { AccountProfileSection } from "@/components/account/account-profile-section";
 import { ChangePasswordSection } from "@/components/account/change-password-section";
@@ -9,14 +11,13 @@ import { ChangePasswordSection } from "@/components/account/change-password-sect
 export function ProfilePageClient() {
   const { data } = useAuthUser();
   const user = data?.user;
+  const t = useTranslations("account.profile");
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your account settings.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("description")}</p>
       </div>
       <AccountProfileSection />
       {user?.hasPassword ? <ChangePasswordSection /> : null}

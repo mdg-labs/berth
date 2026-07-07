@@ -3,18 +3,22 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { toastManager } from "@/components/ui/toast";
+import { formatApiError } from "@/lib/i18n/api-error";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 
 export function AcceptInviteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("auth.acceptInvite");
+  const tErrors = useTranslations("errors.api");
   const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -38,17 +42,16 @@ export function AcceptInviteForm() {
     onSuccess: () => {
       toastManager.add({
         type: "success",
-        title: "Account created",
-        description: "You can now sign in to Berth.",
+        title: t("toast.successTitle"),
+        description: t("toast.successDescription"),
       });
       router.replace("/login");
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Invite acceptance failed",
-        description:
-          error instanceof ApiError ? error.message : "Something went wrong",
+        title: t("toast.errorTitle"),
+        description: formatApiError(tErrors, error, "generic"),
       });
     },
   });
@@ -56,8 +59,8 @@ export function AcceptInviteForm() {
   if (!token) {
     return (
       <div className="space-y-4 rounded-xl border bg-card p-6 text-center shadow-xs">
-        <p className="text-sm text-muted-foreground">Invalid invite link.</p>
-        <Button render={<Link href="/login" />}>Go to sign in</Button>
+        <p className="text-sm text-muted-foreground">{t("invalidLink")}</p>
+        <Button render={<Link href="/login" />}>{t("goToSignIn")}</Button>
       </div>
     );
   }
@@ -73,10 +76,8 @@ export function AcceptInviteForm() {
   if (validationQuery.isError) {
     return (
       <div className="space-y-4 rounded-xl border bg-card p-6 text-center shadow-xs">
-        <p className="text-sm text-muted-foreground">
-          This invite link is invalid or has expired.
-        </p>
-        <Button render={<Link href="/login" />}>Go to sign in</Button>
+        <p className="text-sm text-muted-foreground">{t("expiredLink")}</p>
+        <Button render={<Link href="/login" />}>{t("goToSignIn")}</Button>
       </div>
     );
   }
@@ -84,10 +85,12 @@ export function AcceptInviteForm() {
   return (
     <div className="space-y-6 rounded-xl border bg-card p-6 shadow-xs">
       <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Accept invite</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Welcome, {validationQuery.data?.name}. Set a password for{" "}
-          {validationQuery.data?.email}.
+          {t("description", {
+            name: validationQuery.data?.name ?? "",
+            email: validationQuery.data?.email ?? "",
+          })}
         </p>
       </div>
 
@@ -98,7 +101,7 @@ export function AcceptInviteForm() {
           if (password !== confirmPassword) {
             toastManager.add({
               type: "error",
-              title: "Passwords do not match",
+              title: t("toast.passwordMismatchTitle"),
             });
             return;
           }
@@ -107,7 +110,7 @@ export function AcceptInviteForm() {
       >
         <div className="space-y-2">
           <label htmlFor="invite-password" className="text-sm font-medium">
-            Password
+            {t("password")}
           </label>
           <input
             id="invite-password"
@@ -123,7 +126,7 @@ export function AcceptInviteForm() {
         </div>
         <div className="space-y-2">
           <label htmlFor="invite-password-confirm" className="text-sm font-medium">
-            Confirm password
+            {t("confirmPassword")}
           </label>
           <input
             id="invite-password-confirm"
@@ -144,7 +147,7 @@ export function AcceptInviteForm() {
           data-loading={mutation.isPending ? "" : undefined}
         >
           {mutation.isPending ? <Spinner /> : null}
-          Create account
+          {t("submit")}
         </Button>
       </form>
     </div>

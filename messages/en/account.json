@@ -1,1 +1,47 @@
-{}
+{
+  "profile": {
+    "title": "Profile",
+    "description": "Manage your account settings.",
+    "sectionTitle": "Profile",
+    "sectionDescription": "Update your display name and email address.",
+    "sectionDescriptionReadOnly": "Your account is managed by your identity provider.",
+    "name": "Name",
+    "email": "Email",
+    "currentPassword": "Current password",
+    "currentPasswordHint": "Required when changing your email address.",
+    "saveChanges": "Save changes",
+    "toast": {
+      "successTitle": "Profile updated",
+      "successDescription": "Your account details were saved.",
+      "errorTitle": "Update failed"
+    }
+  },
+  "password": {
+    "title": "Password",
+    "description": "Update your account password.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "minLength": "At least 8 characters.",
+    "submit": "Update password",
+    "toast": {
+      "successTitle": "Password updated",
+      "successDescription": "Your password has been changed.",
+      "errorTitle": "Password change failed",
+      "passwordMismatchTitle": "Passwords do not match",
+      "passwordMismatchDescription": "Confirm password must match the new password."
+    }
+  },
+  "reactivate": {
+    "title": "Reactivate your account?",
+    "description": "This account is scheduled for deletion on {purgeDate}. You can restore it now or sign out and leave the deletion in place.",
+    "purgeDateSoon": "soon",
+    "reactivate": "Reactivate account",
+    "signOut": "Sign out",
+    "toast": {
+      "successTitle": "Account reactivated",
+      "successDescription": "Your account has been restored.",
+      "errorTitle": "Reactivation failed"
+    }
+  }
+}

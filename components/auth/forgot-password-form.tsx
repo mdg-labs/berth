@@ -3,15 +3,19 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { toastManager } from "@/components/ui/toast";
+import { formatApiError } from "@/lib/i18n/api-error";
+import { Link } from "@/lib/i18n/navigation";
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("auth.forgotPassword");
+  const tErrors = useTranslations("errors.api");
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -25,16 +29,15 @@ export function ForgotPasswordForm() {
       setSubmitted(true);
       toastManager.add({
         type: "success",
-        title: "Check your email",
-        description: "If an account exists, a reset link has been sent.",
+        title: t("toast.successTitle"),
+        description: t("toast.successDescription"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Request failed",
-        description:
-          error instanceof ApiError ? error.message : "Something went wrong",
+        title: t("toast.errorTitle"),
+        description: formatApiError(tErrors, error, "generic"),
       });
     },
   });
@@ -42,16 +45,13 @@ export function ForgotPasswordForm() {
   return (
     <div className="space-y-6 rounded-xl border bg-card p-6 shadow-xs">
       <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Forgot password</h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your email and we will send you a reset link.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("description")}</p>
       </div>
 
       {submitted ? (
         <p className="text-center text-sm text-muted-foreground">
-          If an account exists for that email, a password reset link has been
-          sent.
+          {t("successMessage")}
         </p>
       ) : (
         <form
@@ -63,7 +63,7 @@ export function ForgotPasswordForm() {
         >
           <div className="space-y-2">
             <label htmlFor="forgot-email" className="text-sm font-medium">
-              Email
+              {t("email")}
             </label>
             <input
               id="forgot-email"
@@ -83,14 +83,14 @@ export function ForgotPasswordForm() {
             data-loading={mutation.isPending ? "" : undefined}
           >
             {mutation.isPending ? <Spinner /> : null}
-            Send reset link
+            {t("submit")}
           </Button>
         </form>
       )}
 
       <p className="text-center text-sm text-muted-foreground">
         <Link href="/login" className="text-primary hover:underline">
-          Back to sign in
+          {t("backToSignIn")}
         </Link>
       </p>
     </div>

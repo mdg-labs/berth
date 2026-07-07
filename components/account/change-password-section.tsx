@@ -3,9 +3,10 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toastManager } from "@/components/ui/toast";
+import { formatApiError } from "@/lib/i18n/api-error";
 
 type ChangePasswordSectionProps = {
   requireCurrentPassword?: boolean;
@@ -37,6 +39,8 @@ export function ChangePasswordSection({
   onSuccess,
 }: ChangePasswordSectionProps) {
   const queryClient = useQueryClient();
+  const t = useTranslations("account.password");
+  const tErrors = useTranslations("errors.api");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -54,18 +58,16 @@ export function ChangePasswordSection({
       setConfirmPassword("");
       toastManager.add({
         type: "success",
-        title: "Password updated",
-        description: "Your password has been changed.",
+        title: t("toast.successTitle"),
+        description: t("toast.successDescription"),
       });
       onSuccess?.(data.user);
     },
     onError: (error) => {
-      const message =
-        error instanceof ApiError ? error.message : "Password change failed";
       toastManager.add({
         type: "error",
-        title: "Password change failed",
-        description: message,
+        title: t("toast.errorTitle"),
+        description: formatApiError(tErrors, error, "generic"),
       });
     },
   });
@@ -76,8 +78,8 @@ export function ChangePasswordSection({
     if (newPassword !== confirmPassword) {
       toastManager.add({
         type: "error",
-        title: "Passwords do not match",
-        description: "Confirm password must match the new password.",
+        title: t("toast.passwordMismatchTitle"),
+        description: t("toast.passwordMismatchDescription"),
       });
       return;
     }
@@ -89,56 +91,56 @@ export function ChangePasswordSection({
   }
 
   const form = (
-        <Form className="space-y-4" onSubmit={handleSubmit}>
-          {requireCurrentPassword ? (
-            <Field>
-              <FieldLabel htmlFor="current-password">Current password</FieldLabel>
-              <Input
-                id="current-password"
-                name="currentPassword"
-                type="password"
-                autoComplete="current-password"
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-              />
-            </Field>
-          ) : null}
-          <Field>
-            <FieldLabel htmlFor="new-password">New password</FieldLabel>
-            <Input
-              id="new-password"
-              name="newPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-            />
-            <FieldDescription>At least 8 characters.</FieldDescription>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="confirm-password">Confirm new password</FieldLabel>
-            <Input
-              id="confirm-password"
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-            />
-          </Field>
-          <Button
-            type="submit"
-            disabled={mutation.isPending}
-            data-loading={mutation.isPending ? "" : undefined}
-          >
-            {mutation.isPending ? <Spinner /> : null}
-            Update password
-          </Button>
-        </Form>
+    <Form className="space-y-4" onSubmit={handleSubmit}>
+      {requireCurrentPassword ? (
+        <Field>
+          <FieldLabel htmlFor="current-password">{t("currentPassword")}</FieldLabel>
+          <Input
+            id="current-password"
+            name="currentPassword"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+          />
+        </Field>
+      ) : null}
+      <Field>
+        <FieldLabel htmlFor="new-password">{t("newPassword")}</FieldLabel>
+        <Input
+          id="new-password"
+          name="newPassword"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          value={newPassword}
+          onChange={(event) => setNewPassword(event.target.value)}
+        />
+        <FieldDescription>{t("minLength")}</FieldDescription>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="confirm-password">{t("confirmNewPassword")}</FieldLabel>
+        <Input
+          id="confirm-password"
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+        />
+      </Field>
+      <Button
+        type="submit"
+        disabled={mutation.isPending}
+        data-loading={mutation.isPending ? "" : undefined}
+      >
+        {mutation.isPending ? <Spinner /> : null}
+        {t("submit")}
+      </Button>
+    </Form>
   );
 
   if (embedded) {
@@ -148,8 +150,8 @@ export function ChangePasswordSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Password</CardTitle>
-        <CardDescription>Update your account password.</CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>{form}</CardContent>
     </Card>

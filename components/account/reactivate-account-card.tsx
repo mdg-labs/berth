@@ -3,7 +3,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { apiFetch } from "@/lib/api/client";
@@ -17,6 +17,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toastManager } from "@/components/ui/toast";
+import { formatApiError } from "@/lib/i18n/api-error";
+import { useRouter } from "@/lib/i18n/navigation";
 
 type ReactivateResponse = {
   user: AuthUser;
@@ -27,6 +29,8 @@ export function ReactivateAccountCard() {
   const queryClient = useQueryClient();
   const { data } = useAuthUser();
   const user = data?.user;
+  const t = useTranslations("account.reactivate");
+  const tErrors = useTranslations("errors.api");
 
   const reactivateMutation = useMutation({
     mutationFn: () =>
@@ -37,16 +41,16 @@ export function ReactivateAccountCard() {
       queryClient.setQueryData(["auth", "me"], response);
       toastManager.add({
         type: "success",
-        title: "Account reactivated",
-        description: "Your account has been restored.",
+        title: t("toast.successTitle"),
+        description: t("toast.successDescription"),
       });
       router.replace("/repositories");
     },
-    onError: () => {
+    onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Reactivation failed",
-        description: "Could not restore your account.",
+        title: t("toast.errorTitle"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -65,15 +69,14 @@ export function ReactivateAccountCard() {
 
   const purgeDate = user.purgesAt
     ? new Date(user.purgesAt).toLocaleString()
-    : "soon";
+    : t("purgeDateSoon");
 
   return (
     <Card className="mx-auto max-w-lg">
       <CardHeader>
-        <CardTitle>Reactivate your account?</CardTitle>
+        <CardTitle>{t("title")}</CardTitle>
         <CardDescription>
-          This account is scheduled for deletion on {purgeDate}. You can restore
-          it now or sign out and leave the deletion in place.
+          {t("description", { purgeDate })}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
@@ -82,14 +85,14 @@ export function ReactivateAccountCard() {
           disabled={reactivateMutation.isPending}
           data-loading={reactivateMutation.isPending ? "" : undefined}
         >
-          Reactivate account
+          {t("reactivate")}
         </Button>
         <Button
           variant="outline"
           onClick={() => void logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
         >
-          Sign out
+          {t("signOut")}
         </Button>
       </CardContent>
     </Card>

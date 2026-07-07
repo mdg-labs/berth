@@ -3,15 +3,16 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { toastManager } from "@/components/ui/toast";
+import { formatApiError } from "@/lib/i18n/api-error";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 
 type LoginResponse = {
   user: AuthUser;
@@ -20,6 +21,8 @@ type LoginResponse = {
 export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations("auth.login");
+  const tErrors = useTranslations("errors.api");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -33,8 +36,8 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
       queryClient.setQueryData(["auth", "me"], data);
       toastManager.add({
         type: "success",
-        title: "Signed in",
-        description: `Welcome back, ${data.user.name}.`,
+        title: t("toast.successTitle"),
+        description: t("toast.successDescription", { name: data.user.name }),
       });
       router.replace(
         data.user.mustChangePassword
@@ -45,12 +48,10 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
       );
     },
     onError: (error) => {
-      const message =
-        error instanceof ApiError ? error.message : "Sign in failed";
       toastManager.add({
         type: "error",
-        title: "Sign in failed",
-        description: message,
+        title: t("toast.errorTitle"),
+        description: formatApiError(tErrors, error, "generic"),
       });
     },
   });
@@ -63,16 +64,14 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
   return (
     <div className="space-y-6 rounded-xl border bg-card p-6 shadow-xs">
       <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Sign in to Berth</h1>
-        <p className="text-sm text-muted-foreground">
-          Self-hosted OCI artifact registry
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
-            Email
+            {t("email")}
           </label>
           <input
             id="email"
@@ -88,13 +87,13 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <label htmlFor="password" className="text-sm font-medium">
-              Password
+              {t("password")}
             </label>
             <Link
               href="/forgot-password"
               className="text-xs text-muted-foreground hover:text-primary hover:underline"
             >
-              Forgot password?
+              {t("forgotPassword")}
             </Link>
           </div>
           <input
@@ -115,14 +114,14 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
           data-loading={loginMutation.isPending ? "" : undefined}
         >
           {loginMutation.isPending ? <Spinner /> : null}
-          Sign in
+          {t("submit")}
         </Button>
       </form>
 
       {oidcEnabled ? (
         <div className="space-y-3">
           <div className="relative text-center text-xs text-muted-foreground">
-            <span className="bg-card px-2">or</span>
+            <span className="bg-card px-2">{t("or")}</span>
             <div className="absolute inset-x-0 top-1/2 -z-10 border-t" />
           </div>
           <Button
@@ -133,7 +132,7 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
               window.location.href = "/api/auth/oidc/start";
             }}
           >
-            Continue with OIDC
+            {t("oidc")}
           </Button>
         </div>
       ) : null}

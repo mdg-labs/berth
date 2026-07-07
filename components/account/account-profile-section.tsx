@@ -3,10 +3,11 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { useAuthUser } from "@/components/providers/auth-guard";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import type { AuthUser } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toastManager } from "@/components/ui/toast";
+import { formatApiError } from "@/lib/i18n/api-error";
 
 type AccountResponse = {
   user: AuthUser;
@@ -30,6 +32,8 @@ export function AccountProfileSection() {
   const queryClient = useQueryClient();
   const { data } = useAuthUser();
   const user = data?.user;
+  const t = useTranslations("account.profile");
+  const tErrors = useTranslations("errors.api");
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -69,16 +73,15 @@ export function AccountProfileSection() {
       setCurrentPassword("");
       toastManager.add({
         type: "success",
-        title: "Profile updated",
-        description: "Your account details were saved.",
+        title: t("toast.successTitle"),
+        description: t("toast.successDescription"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Update failed",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.errorTitle"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -92,11 +95,9 @@ export function AccountProfileSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile</CardTitle>
+        <CardTitle>{t("sectionTitle")}</CardTitle>
         <CardDescription>
-          {readOnly
-            ? "Your account is managed by your identity provider."
-            : "Update your display name and email address."}
+          {readOnly ? t("sectionDescriptionReadOnly") : t("sectionDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -118,7 +119,7 @@ export function AccountProfileSection() {
           }}
         >
           <Field>
-            <FieldLabel htmlFor="profile-name">Name</FieldLabel>
+            <FieldLabel htmlFor="profile-name">{t("name")}</FieldLabel>
             <Input
               id="profile-name"
               value={name}
@@ -127,7 +128,7 @@ export function AccountProfileSection() {
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="profile-email">Email</FieldLabel>
+            <FieldLabel htmlFor="profile-email">{t("email")}</FieldLabel>
             <Input
               id="profile-email"
               type="email"
@@ -139,7 +140,7 @@ export function AccountProfileSection() {
           {!readOnly && email !== user.email ? (
             <Field>
               <FieldLabel htmlFor="profile-current-password">
-                Current password
+                {t("currentPassword")}
               </FieldLabel>
               <Input
                 id="profile-current-password"
@@ -149,9 +150,7 @@ export function AccountProfileSection() {
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
               />
-              <FieldDescription>
-                Required when changing your email address.
-              </FieldDescription>
+              <FieldDescription>{t("currentPasswordHint")}</FieldDescription>
             </Field>
           ) : null}
           {!readOnly ? (
@@ -161,7 +160,7 @@ export function AccountProfileSection() {
               data-loading={mutation.isPending ? "" : undefined}
             >
               {mutation.isPending ? <Spinner /> : null}
-              Save changes
+              {t("saveChanges")}
             </Button>
           ) : null}
         </Form>
