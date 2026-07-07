@@ -2,6 +2,9 @@
 
 "use client";
 
+import { NextIntlClientProvider } from "next-intl";
+import type { AbstractIntlMessages } from "next-intl";
+
 import { AnchoredToastProvider, ToastProvider } from "@/components/ui/toast";
 import { getDefaultTheme } from "@/lib/theme/config";
 
@@ -9,16 +12,28 @@ import { NuqsProvider } from "./nuqs-provider";
 import { QueryProvider } from "./query-provider";
 import { ThemeProvider } from "./theme-provider";
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+type AppProvidersProps = {
+  children: React.ReactNode;
+  locale: string;
+  messages: AbstractIntlMessages;
+};
+
+export function AppProviders({
+  children,
+  locale,
+  messages,
+}: AppProvidersProps) {
   return (
-    <ThemeProvider defaultTheme={getDefaultTheme()}>
-      <QueryProvider>
-        <NuqsProvider>
-          <ToastProvider>
-            <AnchoredToastProvider>{children}</AnchoredToastProvider>
-          </ToastProvider>
-        </NuqsProvider>
-      </QueryProvider>
-    </ThemeProvider>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <ThemeProvider defaultTheme={getDefaultTheme()}>
+        <QueryProvider>
+          <NuqsProvider>
+            <ToastProvider>
+              <AnchoredToastProvider>{children}</AnchoredToastProvider>
+            </ToastProvider>
+          </NuqsProvider>
+        </QueryProvider>
+      </ThemeProvider>
+    </NextIntlClientProvider>
   );
 }

@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 
+import { redirect } from "@/lib/i18n/navigation";
 import { getSessionUser } from "@/lib/session/server";
 
 export default async function AdminLayout({
@@ -10,11 +11,11 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const user = await getSessionUser();
-  if (!user) {
-    redirect("/login");
-  }
+  const locale = await getLocale();
 
-  if (user.systemRole !== "admin") {
+  if (!user) {
+    redirect({ href: "/login", locale });
+  } else if (user.systemRole !== "admin") {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6">
         <h1 className="text-lg font-semibold">Access denied</h1>
