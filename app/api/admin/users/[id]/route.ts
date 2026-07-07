@@ -12,6 +12,7 @@ import {
 import { isSessionSystemAdmin } from "@/lib/admin/guard";
 import { apiError } from "@/lib/api/errors";
 import { sendSetPasswordEmailForUser } from "@/lib/auth/password-reset";
+import { getLocaleFromRequest } from "@/lib/i18n/request-locale";
 import type { SystemRole } from "@/lib/rbac/types";
 import { getUserDeleteGracePeriodDays } from "@/lib/users/config";
 import { getSessionUserFromRequest } from "@/lib/session/request";
@@ -95,7 +96,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   let emailSent = false;
   if (body.sendResetEmail) {
-    const emailResult = await sendSetPasswordEmailForUser(id);
+    const emailResult = await sendSetPasswordEmailForUser(
+      id,
+      getLocaleFromRequest(request),
+    );
     emailSent = emailResult.emailSent;
   }
 

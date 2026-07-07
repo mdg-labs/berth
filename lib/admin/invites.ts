@@ -9,6 +9,7 @@ import { userInvites, users } from "@/lib/db/schema";
 import { getUserInviteTtlHours } from "@/lib/email/config";
 import { trySendEmail } from "@/lib/email/send";
 import { buildUserInviteUrl, userInviteEmail } from "@/lib/email/templates";
+import type { Locale } from "@/lib/i18n/config";
 import {
   generateToken,
   getExpiryFromHours,
@@ -82,6 +83,7 @@ export async function createUserInvite(
     email: string;
     name: string;
     systemRole?: SystemRole;
+    locale?: Locale;
   },
 ): Promise<
   | { invite: UserInviteSummary; emailSent: boolean; rawToken: string }
@@ -125,10 +127,11 @@ export async function createUserInvite(
   }
 
   const sendResult = await trySendEmail(
-    userInviteEmail({
+    await userInviteEmail({
       to: email,
       inviteeName: name,
       inviteUrl: buildUserInviteUrl(rawToken),
+      locale: input.locale,
     }),
   );
 
@@ -148,6 +151,7 @@ export async function createUserInvite(
 export async function resendUserInvite(
   actorId: string,
   inviteId: string,
+  locale: Locale = "en",
 ): Promise<
   | { invite: UserInviteSummary; emailSent: boolean }
   | { error: "not_found" | "accepted" | "expired" }
@@ -185,10 +189,11 @@ export async function resendUserInvite(
   }
 
   const sendResult = await trySendEmail(
-    userInviteEmail({
+    await userInviteEmail({
       to: updated.email,
       inviteeName: updated.name,
       inviteUrl: buildUserInviteUrl(rawToken),
+      locale,
     }),
   );
 

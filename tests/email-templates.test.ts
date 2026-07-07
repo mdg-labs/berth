@@ -10,33 +10,37 @@ import {
   repositoryInviteEmail,
   userInviteEmail,
 } from "@/lib/email/templates";
+import { getServerTranslator } from "@/lib/i18n/server-translator";
 
 describe("email templates", () => {
-  it("builds password reset email", () => {
-    const message = passwordResetEmail({
+  it("builds password reset email", async () => {
+    const t = await getServerTranslator("en", "emails");
+    const message = await passwordResetEmail({
       to: "user@example.com",
       resetUrl: "https://registry.example.com/reset-password?token=abc",
     });
 
-    expect(message.subject).toContain("Reset your Berth password");
+    expect(message.subject).toBe(t("passwordReset.subject"));
     expect(message.text).toContain("reset-password?token=abc");
     expect(message.html).toContain("reset-password?token=abc");
   });
 
-  it("builds user invite email", () => {
-    const message = userInviteEmail({
+  it("builds user invite email", async () => {
+    const t = await getServerTranslator("en", "emails");
+    const message = await userInviteEmail({
       to: "new@example.com",
       inviteeName: "New User",
       inviteUrl: "https://registry.example.com/accept-invite?token=xyz",
     });
 
-    expect(message.subject).toContain("invited");
+    expect(message.subject).toBe(t("userInvite.subject"));
     expect(message.text).toContain("New User");
     expect(message.html).toContain("accept-invite?token=xyz");
   });
 
-  it("builds repository invite email", () => {
-    const message = repositoryInviteEmail({
+  it("builds repository invite email", async () => {
+    const t = await getServerTranslator("en", "emails");
+    const message = await repositoryInviteEmail({
       to: "dev@example.com",
       repositoryName: "demo",
       role: "developer",
@@ -44,7 +48,9 @@ describe("email templates", () => {
       loginUrl: "https://registry.example.com/login",
     });
 
-    expect(message.subject).toContain("demo");
+    expect(message.subject).toBe(
+      t("repositoryInvite.subject", { repositoryName: "demo" }),
+    );
     expect(message.text).toContain("developer");
     expect(message.html).toContain("/login");
   });

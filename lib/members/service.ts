@@ -13,6 +13,8 @@ import {
 } from "@/lib/db/schema";
 import { trySendEmail } from "@/lib/email/send";
 import { buildLoginUrl, repositoryInviteEmail } from "@/lib/email/templates";
+import type { Locale } from "@/lib/i18n/config";
+import { getServerTranslator } from "@/lib/i18n/server-translator";
 import { canPerformRepositoryAction } from "@/lib/rbac/check";
 import { getRepositoryMemberRole } from "@/lib/rbac/roles";
 import type { RepositoryRole, SystemRole } from "@/lib/rbac/types";
@@ -111,7 +113,7 @@ export async function addProjectMember(
   repositoryId: string,
   actorId: string,
   systemRole: SystemRole,
-  input: { email: string; role: RepositoryRole },
+  input: { email: string; role: RepositoryRole; locale?: Locale },
 ): Promise<
   | { type: "user"; userId: string; email: string; role: RepositoryRole; emailSent: boolean }
   | { type: "invite"; inviteId: string; email: string; role: RepositoryRole; emailSent: boolean }
@@ -202,13 +204,17 @@ export async function addProjectMember(
     .where(eq(users.id, actorId))
     .limit(1);
 
+  const locale = input.locale ?? "en";
+  const t = await getServerTranslator(locale, "emails");
+
   const sendResult = await trySendEmail(
-    repositoryInviteEmail({
+    await repositoryInviteEmail({
       to: email,
       repositoryName: project.name,
       role: input.role,
-      inviterName: inviter?.name ?? "A Berth user",
+      inviterName: inviter?.name ?? t("repositoryInvite.defaultInviterName"),
       loginUrl: buildLoginUrl(),
+      locale,
     }),
   );
 

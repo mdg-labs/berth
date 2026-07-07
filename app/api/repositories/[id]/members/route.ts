@@ -5,6 +5,7 @@ import type { NextRequest } from "next/server";
 
 import { apiError } from "@/lib/api/errors";
 import { addProjectMember, listProjectMembers } from "@/lib/members/service";
+import { getLocaleFromRequest } from "@/lib/i18n/request-locale";
 import type { RepositoryRole } from "@/lib/rbac/types";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const result = await addProjectMember(id, user.id, user.systemRole, {
     email: body.email,
     role: body.role,
+    locale: getLocaleFromRequest(request),
   });
 
   if ("error" in result) {

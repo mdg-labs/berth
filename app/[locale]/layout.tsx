@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 
 import { AppProviders } from "@/components/providers/app-providers";
 import { routing } from "@/lib/i18n/config";
@@ -28,16 +28,22 @@ const geistMono = Geist_Mono({
   variable: "--font-mono",
 });
 
-export const metadata: Metadata = {
-  title: "Berth",
-  description:
-    "Self-hosted OCI artifact registry with Harbor-class identity, repositories, and RBAC",
-};
-
 type LocaleLayoutProps = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: Pick<LocaleLayoutProps, "params">): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+
+  return {
+    title: t("root.title"),
+    description: t("root.description"),
+  };
+}
 
 export default async function LocaleLayout({
   children,

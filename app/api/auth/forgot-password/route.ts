@@ -10,6 +10,7 @@ import {
   requestPasswordReset,
   validatePasswordResetToken,
 } from "@/lib/auth/password-reset";
+import { getLocaleFromRequest } from "@/lib/i18n/request-locale";
 import { checkForgotPasswordRateLimit } from "@/lib/rate-limit/login";
 
 type ForgotPasswordBody = {
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     return apiError("rate_limited", "Too many requests", 429);
   }
 
-  await requestPasswordReset(email);
+  await requestPasswordReset(email, getLocaleFromRequest(request));
 
   return NextResponse.json({
     message:

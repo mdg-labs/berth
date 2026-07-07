@@ -8,6 +8,7 @@ import { findUserByEmail, hashPassword } from "@/lib/auth/credentials";
 import { generateBootstrapPassword } from "@/lib/bootstrap/admin";
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import type { Locale } from "@/lib/i18n/config";
 import type { SystemRole } from "@/lib/rbac/types";
 import { adminResetUserPassword } from "@/lib/users/account";
 import { purgeExpiredDeletedUsers, reactivateUser, softDeleteUser } from "@/lib/users/lifecycle";
@@ -82,6 +83,7 @@ export async function createLocalUser(
     name: string;
     password?: string;
     systemRole?: SystemRole;
+    locale?: Locale;
   },
 ): Promise<
   | { user: AdminUserSummary; emailSent: boolean }
@@ -126,7 +128,10 @@ export async function createLocalUser(
   });
 
   if (mustChangePassword) {
-    const emailResult = await sendSetPasswordEmailForUser(created.id);
+    const emailResult = await sendSetPasswordEmailForUser(
+      created.id,
+      input.locale,
+    );
     return { user: toSummary(created), emailSent: emailResult.emailSent };
   }
 

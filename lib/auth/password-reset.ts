@@ -3,6 +3,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { findUserByEmail, hashPassword } from "@/lib/auth/credentials";
+import type { Locale } from "@/lib/i18n/config";
 import { getDb } from "@/lib/db";
 import { passwordResetTokens, users } from "@/lib/db/schema";
 import { getPasswordResetTtlHours } from "@/lib/email/config";
@@ -37,6 +38,7 @@ async function invalidateExistingTokens(userId: string): Promise<void> {
 
 export async function requestPasswordReset(
   email: string,
+  locale: Locale = "en",
 ): Promise<{ emailSent: boolean }> {
   const user = await findUserByEmail(email);
   if (!user || !user.passwordHash) {
@@ -57,9 +59,10 @@ export async function requestPasswordReset(
   });
 
   const result = await trySendEmail(
-    passwordResetEmail({
+    await passwordResetEmail({
       to: user.email,
       resetUrl: buildPasswordResetUrl(rawToken),
+      locale,
     }),
   );
 
@@ -153,6 +156,7 @@ export async function completePasswordReset(
 
 export async function sendSetPasswordEmailForUser(
   userId: string,
+  locale: Locale = "en",
 ): Promise<{ emailSent: boolean }> {
   const db = getDb();
   const [user] = await db
@@ -181,9 +185,10 @@ export async function sendSetPasswordEmailForUser(
   });
 
   const result = await trySendEmail(
-    passwordResetEmail({
+    await passwordResetEmail({
       to: user.email,
       resetUrl: buildPasswordResetUrl(rawToken),
+      locale,
     }),
   );
 

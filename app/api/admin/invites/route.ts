@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 import { createUserInvite } from "@/lib/admin/invites";
 import { isSessionSystemAdmin } from "@/lib/admin/guard";
 import { apiError } from "@/lib/api/errors";
+import { getLocaleFromRequest } from "@/lib/i18n/request-locale";
 import type { SystemRole } from "@/lib/rbac/types";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
     email: body.email,
     name: body.name,
     systemRole: body.systemRole,
+    locale: getLocaleFromRequest(request),
   });
 
   if ("error" in result) {

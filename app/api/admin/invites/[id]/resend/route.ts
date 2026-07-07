@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 import { resendUserInvite } from "@/lib/admin/invites";
 import { isSessionSystemAdmin } from "@/lib/admin/guard";
 import { apiError } from "@/lib/api/errors";
+import { getLocaleFromRequest } from "@/lib/i18n/request-locale";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 
 type RouteContext = {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const result = await resendUserInvite(user.id, id);
+  const result = await resendUserInvite(user.id, id, getLocaleFromRequest(request));
 
   if ("error" in result) {
     if (result.error === "not_found") {

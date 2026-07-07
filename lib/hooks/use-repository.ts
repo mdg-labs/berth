@@ -4,7 +4,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { apiFetch } from "@/lib/api/client";
+import { ApiError, apiFetch } from "@/lib/api/client";
 import type { RepositorySummary } from "@/lib/api/types";
 
 type RepositoriesResponse = {
@@ -18,7 +18,7 @@ export function useRepositoryByName(repositoryName: string) {
       const data = await apiFetch<RepositoriesResponse>("/api/repositories");
       const repository = data.repositories.find((entry) => entry.name === repositoryName);
       if (!repository) {
-        throw new Error("Repository not found");
+        throw new ApiError("not_found", "", 404);
       }
       return repository;
     },

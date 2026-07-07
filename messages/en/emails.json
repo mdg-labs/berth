@@ -1,1 +1,24 @@
-{}
+{
+  "passwordReset": {
+    "subject": "Reset your Berth password",
+    "intro": "You requested a password reset for your Berth account.",
+    "action": "Reset your password",
+    "ignore": "If you did not request this, you can ignore this email."
+  },
+  "userInvite": {
+    "subject": "You are invited to Berth",
+    "greeting": "Hello {name},",
+    "body": "You have been invited to join this Berth registry.",
+    "action": "Accept your invite",
+    "expiry": "This link expires after a few days."
+  },
+  "repositoryInvite": {
+    "subject": "Invitation to repository {repositoryName} on Berth",
+    "intro": "{inviterName} invited you to the repository \"{repositoryName}\" as {role}.",
+    "introHtml": "{inviterName} invited you to the repository '<strong>'{repositoryName}'</strong>' as '<strong>'{role}'</strong>'.",
+    "signIn": "Sign in to Berth to accept the invitation:",
+    "action": "Sign in to Berth",
+    "noAccount": "If you do not have an account yet, ask your administrator for a Berth invite first.",
+    "defaultInviterName": "A Berth user"
+  }
+}

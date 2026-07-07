@@ -1,1 +1,10 @@
-{}
+{
+  "root": {
+    "title": "Berth",
+    "description": "Self-hosted OCI artifact registry with Harbor-class identity, repositories, and RBAC"
+  },
+  "publicCatalog": {
+    "title": "Berth — Public images",
+    "description": "Browse publicly available container images on this registry."
+  }
+}
