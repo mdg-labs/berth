@@ -11,6 +11,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { PackageIcon, SearchIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
@@ -60,16 +61,15 @@ function PublicCatalogSkeleton() {
 }
 
 function PublicEmptyLanding() {
+  const t = useTranslations("public");
+
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center gap-10 py-8 text-center md:py-16">
       <div className="space-y-3">
         <h1 className="font-heading text-3xl font-semibold tracking-tight md:text-4xl">
-          Berth
+          {t("appName")}
         </h1>
-        <p className="text-muted-foreground text-sm md:text-base">
-          Self-hosted OCI artifact registry with identity, repositories, and
-          RBAC.
-        </p>
+        <p className="text-muted-foreground text-sm md:text-base">{t("tagline")}</p>
       </div>
 
       <Empty className="w-full rounded-lg border border-dashed">
@@ -77,14 +77,11 @@ function PublicEmptyLanding() {
           <EmptyMedia variant="icon">
             <PackageIcon />
           </EmptyMedia>
-          <EmptyTitle>No public images yet</EmptyTitle>
-          <EmptyDescription>
-            Images marked for anonymous pull will appear here. Sign in to manage
-            repositories and publish container images.
-          </EmptyDescription>
+          <EmptyTitle>{t("empty.title")}</EmptyTitle>
+          <EmptyDescription>{t("empty.description")}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button render={<Link href="/login" />}>Sign in</Button>
+          <Button render={<Link href="/login" />}>{t("signIn")}</Button>
         </EmptyContent>
       </Empty>
     </div>
@@ -92,6 +89,7 @@ function PublicEmptyLanding() {
 }
 
 export function PublicCatalogPage() {
+  const t = useTranslations("public");
   const [search, setSearch] = useQueryState(
     "search",
     parseAsString.withDefault(""),
@@ -117,7 +115,7 @@ export function PublicCatalogPage() {
     () => [
       columnHelper.display({
         id: "image",
-        header: "Image",
+        header: t("columns.image"),
         cell: ({ row }) => {
           const { repository, name } = row.original;
           const qualified = `${repository}/${name}`;
@@ -133,21 +131,23 @@ export function PublicCatalogPage() {
         },
       }),
       columnHelper.accessor("repository", {
-        header: "Repository",
+        header: t("columns.repository"),
         cell: (info) => (
           <span className="text-muted-foreground">{info.getValue()}</span>
         ),
       }),
       columnHelper.accessor("tagCount", {
-        header: "Tags",
+        header: t("columns.tags"),
         cell: (info) => (
           <Badge variant="secondary">
-            {info.getValue()} tag{info.getValue() === 1 ? "" : "s"}
+            {t("tagCount", { count: info.getValue() })}
           </Badge>
         ),
       }),
       columnHelper.accessor("pullCount", {
-        header: () => <span className="block w-full text-right">Pulls</span>,
+        header: () => (
+          <span className="block w-full text-right">{t("columns.pulls")}</span>
+        ),
         cell: (info) => (
           <span className="block text-right tabular-nums text-muted-foreground">
             {info.getValue()}
@@ -155,7 +155,7 @@ export function PublicCatalogPage() {
         ),
       }),
     ],
-    [],
+    [t],
   );
 
   const table = useReactTable({
@@ -169,6 +169,7 @@ export function PublicCatalogPage() {
   const hasImages = (imagesQuery.data?.images.length ?? 0) > 0;
   const isEmpty =
     !isLoading && !error && (imagesQuery.data?.images.length ?? 0) === 0;
+  const total = imagesQuery.data?.total ?? 0;
 
   return (
     <PublicShell>
@@ -178,13 +179,11 @@ export function PublicCatalogPage() {
         <div className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Public images
-              </h1>
+              <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
               <p className="text-sm text-muted-foreground">
                 {isLoading
-                  ? "Loading publicly available images…"
-                  : `${imagesQuery.data?.total ?? 0} image${(imagesQuery.data?.total ?? 0) === 1 ? "" : "s"} available for anonymous pull.`}
+                  ? t("loading")
+                  : t("availableCount", { count: total })}
               </p>
             </div>
             <InputGroup className="max-w-sm">
@@ -192,7 +191,7 @@ export function PublicCatalogPage() {
                 <SearchIcon />
               </InputGroupAddon>
               <InputGroupInput
-                placeholder="Search images…"
+                placeholder={t("searchPlaceholder")}
                 value={search}
                 onChange={(event) => void setSearch(event.target.value)}
               />
@@ -203,11 +202,9 @@ export function PublicCatalogPage() {
 
           {error ? (
             <ErrorAlert
-              message={
-                error instanceof Error
-                  ? error.message
-                  : "Failed to load public images"
-              }
+              error={error}
+              fallbackKey="generic"
+              message={error instanceof Error ? undefined : t("loadError")}
               onRetry={() => void imagesQuery.refetch()}
             />
           ) : null}
@@ -218,10 +215,8 @@ export function PublicCatalogPage() {
           (imagesQuery.data?.images.length ?? 0) === 0 ? (
             <Empty className="rounded-lg border border-dashed">
               <EmptyHeader>
-                <EmptyTitle>No matching images</EmptyTitle>
-                <EmptyDescription>
-                  Try a different search term or browse all public images.
-                </EmptyDescription>
+                <EmptyTitle>{t("noMatch.title")}</EmptyTitle>
+                <EmptyDescription>{t("noMatch.description")}</EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : null}

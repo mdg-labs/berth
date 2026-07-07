@@ -1,1 +1,79 @@
-{}
+{
+  "route": {
+    "selectImage": "Select an image from the repository catalog."
+  },
+  "subtitle": "Tags in {repository}/{image}",
+  "searchPlaceholder": "Search tags…",
+  "sort": "Sort",
+  "settings": "Settings",
+  "columns": {
+    "tag": "Tag",
+    "digest": "Digest",
+    "size": "Size",
+    "pulls": "Pulls",
+    "siblings": "Siblings"
+  },
+  "selectAll": "Select all tags on page",
+  "selectTag": "Select {name}",
+  "selected": "{count, plural, one {# selected} other {# selected}}",
+  "deleteSelected": "Delete selected",
+  "loadError": "Failed to load tags",
+  "empty": {
+    "title": "No tags found",
+    "description": "Push a tag to this image to see it here."
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "range": "{start}–{end} of {total}"
+  },
+  "toast": {
+    "bulkDeleteSuccess": {
+      "title": "Tags deleted",
+      "description": "Removed {count, plural, one {# tag} other {# tags}}."
+    },
+    "bulkDeleteError": {
+      "title": "Bulk delete failed"
+    },
+    "deleteSuccess": {
+      "title": "Tag deleted",
+      "description": "{tag} was removed from the image."
+    },
+    "deleteError": {
+      "title": "Delete failed"
+    },
+    "copyPullCommand": {
+      "title": "Copied pull command"
+    }
+  },
+  "detail": {
+    "loadError": "Failed to load tag",
+    "copyPullCommand": "Copy pull command",
+    "deleteTag": "Delete tag",
+    "manifest": "Manifest",
+    "created": "Created {date}",
+    "tabs": {
+      "platforms": "Platforms",
+      "history": "History",
+      "siblings": "Siblings"
+    },
+    "platforms": {
+      "singlePlatform": "Single-platform image (no manifest list).",
+      "os": "OS",
+      "architecture": "Architecture",
+      "variant": "Variant",
+      "digest": "Digest",
+      "size": "Size",
+      "empty": "—"
+    },
+    "history": {
+      "empty": "No history available.",
+      "created": "Created",
+      "by": "By",
+      "comment": "Comment",
+      "emptyLayer": "(empty layer)"
+    },
+    "siblings": {
+      "empty": "No other tags share this digest."
+    }
+  }
+}

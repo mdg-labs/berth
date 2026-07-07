@@ -1,1 +1,25 @@
-{}
+{
+  "appName": "Berth",
+  "tagline": "Self-hosted OCI artifact registry with identity, repositories, and RBAC.",
+  "signIn": "Sign in",
+  "empty": {
+    "title": "No public images yet",
+    "description": "Images marked for anonymous pull will appear here. Sign in to manage repositories and publish container images."
+  },
+  "title": "Public images",
+  "loading": "Loading publicly available images…",
+  "availableCount": "{count, plural, one {# image} other {# images}} available for anonymous pull.",
+  "searchPlaceholder": "Search images…",
+  "loadError": "Failed to load public images",
+  "noMatch": {
+    "title": "No matching images",
+    "description": "Try a different search term or browse all public images."
+  },
+  "columns": {
+    "image": "Image",
+    "repository": "Repository",
+    "tags": "Tags",
+    "pulls": "Pulls"
+  },
+  "tagCount": "{count, plural, one {# tag} other {# tags}}"
+}

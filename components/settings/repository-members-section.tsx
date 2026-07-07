@@ -4,9 +4,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon, Trash2Icon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 
-import { PENDING_INVITE_UNVERIFIED_MESSAGE } from "@/components/settings/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
+import { formatApiError } from "@/lib/i18n/api-error";
 import type { RepositoryRole } from "@/lib/rbac/types";
 import { toastManager } from "@/components/ui/toast";
 
@@ -68,6 +69,9 @@ type RepositoryMembersSectionProps = {
 };
 
 export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSectionProps) {
+  const t = useTranslations("settings.members");
+  const tRoles = useTranslations("roles.repository");
+  const tErrors = useTranslations("errors.api");
   const queryClient = useQueryClient();
   const emailId = useId();
   const roleId = useId();
@@ -94,21 +98,20 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
       setEmail("");
       toastManager.add({
         type: "success",
-        title: "Member added",
+        title: t("toast.added"),
         description:
           data.member.type === "invite"
             ? data.emailSent
-              ? "Invite email sent."
-              : "Invite created, but SMTP is not configured."
-            : "The member was added.",
+              ? t("toast.inviteSent")
+              : t("toast.inviteNoSmtp")
+            : t("toast.memberAdded"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to add member",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.addError"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -123,15 +126,14 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
       void queryClient.invalidateQueries({ queryKey: ["repository-members", repositoryId] });
       toastManager.add({
         type: "success",
-        title: "Role updated",
+        title: t("toast.roleUpdated"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to update role",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.roleError"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -145,15 +147,14 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
       void queryClient.invalidateQueries({ queryKey: ["repository-members", repositoryId] });
       toastManager.add({
         type: "success",
-        title: "Member removed",
+        title: t("toast.removed"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to remove member",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.removeError"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -167,15 +168,14 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
       void queryClient.invalidateQueries({ queryKey: ["repository-members", repositoryId] });
       toastManager.add({
         type: "success",
-        title: "Invite removed",
+        title: t("toast.inviteRemoved"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to remove invite",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.inviteRemoveError"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -186,16 +186,14 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Members</CardTitle>
-        <CardDescription>
-          Add collaborators by email and assign repository roles.
-        </CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {pendingInvites.length > 0 ? (
           <Alert variant="warning">
-            <AlertTitle>Pending invites need attention</AlertTitle>
-            <AlertDescription>{PENDING_INVITE_UNVERIFIED_MESSAGE}</AlertDescription>
+            <AlertTitle>{t("pendingAlert.title")}</AlertTitle>
+            <AlertDescription>{t("pendingAlert.description")}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -208,7 +206,7 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
         >
           <div className="grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
             <Field>
-              <FieldLabel htmlFor={emailId}>Email</FieldLabel>
+              <FieldLabel htmlFor={emailId}>{t("emailLabel")}</FieldLabel>
               <Input
                 id={emailId}
                 name="email"
@@ -216,11 +214,11 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="teammate@example.com"
+                placeholder={t("emailPlaceholder")}
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor={roleId}>Role</FieldLabel>
+              <FieldLabel htmlFor={roleId}>{t("roleLabel")}</FieldLabel>
               <Select
                 value={role}
                 onValueChange={(value) => setRole(value as RepositoryRole)}
@@ -231,7 +229,7 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
                 <SelectPopup>
                   {ROLE_OPTIONS.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {tRoles(option)}
                     </SelectItem>
                   ))}
                 </SelectPopup>
@@ -243,17 +241,17 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
               data-loading={addMutation.isPending ? "" : undefined}
             >
               {addMutation.isPending ? <Spinner /> : <PlusIcon />}
-              Add member
+              {t("addMember")}
             </Button>
           </div>
         </Form>
 
         {membersQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading members…</p>
+          <p className="text-sm text-muted-foreground">{t("loading")}</p>
         ) : null}
 
         {membersQuery.data?.members.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No members yet.</p>
+          <p className="text-sm text-muted-foreground">{t("empty")}</p>
         ) : null}
 
         <ul className="divide-y rounded-lg border">
@@ -268,14 +266,15 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
                   <p className="text-xs text-muted-foreground">{entry.name}</p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Pending invite since{" "}
-                    {new Date(entry.invitedAt).toLocaleDateString()}
+                    {t("pendingSince", {
+                      date: new Date(entry.invitedAt).toLocaleDateString(),
+                    })}
                   </p>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {entry.type === "invite" ? (
-                  <Badge variant="secondary">Pending</Badge>
+                  <Badge variant="secondary">{t("pending")}</Badge>
                 ) : null}
                 {entry.type === "user" ? (
                   <Select
@@ -293,19 +292,19 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
                     <SelectPopup>
                       {ROLE_OPTIONS.map((option) => (
                         <SelectItem key={option} value={option}>
-                          {option}
+                          {tRoles(option)}
                         </SelectItem>
                       ))}
                     </SelectPopup>
                   </Select>
                 ) : (
-                  <Badge>{entry.role}</Badge>
+                  <Badge>{tRoles(entry.role)}</Badge>
                 )}
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Remove ${entry.email}`}
+                  aria-label={t("removeMember", { email: entry.email })}
                   onClick={() => {
                     if (entry.type === "user") {
                       removeUserMutation.mutate(entry.userId);

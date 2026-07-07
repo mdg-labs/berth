@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
+"use client";
+
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +12,8 @@ type PublicShellProps = {
 };
 
 export function PublicShell({ children }: PublicShellProps) {
+  const t = useTranslations("public");
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
@@ -17,10 +22,10 @@ export function PublicShell({ children }: PublicShellProps) {
             href="/"
             className="font-heading text-lg font-semibold tracking-tight transition-colors hover:text-primary"
           >
-            Berth
+            {t("appName")}
           </Link>
           <Button variant="outline" size="sm" render={<Link href="/login" />}>
-            Sign in
+            {t("signIn")}
           </Button>
         </div>
       </header>

@@ -2,12 +2,10 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import {
-  BULK_DELETE_CONFIRM_PHRASE,
-  BULK_DELETE_CONFIRM_THRESHOLD,
-} from "@/components/delete/constants";
+import { BULK_DELETE_CONFIRM_THRESHOLD } from "@/components/delete/constants";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,11 +34,14 @@ export function BulkDeleteDialog({
   isPending = false,
   onConfirm,
 }: BulkDeleteDialogProps) {
+  const t = useTranslations("delete.bulkDelete");
+  const tCommon = useTranslations("common.actions");
   const [phrase, setPhrase] = useState("");
+  const confirmPhrase = t("confirmPhrase");
   const requiresTypedPhrase = tagNames.length > BULK_DELETE_CONFIRM_THRESHOLD;
   const phraseMatches =
     !requiresTypedPhrase ||
-    phrase.trim().toLowerCase() === BULK_DELETE_CONFIRM_PHRASE;
+    phrase.trim().toLowerCase() === confirmPhrase.toLowerCase();
 
   function handleOpenChange(next: boolean) {
     if (!next) {
@@ -53,13 +54,14 @@ export function BulkDeleteDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPopup>
         <DialogHeader>
-          <DialogTitle>
-            Delete {tagNames.length} tag{tagNames.length === 1 ? "" : "s"}?
-          </DialogTitle>
+          <DialogTitle>{t("title", { count: tagNames.length })}</DialogTitle>
           <DialogDescription>
             {requiresTypedPhrase
-              ? `You are about to delete ${tagNames.length} tags. Type "${BULK_DELETE_CONFIRM_PHRASE}" to confirm.`
-              : `This removes ${tagNames.length} tag reference${tagNames.length === 1 ? "" : "s"} from the image.`}
+              ? t("typedConfirm", {
+                  count: tagNames.length,
+                  phrase: confirmPhrase,
+                })
+              : t("simpleConfirm", { count: tagNames.length })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 px-6">
@@ -72,25 +74,27 @@ export function BulkDeleteDialog({
           </ul>
           {requiresTypedPhrase ? (
             <div className="space-y-2">
-              <Label htmlFor="bulk-delete-phrase">Confirmation phrase</Label>
+              <Label htmlFor="bulk-delete-phrase">{t("phraseLabel")}</Label>
               <Input
                 id="bulk-delete-phrase"
                 value={phrase}
                 onChange={(event) => setPhrase(event.target.value)}
-                placeholder={BULK_DELETE_CONFIRM_PHRASE}
+                placeholder={confirmPhrase}
                 autoComplete="off"
               />
             </div>
           ) : null}
         </div>
         <DialogFooter>
-          <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
+          <DialogClose render={<Button variant="ghost" />}>
+            {tCommon("cancel")}
+          </DialogClose>
           <Button
             variant="destructive"
             disabled={isPending || !phraseMatches}
             onClick={onConfirm}
           >
-            Delete tags
+            {t("confirmButton")}
           </Button>
         </DialogFooter>
       </DialogPopup>

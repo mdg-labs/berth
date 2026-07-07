@@ -3,6 +3,7 @@
 import { ImageSettingsPage } from "@/components/settings/image-settings-page";
 import { TagDetailPage } from "@/components/tags/tag-detail-page";
 import { TagsPage } from "@/components/tags/tags-page";
+import { getTranslations } from "next-intl/server";
 
 type PageProps = {
   params: Promise<{ repository: string; rest: string[] }>;
@@ -56,11 +57,12 @@ export default async function ImageRoutePage({ params }: PageProps) {
   const { repository, rest } = await params;
   const repositoryName = decodeURIComponent(repository);
   const parsed = parseImageRoute(rest);
+  const t = await getTranslations("tags");
 
   if (!parsed) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Select an image from the repository catalog.
+        {t("route.selectImage")}
       </div>
     );
   }

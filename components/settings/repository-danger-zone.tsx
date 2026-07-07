@@ -3,6 +3,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -28,6 +29,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CSRF_HEADER, CSRF_VALUE } from "@/lib/csrf/constants";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { toastManager } from "@/components/ui/toast";
 
 type RepositoryDangerZoneProps = {
@@ -43,12 +45,15 @@ export function RepositoryDangerZone({
   repositoryId,
   repositoryName,
 }: RepositoryDangerZoneProps) {
+  const t = useTranslations("settings.repositoryDanger");
+  const tCommon = useTranslations("common.actions");
+  const tErrors = useTranslations("errors.api");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [phrase, setPhrase] = useState("");
   const [force, setForce] = useState(false);
   const [conflict, setConflict] = useState<DeleteConflict | null>(null);
-  const expectedPhrase = `delete ${repositoryName}`;
+  const expectedPhrase = t("confirmPhrase", { name: repositoryName });
 
   const deleteMutation = useMutation({
     mutationFn: async (options: { force: boolean }) => {
@@ -75,14 +80,14 @@ export function RepositoryDangerZone({
         const body = (await response.json()) as {
           error?: { message?: string };
         };
-        throw new Error(body.error?.message ?? "Delete failed");
+        throw new Error(body.error?.message ?? "conflict");
       }
     },
     onSuccess: () => {
       toastManager.add({
         type: "success",
-        title: "Repository deleted",
-        description: `${repositoryName} was removed.`,
+        title: t("toast.success"),
+        description: t("toast.successDescription", { name: repositoryName }),
       });
       router.replace("/repositories");
     },
@@ -96,8 +101,8 @@ export function RepositoryDangerZone({
 
       toastManager.add({
         type: "error",
-        title: "Failed to delete repository",
-        description: error instanceof Error ? error.message : "Request failed",
+        title: t("toast.error"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -116,34 +121,28 @@ export function RepositoryDangerZone({
   return (
     <Card className="border-destructive/40">
       <CardHeader>
-        <CardTitle>Danger zone</CardTitle>
-        <CardDescription>
-          Permanently delete this repository and its metadata.
-        </CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <Button type="button" variant="destructive" onClick={() => setOpen(true)}>
-          Delete repository
+          {t("deleteButton")}
         </Button>
 
         <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogPopup>
             <DialogHeader>
-              <DialogTitle>Delete {repositoryName}?</DialogTitle>
+              <DialogTitle>{t("dialog.title", { name: repositoryName })}</DialogTitle>
               <DialogDescription>
                 {conflict
-                  ? `This repository still has images: ${conflict.images.join(", ")}. Enable force delete to remove them first.`
-                  : "Deletion is blocked while non-empty images remain unless you force-delete."}
+                  ? t("dialog.conflict", { images: conflict.images.join(", ") })
+                  : t("dialog.blocked")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 px-6">
               <Field>
                 <FieldLabel htmlFor="repository-delete-phrase">
-                  Type{" "}
-                  <span className="font-mono text-foreground">
-                    {expectedPhrase}
-                  </span>{" "}
-                  to confirm
+                  {t("dialog.confirmLabel", { phrase: expectedPhrase })}
                 </FieldLabel>
                 <Input
                   id="repository-delete-phrase"
@@ -157,23 +156,22 @@ export function RepositoryDangerZone({
                   checked={force}
                   onCheckedChange={(checked) => setForce(checked === true)}
                 />
-                Force delete (cascade-delete all images)
+                {t("dialog.forceLabel")}
               </Label>
               {force ? (
-                <FieldDescription>
-                  Force delete removes every image and manifest in this
-                  repository before deleting the repository record.
-                </FieldDescription>
+                <FieldDescription>{t("dialog.forceDescription")}</FieldDescription>
               ) : null}
             </div>
             <DialogFooter>
-              <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
+              <DialogClose render={<Button variant="ghost" />}>
+                {tCommon("cancel")}
+              </DialogClose>
               <Button
                 variant="destructive"
                 disabled={!phraseMatches || deleteMutation.isPending}
                 onClick={() => deleteMutation.mutate({ force })}
               >
-                {force ? "Force delete repository" : "Delete repository"}
+                {force ? t("dialog.forceButton") : t("deleteButton")}
               </Button>
             </DialogFooter>
           </DialogPopup>

@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
@@ -27,8 +28,9 @@ import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toastManager } from "@/components/ui/toast";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import { imagePathSegments } from "@/lib/catalog/format";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { useRepositoryByName } from "@/lib/hooks/use-repository";
 import type {
   AnonymousPullOverride,
@@ -58,6 +60,9 @@ export function ImageSettingsPage({
   repositoryName,
   imageName,
 }: ImageSettingsPageProps) {
+  const t = useTranslations("settings");
+  const tImage = useTranslations("settings.imageSettings");
+  const tErrors = useTranslations("errors.api");
   const queryClient = useQueryClient();
   const { data: authData } = useAuthUser();
   const repositoryQuery = useRepositoryByName(repositoryName);
@@ -102,15 +107,14 @@ export function ImageSettingsPage({
       });
       toastManager.add({
         type: "success",
-        title: "Image settings updated",
+        title: tImage("toast.success"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Update failed",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: tImage("toast.error"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -122,7 +126,7 @@ export function ImageSettingsPage({
   if (repositoryQuery.isError || !repositoryQuery.data) {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-        Repository not found or you do not have access.
+        {t("image.notFound")}
       </div>
     );
   }
@@ -130,9 +134,9 @@ export function ImageSettingsPage({
   if (!canAccessSettings) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-          You do not have permission to manage settings for {imageName}.
+          {t("image.forbidden", { name: imageName })}
         </div>
         <Button
           variant="outline"
@@ -143,7 +147,7 @@ export function ImageSettingsPage({
           }
         >
           <ArrowLeftIcon className="size-4" />
-          Back to tags
+          {t("backToTags")}
         </Button>
       </div>
     );
@@ -151,8 +155,8 @@ export function ImageSettingsPage({
 
   const settings = settingsQuery.data?.settings;
   const effectiveLabel = settings?.effectiveAnonymousPull
-    ? "Anonymous pull allowed"
-    : "Anonymous pull denied";
+    ? tImage("effectiveAllow")
+    : tImage("effectiveDeny");
 
   const tagsHref = `/r/${encodeURIComponent(repositoryName)}/i/${imagePathSegments(imageName)}`;
 
@@ -162,12 +166,12 @@ export function ImageSettingsPage({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{imageName}</h1>
           <p className="text-sm text-muted-foreground">
-            Image settings in {repositoryName}
+            {t("image.subtitle", { repository: repositoryName })}
           </p>
         </div>
         <Button variant="outline" render={<Link href={tagsHref} />}>
           <ArrowLeftIcon className="size-4" />
-          Back to tags
+          {t("backToTags")}
         </Button>
       </div>
 
@@ -177,12 +181,9 @@ export function ImageSettingsPage({
 
       {settingsQuery.isError ? (
         <ErrorAlert
-          title="Failed to load image settings"
-          message={
-            settingsQuery.error instanceof Error
-              ? settingsQuery.error.message
-              : "Request failed"
-          }
+          title={t("image.loadError")}
+          error={settingsQuery.error}
+          fallbackKey="request_failed"
           onRetry={() => void settingsQuery.refetch()}
         />
       ) : null}
@@ -190,21 +191,18 @@ export function ImageSettingsPage({
       {canManage && settings ? (
         <Card>
           <CardHeader>
-            <CardTitle>Anonymous pull</CardTitle>
-            <CardDescription>
-              Override the repository default for this image. Members with access
-              can always pull when authenticated.
-            </CardDescription>
+            <CardTitle>{tImage("title")}</CardTitle>
+            <CardDescription>{tImage("description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Repository default:</span>
+              <span className="text-muted-foreground">{tImage("repositoryDefault")}</span>
               <Badge variant="secondary">
                 {settings.repositoryAnonymousPullDefault
-                  ? "Allow anonymous pull"
-                  : "Deny anonymous pull"}
+                  ? tImage("allowDefault")
+                  : tImage("denyDefault")}
               </Badge>
-              <span className="text-muted-foreground">Effective:</span>
+              <span className="text-muted-foreground">{tImage("effective")}</span>
               <Badge
                 variant={
                   settings.effectiveAnonymousPull ? "default" : "destructive"
@@ -222,7 +220,7 @@ export function ImageSettingsPage({
               }}
             >
               <Fieldset>
-                <FieldsetLegend>Override</FieldsetLegend>
+                <FieldsetLegend>{tImage("override")}</FieldsetLegend>
                 <RadioGroup
                   value={anonymousPull}
                   onValueChange={(value) =>
@@ -232,27 +230,27 @@ export function ImageSettingsPage({
                   <Label className="flex items-start gap-2">
                     <Radio value="inherit" className="mt-0.5" />
                     <span>
-                      <span className="font-medium">Inherit repository default</span>
+                      <span className="font-medium">{tImage("inherit.label")}</span>
                       <p className="text-muted-foreground text-xs">
-                        Use the repository-wide anonymous pull setting.
+                        {tImage("inherit.description")}
                       </p>
                     </span>
                   </Label>
                   <Label className="flex items-start gap-2">
                     <Radio value="allow" className="mt-0.5" />
                     <span>
-                      <span className="font-medium">Allow anonymous pull</span>
+                      <span className="font-medium">{tImage("allow.label")}</span>
                       <p className="text-muted-foreground text-xs">
-                        Unauthenticated clients can pull this image.
+                        {tImage("allow.description")}
                       </p>
                     </span>
                   </Label>
                   <Label className="flex items-start gap-2">
                     <Radio value="deny" className="mt-0.5" />
                     <span>
-                      <span className="font-medium">Deny anonymous pull</span>
+                      <span className="font-medium">{tImage("deny.label")}</span>
                       <p className="text-muted-foreground text-xs">
-                        Require authentication even when the repository is public.
+                        {tImage("deny.description")}
                       </p>
                     </span>
                   </Label>
@@ -264,7 +262,7 @@ export function ImageSettingsPage({
                 data-loading={mutation.isPending ? "" : undefined}
               >
                 {mutation.isPending ? <Spinner /> : null}
-                Save changes
+                {tImage("save")}
               </Button>
             </Form>
           </CardContent>

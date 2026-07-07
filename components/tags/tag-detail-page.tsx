@@ -4,6 +4,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, Trash2Icon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -39,6 +40,7 @@ import {
   formatDigest,
   imagePathSegments,
 } from "@/lib/catalog/format";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { useRepositoryByName } from "@/lib/hooks/use-repository";
 import type { SiblingsResponse, TagDetail } from "@/lib/registry/client/types";
 
@@ -70,6 +72,9 @@ function encodeRepoPath(imageName: string): string {
 }
 
 export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageProps) {
+  const t = useTranslations("tags");
+  const tDetail = useTranslations("tags.detail");
+  const tErrors = useTranslations("errors.api");
   const router = useRouter();
   const queryClient = useQueryClient();
   const authQuery = useAuthUser();
@@ -117,16 +122,16 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
       void queryClient.invalidateQueries({ queryKey: ["tags"] });
       toastManager.add({
         type: "success",
-        title: "Tag deleted",
-        description: `${tag} was removed from the image.`,
+        title: t("toast.deleteSuccess.title"),
+        description: t("toast.deleteSuccess.description", { tag }),
       });
       router.push(`/r/${repositoryName}/i/${imagePathSegments(imageName)}`);
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Delete failed",
-        description: error instanceof Error ? error.message : "Request failed",
+        title: t("toast.deleteError.title"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -142,7 +147,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
     void navigator.clipboard.writeText(pullCommand);
     anchoredToastManager.add({
       type: "success",
-      title: "Copied pull command",
+      title: t("toast.copyPullCommand.title"),
       description: pullCommand,
       positionerProps: {
         anchor: copyButtonRef.current,
@@ -156,6 +161,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
   const error = repositoryQuery.error ?? detailQuery.error;
   const detail = detailQuery.data?.tag;
   const siblings = siblingsQuery.data?.siblings.map((entry) => entry.name) ?? [];
+  const empty = tDetail("platforms.empty");
 
   return (
     <div className="space-y-6">
@@ -163,7 +169,9 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
 
       {error ? (
         <ErrorAlert
-          message={error instanceof Error ? error.message : "Failed to load tag"}
+          error={error}
+          fallbackKey="generic"
+          message={error instanceof Error ? undefined : tDetail("loadError")}
           onRetry={() => {
             void repositoryQuery.refetch();
             void detailQuery.refetch();
@@ -185,7 +193,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
             <div className="flex flex-wrap gap-2">
               <Button ref={copyButtonRef} variant="outline" onClick={copyPullCommand}>
                 <CopyIcon />
-                Copy pull command
+                {tDetail("copyPullCommand")}
               </Button>
               {canDelete ? (
                 <Button
@@ -193,7 +201,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
                   onClick={() => setDeleteOpen(true)}
                 >
                   <Trash2Icon />
-                  Delete tag
+                  {tDetail("deleteTag")}
                 </Button>
               ) : null}
             </div>
@@ -201,7 +209,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
 
           <Card>
             <CardHeader>
-              <CardTitle>Manifest</CardTitle>
+              <CardTitle>{tDetail("manifest")}</CardTitle>
               <CardDescription>{detail.mediaType}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
@@ -211,7 +219,9 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
               </div>
               {detail.pushedAt ? (
                 <p className="text-muted-foreground">
-                  Created {new Date(detail.pushedAt).toLocaleString()}
+                  {tDetail("created", {
+                    date: new Date(detail.pushedAt).toLocaleString(),
+                  })}
                 </p>
               ) : null}
               <pre className="overflow-x-auto rounded-lg border bg-muted/30 p-3 font-mono text-xs">
@@ -222,25 +232,25 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
 
           <Tabs defaultValue="platforms">
             <TabsList>
-              <TabsTab value="platforms">Platforms</TabsTab>
-              <TabsTab value="history">History</TabsTab>
-              <TabsTab value="siblings">Siblings</TabsTab>
+              <TabsTab value="platforms">{tDetail("tabs.platforms")}</TabsTab>
+              <TabsTab value="history">{tDetail("tabs.history")}</TabsTab>
+              <TabsTab value="siblings">{tDetail("tabs.siblings")}</TabsTab>
             </TabsList>
 
             <TabsContent value="platforms" className="mt-4">
               {detail.platforms.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Single-platform image (no manifest list).
+                  {tDetail("platforms.singlePlatform")}
                 </p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>OS</TableHead>
-                      <TableHead>Architecture</TableHead>
-                      <TableHead>Variant</TableHead>
-                      <TableHead>Digest</TableHead>
-                      <TableHead>Size</TableHead>
+                      <TableHead>{tDetail("platforms.os")}</TableHead>
+                      <TableHead>{tDetail("platforms.architecture")}</TableHead>
+                      <TableHead>{tDetail("platforms.variant")}</TableHead>
+                      <TableHead>{tDetail("platforms.digest")}</TableHead>
+                      <TableHead>{tDetail("platforms.size")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -248,7 +258,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
                       <TableRow key={platform.digest}>
                         <TableCell>{platform.os}</TableCell>
                         <TableCell>{platform.architecture}</TableCell>
-                        <TableCell>{platform.variant ?? "—"}</TableCell>
+                        <TableCell>{platform.variant ?? empty}</TableCell>
                         <TableCell className="font-mono text-xs">
                           {formatDigest(platform.digest)}
                         </TableCell>
@@ -262,14 +272,16 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
 
             <TabsContent value="history" className="mt-4">
               {detail.history.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No history available.</p>
+                <p className="text-sm text-muted-foreground">
+                  {tDetail("history.empty")}
+                </p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Created</TableHead>
-                      <TableHead>By</TableHead>
-                      <TableHead>Comment</TableHead>
+                      <TableHead>{tDetail("history.created")}</TableHead>
+                      <TableHead>{tDetail("history.by")}</TableHead>
+                      <TableHead>{tDetail("history.comment")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -278,11 +290,12 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
                         <TableCell>
                           {entry.created
                             ? new Date(entry.created).toLocaleString()
-                            : "—"}
+                            : empty}
                         </TableCell>
-                        <TableCell>{entry.createdBy || "—"}</TableCell>
+                        <TableCell>{entry.createdBy || empty}</TableCell>
                         <TableCell className="max-w-md truncate">
-                          {entry.comment || (entry.emptyLayer ? "(empty layer)" : "—")}
+                          {entry.comment ||
+                            (entry.emptyLayer ? tDetail("history.emptyLayer") : empty)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -294,7 +307,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
             <TabsContent value="siblings" className="mt-4">
               {siblings.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No other tags share this digest.
+                  {tDetail("siblings.empty")}
                 </p>
               ) : (
                 <ul className="divide-y rounded-lg border">

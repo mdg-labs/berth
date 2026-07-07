@@ -17,6 +17,7 @@ import {
   SettingsIcon,
   Trash2Icon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   parseAsInteger,
   parseAsString,
@@ -74,6 +75,7 @@ import { Toolbar, ToolbarButton, ToolbarGroup } from "@/components/ui/toolbar";
 import { apiFetch } from "@/lib/api/client";
 import { formatBytes, formatDigest, imagePathSegments } from "@/lib/catalog/format";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { useRepositoryByName } from "@/lib/hooks/use-repository";
 import type { TagSummary, TagsListResponse } from "@/lib/registry/client/types";
 import { cn } from "@/lib/utils";
@@ -135,6 +137,9 @@ function TagsSkeleton({ className }: { className?: string }) {
 }
 
 export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
+  const t = useTranslations("tags");
+  const tSettings = useTranslations("settings");
+  const tErrors = useTranslations("errors.api");
   const queryClient = useQueryClient();
   const authQuery = useAuthUser();
   const repositoryQuery = useRepositoryByName(repositoryName);
@@ -201,15 +206,17 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
       void queryClient.invalidateQueries({ queryKey: ["tags"] });
       toastManager.add({
         type: "success",
-        title: "Tags deleted",
-        description: `Removed ${result.deletedTags.length} tag${result.deletedTags.length === 1 ? "" : "s"}.`,
+        title: t("toast.bulkDeleteSuccess.title"),
+        description: t("toast.bulkDeleteSuccess.description", {
+          count: result.deletedTags.length,
+        }),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Bulk delete failed",
-        description: error instanceof Error ? error.message : "Request failed",
+        title: t("toast.bulkDeleteError.title"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -262,7 +269,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
               checked={allSelected}
               indeterminate={someSelected}
               onCheckedChange={(checked) => toggleAllOnPage(checked === true)}
-              aria-label="Select all tags on page"
+              aria-label={t("selectAll")}
             />
           ),
           cell: ({ row }) => (
@@ -271,7 +278,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
               onCheckedChange={(checked) =>
                 toggleTag(row.original.name, checked === true)
               }
-              aria-label={`Select ${row.original.name}`}
+              aria-label={t("selectTag", { name: row.original.name })}
             />
           ),
         }),
@@ -280,7 +287,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
 
     baseColumns.push(
       columnHelper.accessor("name", {
-        header: "Tag",
+        header: t("columns.tag"),
         cell: (info) => (
           <Link
             href={`/r/${repositoryName}/i/${imagePathSegments(imageName)}/t/${encodeURIComponent(info.getValue())}`}
@@ -291,7 +298,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
         ),
       }),
       columnHelper.accessor("digest", {
-        header: "Digest",
+        header: t("columns.digest"),
         cell: (info) => (
           <span className="font-mono text-xs text-muted-foreground">
             {formatDigest(info.getValue())}
@@ -299,11 +306,13 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
         ),
       }),
       columnHelper.accessor("size", {
-        header: "Size",
+        header: t("columns.size"),
         cell: (info) => formatBytes(info.getValue()),
       }),
       columnHelper.accessor("pullCount", {
-        header: () => <span className="block w-full text-right">Pulls</span>,
+        header: () => (
+          <span className="block w-full text-right">{t("columns.pulls")}</span>
+        ),
         cell: (info) => (
           <span className="block text-right tabular-nums text-muted-foreground">
             {info.getValue() ?? 0}
@@ -311,7 +320,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
         ),
       }),
       columnHelper.accessor("siblings", {
-        header: "Siblings",
+        header: t("columns.siblings"),
         cell: (info) => (
           <TagSiblingsCell
             repositoryName={repositoryName}
@@ -329,6 +338,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
     imageName,
     selectedTags,
     tagsQuery.data?.tags,
+    t,
     toggleAllOnPage,
     toggleTag,
   ]);
@@ -356,7 +366,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{imageName}</h1>
           <p className="text-sm text-muted-foreground">
-            Tags in {repositoryName}/{imageName}
+            {t("subtitle", { repository: repositoryName, image: imageName })}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -365,7 +375,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
               <SearchIcon />
             </InputGroupAddon>
             <InputGroupInput
-              placeholder="Search tags…"
+              placeholder={t("searchPlaceholder")}
               value={query.search}
               onChange={(event) =>
                 void setQuery({ search: event.target.value, page: 1 })
@@ -383,7 +393,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
             }
           >
             {query.sort === "name_desc" ? <ArrowDownIcon /> : <ArrowUpIcon />}
-            Sort
+            {t("sort")}
           </Button>
           {canAccessSettings ? (
             <Button
@@ -396,7 +406,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
               }
             >
               <SettingsIcon />
-              Settings
+              {tSettings("title")}
             </Button>
           ) : null}
         </div>
@@ -411,7 +421,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
       {canDelete && selectedTagNames.length > 0 ? (
         <Toolbar className="shrink-0">
           <ToolbarGroup className="flex-1 px-2 text-sm text-muted-foreground">
-            {selectedTagNames.length} selected
+            {t("selected", { count: selectedTagNames.length })}
           </ToolbarGroup>
           <ToolbarButton
             render={
@@ -423,7 +433,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
             }
           >
             <Trash2Icon />
-            Delete selected
+            {t("deleteSelected")}
           </ToolbarButton>
         </Toolbar>
       ) : null}
@@ -433,7 +443,9 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
       {error ? (
         <div className="shrink-0">
           <ErrorAlert
-            message={error instanceof Error ? error.message : "Failed to load tags"}
+            error={error}
+            fallbackKey="generic"
+            message={error instanceof Error ? undefined : t("loadError")}
             onRetry={() => {
               void repositoryQuery.refetch();
               void tagsQuery.refetch();
@@ -445,10 +457,8 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
       {!isLoading && !error && tagsQuery.data?.tags.length === 0 ? (
         <Empty className="shrink-0 rounded-lg border border-dashed">
           <EmptyHeader>
-            <EmptyTitle>No tags found</EmptyTitle>
-            <EmptyDescription>
-              Push a tag to this image to see it here.
-            </EmptyDescription>
+            <EmptyTitle>{t("empty.title")}</EmptyTitle>
+            <EmptyDescription>{t("empty.description")}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : null}
@@ -492,7 +502,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
 
           <div className="flex shrink-0 flex-nowrap items-center justify-end gap-6 overflow-x-auto border-t px-2.5 py-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span>Rows per page</span>
+              <span>{t("pagination.rowsPerPage")}</span>
               <Select
                 value={String(query.pageSize)}
                 onValueChange={(value) => {
@@ -520,7 +530,11 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
             </div>
 
             <span>
-              {rangeStart}–{rangeEnd} of {total}
+              {t("pagination.range", {
+                start: rangeStart,
+                end: rangeEnd,
+                total,
+              })}
             </span>
 
             {totalPages > 1 ? (

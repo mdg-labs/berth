@@ -1,1 +1,18 @@
-{}
+{
+  "visibility": {
+    "public": "Public",
+    "private": "Private"
+  },
+  "pulls": "Pulls",
+  "pullCount": "{count, plural, one {# pull} other {# pulls}}",
+  "tagCount": "{count, plural, one {# tag} other {# tags}}",
+  "settingsFor": "Settings for {image}",
+  "browseDescription": "Browse images in this repository",
+  "repositoryPullCount": " · {count, plural, one {# pull} other {# pulls}}",
+  "searchPlaceholder": "Search images…",
+  "loadError": "Failed to load catalog",
+  "empty": {
+    "title": "No images yet",
+    "description": "Push an image to this repository to see it here."
+  }
+}

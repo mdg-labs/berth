@@ -1,1 +1,114 @@
-{}
+{
+  "title": "Settings",
+  "backToCatalog": "Back to catalog",
+  "backToTags": "Back to tags",
+  "repository": {
+    "description": "Manage members, visibility, and deletion for {name}.",
+    "notFound": "Repository not found or you do not have access.",
+    "forbidden": "Only repository admins can manage settings for {name}."
+  },
+  "image": {
+    "subtitle": "Image settings in {repository}",
+    "notFound": "Repository not found or you do not have access.",
+    "forbidden": "You do not have permission to manage settings for {name}.",
+    "loadError": "Failed to load image settings"
+  },
+  "visibility": {
+    "title": "Default anonymous pull",
+    "description": "Applies to all images unless overridden on an individual image settings page.",
+    "label": "Allow anonymous pull",
+    "fieldDescription": "When enabled, unauthenticated clients can pull images that inherit this repository default.",
+    "toast": {
+      "success": "Default visibility updated",
+      "error": "Failed to update visibility"
+    }
+  },
+  "members": {
+    "title": "Members",
+    "description": "Add collaborators by email and assign repository roles.",
+    "pendingAlert": {
+      "title": "Pending invites need attention",
+      "description": "This invite stays pending until the user signs in with a verified email address. If they logged in via OIDC without email_verified, a system admin must link or remove the invite manually."
+    },
+    "emailLabel": "Email",
+    "emailPlaceholder": "teammate@example.com",
+    "roleLabel": "Role",
+    "addMember": "Add member",
+    "loading": "Loading members…",
+    "empty": "No members yet.",
+    "pending": "Pending",
+    "pendingSince": "Pending invite since {date}",
+    "removeMember": "Remove {email}",
+    "toast": {
+      "added": "Member added",
+      "inviteSent": "Invite email sent.",
+      "inviteNoSmtp": "Invite created, but SMTP is not configured.",
+      "memberAdded": "The member was added.",
+      "addError": "Failed to add member",
+      "roleUpdated": "Role updated",
+      "roleError": "Failed to update role",
+      "removed": "Member removed",
+      "removeError": "Failed to remove member",
+      "inviteRemoved": "Invite removed",
+      "inviteRemoveError": "Failed to remove invite"
+    }
+  },
+  "repositoryDanger": {
+    "title": "Danger zone",
+    "description": "Permanently delete this repository and its metadata.",
+    "deleteButton": "Delete repository",
+    "dialog": {
+      "title": "Delete {name}?",
+      "conflict": "This repository still has images: {images}. Enable force delete to remove them first.",
+      "blocked": "Deletion is blocked while non-empty images remain unless you force-delete.",
+      "confirmLabel": "Type {phrase} to confirm",
+      "forceLabel": "Force delete (cascade-delete all images)",
+      "forceDescription": "Force delete removes every image and manifest in this repository before deleting the repository record.",
+      "forceButton": "Force delete repository"
+    },
+    "confirmPhrase": "delete {name}",
+    "toast": {
+      "success": "Repository deleted",
+      "successDescription": "{name} was removed.",
+      "error": "Failed to delete repository"
+    }
+  },
+  "imageSettings": {
+    "title": "Anonymous pull",
+    "description": "Override the repository default for this image. Members with access can always pull when authenticated.",
+    "repositoryDefault": "Repository default:",
+    "effective": "Effective:",
+    "allowDefault": "Allow anonymous pull",
+    "denyDefault": "Deny anonymous pull",
+    "effectiveAllow": "Anonymous pull allowed",
+    "effectiveDeny": "Anonymous pull denied",
+    "override": "Override",
+    "inherit": {
+      "label": "Inherit repository default",
+      "description": "Use the repository-wide anonymous pull setting."
+    },
+    "allow": {
+      "label": "Allow anonymous pull",
+      "description": "Unauthenticated clients can pull this image."
+    },
+    "deny": {
+      "label": "Deny anonymous pull",
+      "description": "Require authentication even when the repository is public."
+    },
+    "save": "Save changes",
+    "toast": {
+      "success": "Image settings updated",
+      "error": "Update failed"
+    }
+  },
+  "imageDanger": {
+    "title": "Danger zone",
+    "description": "Permanently delete this image and all of its tags from the registry.",
+    "deleteButton": "Delete image",
+    "toast": {
+      "success": "Image deleted",
+      "successDescription": "Removed {count, plural, one {# tag} other {# tags}}.",
+      "error": "Image delete failed"
+    }
+  }
+}

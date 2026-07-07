@@ -12,6 +12,7 @@ import {
   SearchIcon,
   SettingsIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { parseAsString, useQueryState } from "nuqs";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 
@@ -62,18 +63,15 @@ function CatalogSkeleton() {
   );
 }
 
-function visibilityLabel(
-  image: CatalogResponse["images"][number],
-): "Public" | "Private" {
-  return image.effectiveAnonymousPull ? "Public" : "Private";
-}
-
 function ImageVisibilityLock({
   image,
 }: {
   image: CatalogResponse["images"][number];
 }) {
-  const label = visibilityLabel(image);
+  const t = useTranslations("catalog");
+  const label = image.effectiveAnonymousPull
+    ? t("visibility.public")
+    : t("visibility.private");
   const isPublic = image.effectiveAnonymousPull;
 
   return (
@@ -106,7 +104,8 @@ function ImageVisibilityLock({
 }
 
 function ImagePullCount({ pullCount }: { pullCount: number }) {
-  const label = `${pullCount} pull${pullCount === 1 ? "" : "s"}`;
+  const t = useTranslations("catalog");
+  const label = t("pullCount", { count: pullCount });
 
   return (
     <Tooltip>
@@ -128,7 +127,7 @@ function ImagePullCount({ pullCount }: { pullCount: number }) {
         side="top"
         className="border-border/80 px-2.5 py-1 font-medium shadow-md/10"
       >
-        Pulls
+        {t("pulls")}
       </TooltipPopup>
     </Tooltip>
   );
@@ -143,6 +142,7 @@ function ImageCatalogCard({
   repositoryName: string;
   canManage: boolean;
 }) {
+  const t = useTranslations("catalog");
   const imageTitle = `${repositoryName}/${image.name}`;
   const tagsHref = `/r/${repositoryName}/i/${imagePathSegments(image.name)}`;
   const settingsHref = `/r/${encodeURIComponent(repositoryName)}/i/${imagePathSegments(image.name)}/settings`;
@@ -164,7 +164,7 @@ function ImageCatalogCard({
               </Link>
             </CardTitle>
             <Badge variant="secondary" className="w-fit">
-              {image.tagCount} tag{image.tagCount === 1 ? "" : "s"}
+              {t("tagCount", { count: image.tagCount })}
             </Badge>
           </div>
         </div>
@@ -173,7 +173,7 @@ function ImageCatalogCard({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`Settings for ${imageTitle}`}
+              aria-label={t("settingsFor", { image: imageTitle })}
               render={<Link href={settingsHref} />}
             >
               <SettingsIcon className="size-4" />
@@ -192,6 +192,7 @@ function ImageCatalogCard({
 }
 
 export function CatalogPage({ repositoryName }: CatalogPageProps) {
+  const t = useTranslations("catalog");
   const { data: authData } = useAuthUser();
   const repositoryQuery = useRepositoryByName(repositoryName);
   const [search, setSearch] = useQueryState(
@@ -222,6 +223,7 @@ export function CatalogPage({ repositoryName }: CatalogPageProps) {
 
   const isLoading = repositoryQuery.isLoading || catalogQuery.isLoading;
   const error = repositoryQuery.error ?? catalogQuery.error;
+  const repositoryPullCount = catalogQuery.data?.repositoryPullCount;
 
   return (
     <div className="space-y-6">
@@ -229,9 +231,9 @@ export function CatalogPage({ repositoryName }: CatalogPageProps) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{repositoryName}</h1>
           <p className="text-sm text-muted-foreground">
-            Browse images in this repository
-            {catalogQuery.data?.repositoryPullCount !== undefined
-              ? ` · ${catalogQuery.data.repositoryPullCount} pull${catalogQuery.data.repositoryPullCount === 1 ? "" : "s"}`
+            {t("browseDescription")}
+            {repositoryPullCount !== undefined
+              ? t("repositoryPullCount", { count: repositoryPullCount })
               : ""}
             .
           </p>
@@ -241,7 +243,7 @@ export function CatalogPage({ repositoryName }: CatalogPageProps) {
             <SearchIcon />
           </InputGroupAddon>
           <InputGroupInput
-            placeholder="Search images…"
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(event) => void setSearch(event.target.value)}
           />
@@ -252,9 +254,9 @@ export function CatalogPage({ repositoryName }: CatalogPageProps) {
 
       {error ? (
         <ErrorAlert
-          message={
-            error instanceof Error ? error.message : "Failed to load catalog"
-          }
+          error={error}
+          fallbackKey="generic"
+          message={error instanceof Error ? undefined : t("loadError")}
           onRetry={() => {
             void repositoryQuery.refetch();
             void catalogQuery.refetch();
@@ -268,10 +270,8 @@ export function CatalogPage({ repositoryName }: CatalogPageProps) {
             <EmptyMedia variant="icon">
               <PackageIcon />
             </EmptyMedia>
-            <EmptyTitle>No images yet</EmptyTitle>
-            <EmptyDescription>
-              Push an image to this repository to see it here.
-            </EmptyDescription>
+            <EmptyTitle>{t("empty.title")}</EmptyTitle>
+            <EmptyDescription>{t("empty.description")}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : null}

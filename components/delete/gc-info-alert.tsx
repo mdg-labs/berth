@@ -3,8 +3,8 @@
 "use client";
 
 import { InfoIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-import { GC_INFO_MESSAGE } from "@/components/delete/constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type GcInfoAlertProps = {
@@ -12,19 +12,21 @@ type GcInfoAlertProps = {
 };
 
 export function GcInfoAlert({ onDismiss }: GcInfoAlertProps) {
+  const t = useTranslations("delete.gcInfo");
+
   return (
     <Alert variant="info">
       <InfoIcon />
-      <AlertTitle>Garbage collection required</AlertTitle>
+      <AlertTitle>{t("title")}</AlertTitle>
       <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <span>{GC_INFO_MESSAGE}</span>
+        <span>{t("message")}</span>
         {onDismiss ? (
           <button
             type="button"
             className="text-sm font-medium underline-offset-4 hover:underline"
             onClick={onDismiss}
           >
-            Dismiss
+            {t("dismiss")}
           </button>
         ) : null}
       </AlertDescription>

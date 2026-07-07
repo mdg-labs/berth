@@ -2,6 +2,7 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import {
@@ -32,6 +33,8 @@ export function DeleteTagDialog({
   isPending = false,
   onConfirm,
 }: DeleteTagDialogProps) {
+  const t = useTranslations("delete.tagDelete");
+  const tCommon = useTranslations("common.actions");
   const [acknowledged, setAcknowledged] = useState(false);
 
   function handleOpenChange(next: boolean) {
@@ -47,21 +50,15 @@ export function DeleteTagDialog({
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete tag {tagName}?</AlertDialogTitle>
+          <AlertDialogTitle>{t("title", { name: tagName })}</AlertDialogTitle>
           <AlertDialogDescription>
-            {hasSiblings ? (
-              <>
-                This tag shares digest{" "}
-                <span className="font-medium text-foreground">
-                  {siblings.length} other tag{siblings.length === 1 ? "" : "s"}
-                </span>
-                : {siblings.join(", ")}. Deleting this tag removes only the{" "}
-                <span className="font-medium text-foreground">{tagName}</span>{" "}
-                reference; sibling tags remain until they are deleted separately.
-              </>
-            ) : (
-              "This removes the tag reference from the image. The action cannot be undone."
-            )}
+            {hasSiblings
+              ? t("withSiblings", {
+                  siblingCount: siblings.length,
+                  siblings: siblings.join(", "),
+                  name: tagName,
+                })
+              : t("simple")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {hasSiblings ? (
@@ -72,19 +69,19 @@ export function DeleteTagDialog({
               checked={acknowledged}
               onChange={(event) => setAcknowledged(event.target.checked)}
             />
-            <span>I understand sibling tags will remain.</span>
+            <span>{t("acknowledge")}</span>
           </label>
         ) : null}
         <AlertDialogFooter>
           <AlertDialogClose render={<Button variant="ghost" />}>
-            Cancel
+            {tCommon("cancel")}
           </AlertDialogClose>
           <Button
             variant="destructive"
             disabled={isPending || (hasSiblings && !acknowledged)}
             onClick={onConfirm}
           >
-            Delete tag
+            {t("confirmButton")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>

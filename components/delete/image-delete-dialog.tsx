@@ -2,9 +2,9 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { imageDeleteConfirmPhrase } from "@/components/delete/constants";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -37,10 +37,12 @@ export function ImageDeleteDialog({
   isPending = false,
   onConfirm,
 }: ImageDeleteDialogProps) {
+  const t = useTranslations("delete.imageDelete");
+  const tCommon = useTranslations("common.actions");
   const [phrase, setPhrase] = useState("");
-  const expectedPhrase = imageDeleteConfirmPhrase(imageName);
+  const expectedPhrase = t("confirmPhrase", { name: imageName });
   const phraseMatches = phrase.trim() === expectedPhrase;
-  const resourceLabel = resourceKind === "image" ? "image" : "repository";
+  const kindLabel = t(`kind.${resourceKind}`);
 
   function handleOpenChange(next: boolean) {
     if (!next) {
@@ -54,17 +56,18 @@ export function ImageDeleteDialog({
       <DialogPopup>
         <DialogHeader>
           <DialogTitle>
-            Delete {resourceLabel} {imageName}?
+            {t("title", { kind: kindLabel, name: imageName })}
           </DialogTitle>
           <DialogDescription>
-            This deletes all {tagCount} tag{tagCount === 1 ? "" : "s"} and
-            manifests in this {resourceLabel}. Type{" "}
-            <span className="font-mono text-foreground">{expectedPhrase}</span>{" "}
-            to confirm.
+            {t("description", {
+              count: tagCount,
+              kind: kindLabel,
+              phrase: expectedPhrase,
+            })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2 px-6">
-          <Label htmlFor="repo-delete-phrase">Confirmation phrase</Label>
+          <Label htmlFor="repo-delete-phrase">{t("phraseLabel")}</Label>
           <Input
             id="repo-delete-phrase"
             value={phrase}
@@ -74,13 +77,15 @@ export function ImageDeleteDialog({
           />
         </div>
         <DialogFooter>
-          <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
+          <DialogClose render={<Button variant="ghost" />}>
+            {tCommon("cancel")}
+          </DialogClose>
           <Button
             variant="destructive"
             disabled={isPending || !phraseMatches}
             onClick={onConfirm}
           >
-            Delete {resourceLabel}
+            {t("confirmButton", { kind: kindLabel })}
           </Button>
         </DialogFooter>
       </DialogPopup>

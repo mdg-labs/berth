@@ -1,1 +1,33 @@
-{}
+{
+  "gcInfo": {
+    "title": "Garbage collection required",
+    "message": "Deleted manifests are marked for removal. Storage is reclaimed after registry garbage collection.",
+    "dismiss": "Dismiss"
+  },
+  "bulkDelete": {
+    "confirmPhrase": "delete tags",
+    "title": "Delete {count, plural, one {# tag} other {# tags}}?",
+    "typedConfirm": "You are about to delete {count} tags. Type \"{phrase}\" to confirm.",
+    "simpleConfirm": "This removes {count, plural, one {# tag reference} other {# tag references}} from the image.",
+    "phraseLabel": "Confirmation phrase",
+    "confirmButton": "Delete tags"
+  },
+  "tagDelete": {
+    "title": "Delete tag {name}?",
+    "withSiblings": "This tag shares digest {siblingCount, plural, one {# other tag} other {# other tags}}: {siblings}. Deleting this tag removes only the {name} reference; sibling tags remain until they are deleted separately.",
+    "simple": "This removes the tag reference from the image. The action cannot be undone.",
+    "acknowledge": "I understand sibling tags will remain.",
+    "confirmButton": "Delete tag"
+  },
+  "imageDelete": {
+    "confirmPhrase": "delete {name}",
+    "title": "Delete {kind} {name}?",
+    "description": "This deletes all {count, plural, one {# tag} other {# tags}} and manifests in this {kind}. Type {phrase} to confirm.",
+    "phraseLabel": "Confirmation phrase",
+    "confirmButton": "Delete {kind}",
+    "kind": {
+      "image": "image",
+      "repository": "repository"
+    }
+  }
+}

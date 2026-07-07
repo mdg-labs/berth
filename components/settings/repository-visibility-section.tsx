@@ -3,6 +3,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useId } from "react";
 
 import {
@@ -14,7 +15,8 @@ import {
 } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { toastManager } from "@/components/ui/toast";
 
 type RepositoryVisibilitySectionProps = {
@@ -26,6 +28,8 @@ export function RepositoryVisibilitySection({
   repositoryId,
   isPublic,
 }: RepositoryVisibilitySectionProps) {
+  const t = useTranslations("settings.visibility");
+  const tErrors = useTranslations("errors.api");
   const queryClient = useQueryClient();
   const switchId = useId();
 
@@ -39,15 +43,14 @@ export function RepositoryVisibilitySection({
       void queryClient.invalidateQueries({ queryKey: ["repositories"] });
       toastManager.add({
         type: "success",
-        title: "Default visibility updated",
+        title: t("toast.success"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to update visibility",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.error"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -55,20 +58,14 @@ export function RepositoryVisibilitySection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Default anonymous pull</CardTitle>
-        <CardDescription>
-          Applies to all images unless overridden on an individual image
-          settings page.
-        </CardDescription>
+        <CardTitle>{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between gap-4">
           <Field className="flex-1">
-            <FieldLabel htmlFor={switchId}>Allow anonymous pull</FieldLabel>
-            <FieldDescription>
-              When enabled, unauthenticated clients can pull images that
-              inherit this repository default.
-            </FieldDescription>
+            <FieldLabel htmlFor={switchId}>{t("label")}</FieldLabel>
+            <FieldDescription>{t("fieldDescription")}</FieldDescription>
           </Field>
           <Switch
             id={switchId}

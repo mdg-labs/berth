@@ -3,6 +3,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -19,6 +20,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toastManager } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api/client";
+import { formatApiError } from "@/lib/i18n/api-error";
 import type { TagsListResponse } from "@/lib/registry/client/types";
 
 type ImageDangerZoneProps = {
@@ -39,6 +41,8 @@ export function ImageDangerZone({
   repositoryName,
   imageName,
 }: ImageDangerZoneProps) {
+  const t = useTranslations("settings.imageDanger");
+  const tErrors = useTranslations("errors.api");
   const router = useRouter();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -64,16 +68,18 @@ export function ImageDangerZone({
       void queryClient.invalidateQueries({ queryKey: ["catalog", repositoryId] });
       toastManager.add({
         type: "success",
-        title: "Image deleted",
-        description: `Removed ${result.deletedTags.length} tag${result.deletedTags.length === 1 ? "" : "s"}.`,
+        title: t("toast.success"),
+        description: t("toast.successDescription", {
+          count: result.deletedTags.length,
+        }),
       });
       router.push(`/r/${encodeURIComponent(repositoryName)}`);
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Image delete failed",
-        description: error instanceof Error ? error.message : "Request failed",
+        title: t("toast.error"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -86,10 +92,8 @@ export function ImageDangerZone({
 
       <Card className="border-destructive/40">
         <CardHeader>
-          <CardTitle>Danger zone</CardTitle>
-          <CardDescription>
-            Permanently delete this image and all of its tags from the registry.
-          </CardDescription>
+          <CardTitle>{t("title")}</CardTitle>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {tagsQuery.isLoading ? (
@@ -101,7 +105,7 @@ export function ImageDangerZone({
               disabled={tagCount === 0}
               onClick={() => setDeleteOpen(true)}
             >
-              Delete image
+              {t("deleteButton")}
             </Button>
           )}
         </CardContent>

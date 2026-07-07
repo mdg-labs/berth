@@ -4,6 +4,7 @@
 
 import Link from "next/link";
 import { SettingsIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { RepositoryDangerZone } from "@/components/settings/repository-danger-zone";
 import { RepositoryMembersSection } from "@/components/settings/repository-members-section";
@@ -18,6 +19,7 @@ type RepositorySettingsPageProps = {
 };
 
 export function RepositorySettingsPage({ repositoryName }: RepositorySettingsPageProps) {
+  const t = useTranslations("settings");
   const { data: authData } = useAuthUser();
   const repositoryQuery = useRepositoryByName(repositoryName);
 
@@ -36,7 +38,7 @@ export function RepositorySettingsPage({ repositoryName }: RepositorySettingsPag
   if (repositoryQuery.isError || !repositoryQuery.data) {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-        Repository not found or you do not have access.
+        {t("repository.notFound")}
       </div>
     );
   }
@@ -44,12 +46,12 @@ export function RepositorySettingsPage({ repositoryName }: RepositorySettingsPag
   if (!canManage) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-          Only repository admins can manage settings for {repositoryName}.
+          {t("repository.forbidden", { name: repositoryName })}
         </div>
         <Button variant="outline" render={<Link href={`/r/${repositoryName}`} />}>
-          Back to catalog
+          {t("backToCatalog")}
         </Button>
       </div>
     );
@@ -61,14 +63,14 @@ export function RepositorySettingsPage({ repositoryName }: RepositorySettingsPag
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Manage members, visibility, and deletion for {repository.name}.
+            {t("repository.description", { name: repository.name })}
           </p>
         </div>
         <Button variant="outline" render={<Link href={`/r/${repositoryName}`} />}>
           <SettingsIcon className="size-4" />
-          Back to catalog
+          {t("backToCatalog")}
         </Button>
       </div>
 
