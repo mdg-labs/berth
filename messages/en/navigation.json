@@ -1,1 +1,15 @@
-{}
+{
+  "appName": "Berth",
+  "groups": {
+    "main": "Main",
+    "admin": "Admin"
+  },
+  "repositories": "Repositories",
+  "images": "Images",
+  "settings": "Settings",
+  "users": "Users",
+  "garbageCollection": "Garbage collection",
+  "profile": "Profile",
+  "reactivateAccount": "Reactivate account",
+  "admin": "Admin"
+}

@@ -1,1 +1,12 @@
-{}
+{
+  "system": {
+    "admin": "Admin",
+    "user": "User"
+  },
+  "repository": {
+    "guest": "Guest",
+    "developer": "Developer",
+    "maintainer": "Maintainer",
+    "admin": "Admin"
+  }
+}

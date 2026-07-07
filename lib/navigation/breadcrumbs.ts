@@ -2,6 +2,18 @@
 
 import { imagePathSegments } from "@/lib/catalog/format";
 
+export type NavigationTranslator = (
+  key:
+    | "repositories"
+    | "settings"
+    | "images"
+    | "admin"
+    | "users"
+    | "garbageCollection"
+    | "profile"
+    | "reactivateAccount",
+) => string;
+
 export type BreadcrumbItemData = {
   label: string;
   href?: string;
@@ -42,15 +54,18 @@ function parseRepositoryImageRoute(rest: string[]): {
   };
 }
 
-function buildRepositoryBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
+function buildRepositoryBreadcrumbs(
+  segments: string[],
+  t: NavigationTranslator,
+): BreadcrumbItemData[] {
   if (segments.length < 2) {
-    return [{ label: "Repositories", href: "/repositories" }];
+    return [{ label: t("repositories"), href: "/repositories" }];
   }
 
   const repository = decodeURIComponent(segments[1]!);
   const repositoryPath = `/r/${encodeURIComponent(repository)}`;
   const items: BreadcrumbItemData[] = [
-    { label: "Repositories", href: "/repositories" },
+    { label: t("repositories"), href: "/repositories" },
   ];
 
   const tail = segments.slice(2);
@@ -62,7 +77,7 @@ function buildRepositoryBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
 
   if (tail[0] === "settings" && tail.length === 1) {
     items.push({ label: repository, href: repositoryPath });
-    items.push({ label: "Settings" });
+    items.push({ label: t("settings") });
     return items;
   }
 
@@ -71,7 +86,7 @@ function buildRepositoryBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
     items.push({ label: repository, href: repositoryPath });
 
     if (imageSegments.length === 0) {
-      items.push({ label: "Images" });
+      items.push({ label: t("images") });
       return items;
     }
 
@@ -79,13 +94,13 @@ function buildRepositoryBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
       const imageName = imageSegments.slice(0, -1).join("/");
       const imageHref = `/r/${encodeURIComponent(repository)}/i/${imagePathSegments(imageName)}`;
       items.push({ label: imageName, href: imageHref });
-      items.push({ label: "Settings" });
+      items.push({ label: t("settings") });
       return items;
     }
 
     const parsed = parseRepositoryImageRoute(imageSegments);
     if (!parsed) {
-      items.push({ label: "Images" });
+      items.push({ label: t("images") });
       return items;
     }
 
@@ -116,7 +131,10 @@ function buildRepositoryBreadcrumbs(segments: string[]): BreadcrumbItemData[] {
   return items;
 }
 
-export function buildBreadcrumbItems(pathname: string): BreadcrumbItemData[] {
+export function buildBreadcrumbItems(
+  pathname: string,
+  t: NavigationTranslator,
+): BreadcrumbItemData[] {
   const segments = pathname.split("/").filter(Boolean);
 
   if (segments.length === 0) {
@@ -124,20 +142,22 @@ export function buildBreadcrumbItems(pathname: string): BreadcrumbItemData[] {
   }
 
   if (segments[0] === "r") {
-    return buildRepositoryBreadcrumbs(segments);
+    return buildRepositoryBreadcrumbs(segments, t);
   }
 
   if (segments[0] === "admin") {
-    const items: BreadcrumbItemData[] = [{ label: "Admin", href: "/admin" }];
+    const items: BreadcrumbItemData[] = [
+      { label: t("admin"), href: "/admin" },
+    ];
 
     if (segments[1] === "users" && segments[2]) {
-      items.push({ label: "Users", href: "/admin" });
+      items.push({ label: t("users"), href: "/admin" });
       items.push({ label: decodeURIComponent(segments[2]) });
       return items;
     }
 
     if (segments[1] === "gc") {
-      items.push({ label: "Garbage collection" });
+      items.push({ label: t("garbageCollection") });
       return items;
     }
 
@@ -145,11 +165,11 @@ export function buildBreadcrumbItems(pathname: string): BreadcrumbItemData[] {
   }
 
   if (segments[0] === "profile") {
-    return [{ label: "Profile" }];
+    return [{ label: t("profile") }];
   }
 
   if (segments[0] === "reactivate-account") {
-    return [{ label: "Reactivate account" }];
+    return [{ label: t("reactivateAccount") }];
   }
 
   return segments.map((segment, index) => {

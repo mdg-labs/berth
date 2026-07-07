@@ -4,6 +4,7 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,8 @@ export function SheetPopup({
   closeProps?: SheetPrimitive.Close.Props;
   portalProps?: SheetPrimitive.Portal.Props;
 }): React.ReactElement {
+  const t = useTranslations("common.actions");
+
   return (
     <SheetPortal {...portalProps}>
       <SheetBackdrop />
@@ -108,7 +111,7 @@ export function SheetPopup({
           {children}
           {showCloseButton && (
             <SheetPrimitive.Close
-              aria-label="Close"
+              aria-label={t("close")}
               className="absolute end-2 top-2"
               render={<Button size="icon" variant="ghost" />}
               {...closeProps}

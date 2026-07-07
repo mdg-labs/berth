@@ -3,13 +3,16 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { ChevronRight, MoreHorizontal } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 export function Breadcrumb({
   ...props
 }: React.ComponentProps<"nav">): React.ReactElement {
-  return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />;
+  const t = useTranslations("common.breadcrumb");
+
+  return <nav aria-label={t("label")} data-slot="breadcrumb" {...props} />;
 }
 
 export function BreadcrumbList({
@@ -94,6 +97,8 @@ export function BreadcrumbEllipsis({
   className,
   ...props
 }: React.ComponentProps<"span">): React.ReactElement {
+  const t = useTranslations("common.breadcrumb");
+
   return (
     <span
       aria-hidden="true"
@@ -103,7 +108,7 @@ export function BreadcrumbEllipsis({
       {...props}
     >
       <MoreHorizontal className="size-4" />
-      <span className="sr-only">More</span>
+      <span className="sr-only">{t("more")}</span>
     </span>
   );
 }

@@ -4,26 +4,41 @@
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { formatApiError } from "@/lib/i18n/api-error";
+import { useTranslations } from "next-intl";
 
 type ErrorAlertProps = {
   title?: string;
-  message: string;
+  error?: unknown;
+  message?: string;
+  fallbackKey?: string;
   onRetry?: () => void;
 };
 
 export function ErrorAlert({
-  title = "Something went wrong",
+  title,
+  error,
   message,
+  fallbackKey = "generic",
   onRetry,
 }: ErrorAlertProps) {
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors.api");
+
+  const displayTitle = title ?? tCommon("error.title");
+  const displayMessage =
+    error !== undefined
+      ? formatApiError(tErrors, error, fallbackKey)
+      : (message ?? formatApiError(tErrors, undefined, fallbackKey));
+
   return (
     <Alert variant="error">
-      <AlertTitle>{title}</AlertTitle>
-      <AlertDescription>{message}</AlertDescription>
+      <AlertTitle>{displayTitle}</AlertTitle>
+      <AlertDescription>{displayMessage}</AlertDescription>
       {onRetry ? (
         <AlertAction>
           <Button variant="outline" size="sm" onClick={onRetry}>
-            Retry
+            {tCommon("actions.retry")}
           </Button>
         </AlertAction>
       ) : null}

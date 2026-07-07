@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
@@ -51,6 +52,7 @@ type AdminUserDetailPageProps = {
 export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const tDeletion = useTranslations("common.deletion");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
 
@@ -76,7 +78,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
 
   const updateMutation = useMutation({
     mutationFn: () =>
-      apiFetch<UserResponse>(`/api/admin/users/${userId}`, {
+      apiFetch<UserResponse & { emailSent?: boolean }>(`/api/admin/users/${userId}`, {
         method: "PATCH",
         body: {
           name,
@@ -97,6 +99,31 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       toastManager.add({
         type: "error",
         title: "Update failed",
+        description:
+          error instanceof ApiError ? error.message : "Request failed",
+      });
+    },
+  });
+
+  const sendResetEmailMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<{ emailSent: boolean }>(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        body: { sendResetEmail: true },
+      }),
+    onSuccess: (response) => {
+      toastManager.add({
+        type: "success",
+        title: response.emailSent ? "Reset email sent" : "SMTP not configured",
+        description: response.emailSent
+          ? `A password reset link was sent to ${user?.email}.`
+          : "Configure SMTP to send password reset emails.",
+      });
+    },
+    onError: (error) => {
+      toastManager.add({
+        type: "error",
+        title: "Failed to send reset email",
         description:
           error instanceof ApiError ? error.message : "Request failed",
       });
@@ -180,7 +207,9 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
           <CardHeader>
             <CardTitle>Pending deletion</CardTitle>
             <CardDescription>
-              {formatDeletionCountdown(user.purgesAt)}
+              {formatDeletionCountdown(user.purgesAt, (key, values) =>
+                tDeletion(key, values),
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -275,6 +304,15 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                 Blank password forces a change on next login.
               </FieldDescription>
             </Field>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void sendResetEmailMutation.mutate()}
+              disabled={sendResetEmailMutation.isPending}
+            >
+              {sendResetEmailMutation.isPending ? <Spinner /> : null}
+              Email reset link
+            </Button>
           </CardContent>
         </Card>
       ) : (

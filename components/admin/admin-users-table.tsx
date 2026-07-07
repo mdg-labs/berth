@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { MoreHorizontalIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -50,6 +51,7 @@ export function AdminUsersTable({
 }: AdminUsersTableProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const tDeletion = useTranslations("common.deletion");
   const [deleteTarget, setDeleteTarget] = useState<AdminUserRow | null>(null);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
 
@@ -134,7 +136,9 @@ export function AdminUsersTable({
                 <TableCell>
                   {user.status === "pending_deletion" ? (
                     <Badge variant="destructive">
-                      {formatDeletionCountdown(user.purgesAt)}
+                      {formatDeletionCountdown(user.purgesAt, (key, values) =>
+                        tDeletion(key, values),
+                      )}
                     </Badge>
                   ) : (
                     <Badge variant="secondary">Active</Badge>

@@ -1,1 +1,16 @@
-{}
+{
+  "bad_request": "The request could not be processed.",
+  "conflict": "This action conflicts with existing data.",
+  "csrf_missing": "Your session could not be verified. Refresh the page and try again.",
+  "forbidden": "You do not have permission to perform this action.",
+  "invalid_credentials": "The credentials you entered are incorrect.",
+  "not_authenticated": "Sign in to continue.",
+  "not_found": "The requested resource was not found.",
+  "oidc_not_configured": "Single sign-on is not configured.",
+  "oidc_state_invalid": "Sign-in could not be completed. Try again.",
+  "rate_limited": "Too many requests. Wait a moment and try again.",
+  "repository_not_found": "The repository was not found or you do not have access.",
+  "request_failed": "The request failed. Try again.",
+  "server_error": "Something went wrong on the server. Try again later.",
+  "generic": "Something went wrong. Try again."
+}

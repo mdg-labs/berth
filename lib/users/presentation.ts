@@ -12,6 +12,11 @@ export type UserDeletionState = {
   pendingDeletion: boolean;
 };
 
+export type DeletionTranslator = (
+  key: "pending" | "deletingSoon" | "deletesInOneDay" | "deletesInDays",
+  values?: { days: number },
+) => string;
+
 export function getUserDeletionState(
   deletedAt: Date | null | undefined,
 ): UserDeletionState {
@@ -34,20 +39,23 @@ export function getUserDeletionState(
   };
 }
 
-export function formatDeletionCountdown(purgesAt: string | null): string {
+export function formatDeletionCountdown(
+  purgesAt: string | null,
+  t: DeletionTranslator,
+): string {
   if (!purgesAt) {
-    return "Pending deletion";
+    return t("pending");
   }
 
   const remainingMs = new Date(purgesAt).getTime() - Date.now();
   if (remainingMs <= 0) {
-    return "Deleting soon";
+    return t("deletingSoon");
   }
 
   const days = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
   if (days <= 1) {
-    return "Deletes in 1 day";
+    return t("deletesInOneDay");
   }
 
-  return `Deletes in ${days} days`;
+  return t("deletesInDays", { days });
 }

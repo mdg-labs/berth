@@ -2,19 +2,27 @@
 
 import { NextResponse } from "next/server";
 
-export type ApiErrorCode =
-  | "bad_request"
-  | "conflict"
-  | "csrf_missing"
-  | "forbidden"
-  | "invalid_credentials"
-  | "not_authenticated"
-  | "not_found"
-  | "oidc_not_configured"
-  | "oidc_state_invalid"
-  | "repository_not_found"
-  | "rate_limited"
-  | "server_error";
+export const API_ERROR_CODES = [
+  "bad_request",
+  "conflict",
+  "csrf_missing",
+  "forbidden",
+  "invalid_credentials",
+  "not_authenticated",
+  "not_found",
+  "oidc_not_configured",
+  "oidc_state_invalid",
+  "rate_limited",
+  "repository_not_found",
+  "request_failed",
+  "server_error",
+] as const;
+
+export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
+
+export function isApiErrorCode(code: string): code is ApiErrorCode {
+  return (API_ERROR_CODES as readonly string[]).includes(code);
+}
 
 export function apiError(
   code: ApiErrorCode,

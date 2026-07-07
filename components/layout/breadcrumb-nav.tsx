@@ -4,6 +4,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Fragment } from "react";
 
 import {
@@ -18,7 +19,8 @@ import { buildBreadcrumbItems } from "@/lib/navigation/breadcrumbs";
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
-  const items = buildBreadcrumbItems(pathname);
+  const t = useTranslations("navigation");
+  const items = buildBreadcrumbItems(pathname, (key) => t(key));
 
   if (items.length === 0) {
     return null;

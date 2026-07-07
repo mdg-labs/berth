@@ -2,24 +2,42 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildBreadcrumbItems } from "@/lib/navigation/breadcrumbs";
+import {
+  buildBreadcrumbItems,
+  type NavigationTranslator,
+} from "@/lib/navigation/breadcrumbs";
+
+const t: NavigationTranslator = (key) => {
+  const labels: Record<Parameters<NavigationTranslator>[0], string> = {
+    repositories: "Repositories",
+    settings: "Settings",
+    images: "Images",
+    admin: "Admin",
+    users: "Users",
+    garbageCollection: "Garbage collection",
+    profile: "Profile",
+    reactivateAccount: "Reactivate account",
+  };
+
+  return labels[key];
+};
 
 describe("buildBreadcrumbItems", () => {
   it("maps the repositories list route", () => {
-    expect(buildBreadcrumbItems("/repositories")).toEqual([
+    expect(buildBreadcrumbItems("/repositories", t)).toEqual([
       { label: "Repositories" },
     ]);
   });
 
   it("maps project catalog routes through /repositories", () => {
-    expect(buildBreadcrumbItems("/r/demo-app")).toEqual([
+    expect(buildBreadcrumbItems("/r/demo-app", t)).toEqual([
       { label: "Repositories", href: "/repositories" },
       { label: "demo-app" },
     ]);
   });
 
   it("maps project settings routes", () => {
-    expect(buildBreadcrumbItems("/r/demo-app/settings")).toEqual([
+    expect(buildBreadcrumbItems("/r/demo-app/settings", t)).toEqual([
       { label: "Repositories", href: "/repositories" },
       { label: "demo-app", href: "/r/demo-app" },
       { label: "Settings" },
@@ -27,7 +45,7 @@ describe("buildBreadcrumbItems", () => {
   });
 
   it("maps image tag list routes without the /i segment", () => {
-    expect(buildBreadcrumbItems("/r/demo-app/i/my-image")).toEqual([
+    expect(buildBreadcrumbItems("/r/demo-app/i/my-image", t)).toEqual([
       { label: "Repositories", href: "/repositories" },
       { label: "demo-app", href: "/r/demo-app" },
       { label: "my-image" },
@@ -35,7 +53,7 @@ describe("buildBreadcrumbItems", () => {
   });
 
   it("maps image tag detail routes", () => {
-    expect(buildBreadcrumbItems("/r/demo-app/i/my-image/t/latest")).toEqual([
+    expect(buildBreadcrumbItems("/r/demo-app/i/my-image/t/latest", t)).toEqual([
       { label: "Repositories", href: "/repositories" },
       { label: "demo-app", href: "/r/demo-app" },
       { label: "my-image", href: "/r/demo-app/i/my-image" },
@@ -44,23 +62,23 @@ describe("buildBreadcrumbItems", () => {
   });
 
   it("maps bare /r to repositories list breadcrumb", () => {
-    expect(buildBreadcrumbItems("/r")).toEqual([
+    expect(buildBreadcrumbItems("/r", t)).toEqual([
       { label: "Repositories", href: "/repositories" },
     ]);
   });
 
   it("maps the profile route", () => {
-    expect(buildBreadcrumbItems("/profile")).toEqual([{ label: "Profile" }]);
+    expect(buildBreadcrumbItems("/profile", t)).toEqual([{ label: "Profile" }]);
   });
 
   it("maps the reactivate account route", () => {
-    expect(buildBreadcrumbItems("/reactivate-account")).toEqual([
+    expect(buildBreadcrumbItems("/reactivate-account", t)).toEqual([
       { label: "Reactivate account" },
     ]);
   });
 
   it("maps admin user detail routes", () => {
-    expect(buildBreadcrumbItems("/admin/users/user-123")).toEqual([
+    expect(buildBreadcrumbItems("/admin/users/user-123", t)).toEqual([
       { label: "Admin", href: "/admin" },
       { label: "Users", href: "/admin" },
       { label: "user-123" },
@@ -68,7 +86,7 @@ describe("buildBreadcrumbItems", () => {
   });
 
   it("maps image settings routes", () => {
-    expect(buildBreadcrumbItems("/r/demo-app/i/my-image/settings")).toEqual([
+    expect(buildBreadcrumbItems("/r/demo-app/i/my-image/settings", t)).toEqual([
       { label: "Repositories", href: "/repositories" },
       { label: "demo-app", href: "/r/demo-app" },
       { label: "my-image", href: "/r/demo-app/i/my-image" },

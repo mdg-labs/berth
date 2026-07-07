@@ -4,6 +4,7 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import * as React from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
@@ -190,6 +191,7 @@ export function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none";
 }): React.ReactElement {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const t = useTranslations("common.sidebar");
 
   if (collapsible === "none") {
     return (
@@ -222,8 +224,8 @@ export function Sidebar({
           }
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>{t("title")}</SheetTitle>
+            <SheetDescription>{t("mobileDescription")}</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetPopup>
@@ -285,6 +287,7 @@ export function SidebarTrigger({
   ...props
 }: React.ComponentProps<typeof Button>): React.ReactElement {
   const { toggleSidebar } = useSidebar();
+  const t = useTranslations("common.sidebar");
 
   return (
     <Button
@@ -300,7 +303,7 @@ export function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">{t("toggle")}</span>
     </Button>
   );
 }
@@ -310,10 +313,11 @@ export function SidebarRail({
   ...props
 }: React.ComponentProps<"button">): React.ReactElement {
   const { toggleSidebar } = useSidebar();
+  const t = useTranslations("common.sidebar");
 
   return (
     <button
-      aria-label="Toggle Sidebar"
+      aria-label={t("toggle")}
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
@@ -327,7 +331,7 @@ export function SidebarRail({
       data-slot="sidebar-rail"
       onClick={toggleSidebar}
       tabIndex={-1}
-      title="Toggle Sidebar"
+      title={t("toggle")}
       type="button"
       {...props}
     />

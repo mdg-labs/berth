@@ -11,7 +11,21 @@ import {
 import {
   formatDeletionCountdown,
   getUserDeletionState,
+  type DeletionTranslator,
 } from "@/lib/users/presentation";
+
+const deletionT: DeletionTranslator = (key, values) => {
+  switch (key) {
+    case "pending":
+      return "Pending deletion";
+    case "deletingSoon":
+      return "Deleting soon";
+    case "deletesInOneDay":
+      return "Deletes in 1 day";
+    case "deletesInDays":
+      return `Deletes in ${values?.days ?? 0} days`;
+  }
+};
 
 describe("user delete grace configuration", () => {
   afterEach(() => {
@@ -48,7 +62,7 @@ describe("user deletion presentation", () => {
 
   it("formats deletion countdown labels", () => {
     const future = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString();
-    expect(formatDeletionCountdown(future)).toMatch(/^Deletes in \d+ days$/);
-    expect(formatDeletionCountdown(null)).toBe("Pending deletion");
+    expect(formatDeletionCountdown(future, deletionT)).toMatch(/^Deletes in \d+ days$/);
+    expect(formatDeletionCountdown(null, deletionT)).toBe("Pending deletion");
   });
 });

@@ -1,1 +1,35 @@
-{}
+{
+  "actions": {
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close"
+  },
+  "loading": "Loading",
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "previousAria": "Go to previous page",
+    "nextAria": "Go to next page",
+    "morePages": "More pages"
+  },
+  "sidebar": {
+    "title": "Sidebar",
+    "mobileDescription": "Displays the mobile sidebar.",
+    "toggle": "Toggle Sidebar"
+  },
+  "breadcrumb": {
+    "label": "breadcrumb",
+    "more": "More"
+  },
+  "error": {
+    "title": "Something went wrong"
+  },
+  "deletion": {
+    "pending": "Pending deletion",
+    "deletingSoon": "Deleting soon",
+    "deletesInOneDay": "Deletes in 1 day",
+    "deletesInDays": "Deletes in {days} days"
+  }
+}
