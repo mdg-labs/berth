@@ -49,6 +49,10 @@ export function middleware(request: NextRequest) {
 
   const sessionPresent = hasSession(request);
 
+  if (pathname === "/" && sessionPresent) {
+    return NextResponse.redirect(new URL("/repositories", request.url));
+  }
+
   if (PUBLIC_PATHS.has(pathname) && sessionPresent) {
     return NextResponse.redirect(new URL("/repositories", request.url));
   }
