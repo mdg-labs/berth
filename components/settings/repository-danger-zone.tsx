@@ -47,7 +47,7 @@ export function RepositoryDangerZone({
 }: RepositoryDangerZoneProps) {
   const t = useTranslations("settings.repositoryDanger");
   const tCommon = useTranslations("common.actions");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [phrase, setPhrase] = useState("");

@@ -29,7 +29,7 @@ export function RepositoryVisibilitySection({
   isPublic,
 }: RepositoryVisibilitySectionProps) {
   const t = useTranslations("settings.visibility");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const queryClient = useQueryClient();
   const switchId = useId();
 

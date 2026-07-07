@@ -33,7 +33,7 @@ export function AccountProfileSection() {
   const { data } = useAuthUser();
   const user = data?.user;
   const t = useTranslations("account.profile");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");

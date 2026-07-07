@@ -74,7 +74,7 @@ function encodeRepoPath(imageName: string): string {
 export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageProps) {
   const t = useTranslations("tags");
   const tDetail = useTranslations("tags.detail");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const router = useRouter();
   const queryClient = useQueryClient();
   const authQuery = useAuthUser();

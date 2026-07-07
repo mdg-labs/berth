@@ -62,7 +62,7 @@ export function ImageSettingsPage({
 }: ImageSettingsPageProps) {
   const t = useTranslations("settings");
   const tImage = useTranslations("settings.imageSettings");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const queryClient = useQueryClient();
   const { data: authData } = useAuthUser();
   const repositoryQuery = useRepositoryByName(repositoryName);

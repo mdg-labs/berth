@@ -56,7 +56,7 @@ export function AdminUsersTable({
   const tCommon = useTranslations("common");
   const tRoles = useTranslations("roles.system");
   const tDeletion = useTranslations("common.deletion");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const [deleteTarget, setDeleteTarget] = useState<AdminUserRow | null>(null);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
 

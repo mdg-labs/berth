@@ -18,7 +18,7 @@ type Namespace =
   | "delete"
   | "public"
   | "roles"
-  | "errors.api"
+  | "errorsApi"
   | "emails";
 
 async function loadNamespaceMessages(locale: Locale, namespace: Namespace) {

@@ -30,7 +30,7 @@ export function ReactivateAccountCard() {
   const { data } = useAuthUser();
   const user = data?.user;
   const t = useTranslations("account.reactivate");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
 
   const reactivateMutation = useMutation({
     mutationFn: () =>

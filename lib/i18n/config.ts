@@ -6,7 +6,7 @@
 // - Client components: `useTranslations("<namespace>")`; server: `getTranslations` or
 //   `getServerTranslator` for emails/API-adjacent copy.
 // - API errors: never surface `ApiError.message`; map codes via `formatApiError` +
-//   `messages/en/errors.api.json`.
+//   `messages/en/errorsApi.json`.
 // - Links: `@/lib/i18n/navigation` (`Link`, `useRouter`, `usePathname`) for locale-aware routes.
 // - CI guard: `pnpm check:i18n` scans migrated dirs for hardcoded English stragglers.
 

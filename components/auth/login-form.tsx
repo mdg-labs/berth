@@ -22,7 +22,7 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const t = useTranslations("auth.login");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 

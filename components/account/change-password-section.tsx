@@ -40,7 +40,7 @@ export function ChangePasswordSection({
 }: ChangePasswordSectionProps) {
   const queryClient = useQueryClient();
   const t = useTranslations("account.password");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

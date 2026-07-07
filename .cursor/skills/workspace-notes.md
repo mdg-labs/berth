@@ -30,6 +30,7 @@ Cross-session context for orchestrator runs. Update at the end of each orchestra
 ### Next
 
 - Post-MVP backlog (see ROADMAP.md) — issue mode or ad-hoc
+- i18n: add second locale (`de`) + locale picker before public release
 
 ### Blocked
 
@@ -51,3 +52,4 @@ _(none)_
 | 2026-07-06 | P9 | PASS — verifier + commit audit | `b5127a0` |
 | 2026-07-06 | P10 | PASS — verifier + commit audit | `08a3021` |
 | 2026-07-06 | P11 | PASS — verifier + commit audit — **MVP complete** | `fb5e157` |
+| 2026-07-07 | i18n rollout | PASS — 8 batches, next-intl scaffold + full EN catalog | `d3ea455`…`472a87e` |

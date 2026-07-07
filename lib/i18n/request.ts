@@ -19,7 +19,7 @@ const namespaces = [
   "delete",
   "public",
   "roles",
-  "errors.api",
+  "errorsApi",
   "emails",
 ] as const;
 

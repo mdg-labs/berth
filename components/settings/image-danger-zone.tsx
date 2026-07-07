@@ -42,7 +42,7 @@ export function ImageDangerZone({
   imageName,
 }: ImageDangerZoneProps) {
   const t = useTranslations("settings.imageDanger");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const router = useRouter();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);

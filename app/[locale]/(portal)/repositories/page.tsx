@@ -47,7 +47,7 @@ export default function RepositoriesPage() {
   const queryClient = useQueryClient();
   const t = useTranslations("repositories");
   const tCommon = useTranslations("common");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const tRoles = useTranslations("roles.repository");
   const [name, setName] = useState("");
   const [isPublic, setIsPublic] = useState(false);

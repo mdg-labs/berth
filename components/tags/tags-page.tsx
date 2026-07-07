@@ -139,7 +139,7 @@ function TagsSkeleton({ className }: { className?: string }) {
 export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
   const t = useTranslations("tags");
   const tSettings = useTranslations("settings");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const queryClient = useQueryClient();
   const authQuery = useAuthUser();
   const repositoryQuery = useRepositoryByName(repositoryName);

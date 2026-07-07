@@ -18,7 +18,7 @@ export function AcceptInviteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("auth.acceptInvite");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const token = searchParams.get("token") ?? "";
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

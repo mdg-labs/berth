@@ -59,7 +59,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
   const tCommon = useTranslations("common");
   const tRoles = useTranslations("roles.system");
   const tDeletion = useTranslations("common.deletion");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
 

@@ -23,7 +23,7 @@ export function ErrorAlert({
   onRetry,
 }: ErrorAlertProps) {
   const tCommon = useTranslations("common");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
 
   const displayTitle = title ?? tCommon("error.title");
   const displayMessage =

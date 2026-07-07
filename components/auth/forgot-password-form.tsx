@@ -15,7 +15,7 @@ import { Link } from "@/lib/i18n/navigation";
 
 export function ForgotPasswordForm() {
   const t = useTranslations("auth.forgotPassword");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 

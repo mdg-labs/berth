@@ -58,7 +58,7 @@ export function CreateUserDialog({
   const t = useTranslations("admin.createUser");
   const tCommon = useTranslations("common");
   const tRoles = useTranslations("roles.system");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");

@@ -71,7 +71,7 @@ type RepositoryMembersSectionProps = {
 export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSectionProps) {
   const t = useTranslations("settings.members");
   const tRoles = useTranslations("roles.repository");
-  const tErrors = useTranslations("errors.api");
+  const tErrors = useTranslations("errorsApi");
   const queryClient = useQueryClient();
   const emailId = useId();
   const roleId = useId();
