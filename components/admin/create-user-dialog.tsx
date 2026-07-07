@@ -3,6 +3,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import type { AdminUserRow } from "@/components/admin/admin-users-page";
@@ -22,7 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { toastManager } from "@/components/ui/toast";
 
 type CreateUserDialogProps = {
@@ -53,6 +55,10 @@ export function CreateUserDialog({
   onOpenChange,
   onCreated,
 }: CreateUserDialogProps) {
+  const t = useTranslations("admin.createUser");
+  const tCommon = useTranslations("common");
+  const tRoles = useTranslations("roles.system");
+  const tErrors = useTranslations("errors.api");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -73,12 +79,12 @@ export function CreateUserDialog({
       const hadPassword = Boolean(password.trim());
       toastManager.add({
         type: "success",
-        title: "User created",
+        title: t("toast.success"),
         description: hadPassword
-          ? `${email} can sign in with the provided password.`
+          ? t("toast.withPassword", { email })
           : data.emailSent
-            ? `${email} will receive a set-password email shortly.`
-            : `${email} must change password on first login.`,
+            ? t("toast.setPasswordEmail", { email })
+            : t("toast.mustChangePassword", { email }),
       });
       resetFormState(setEmail, setName, setPassword, setSystemRole);
       onOpenChange(false);
@@ -87,9 +93,8 @@ export function CreateUserDialog({
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to create user",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.error"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -105,11 +110,8 @@ export function CreateUserDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPopup>
         <DialogHeader>
-          <DialogTitle>Create local user</DialogTitle>
-          <DialogDescription>
-            Leave password empty to auto-generate one and email a set-password
-            link when SMTP is configured.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <Form
           className="contents"
@@ -120,9 +122,11 @@ export function CreateUserDialog({
         >
           <div className="space-y-4 px-6 pb-2">
             <Fieldset className="space-y-4">
-              <FieldsetLegend className="sr-only">User details</FieldsetLegend>
+              <FieldsetLegend className="sr-only">
+                {t("fieldsetLegend")}
+              </FieldsetLegend>
               <Field>
-                <FieldLabel htmlFor="create-user-email">Email</FieldLabel>
+                <FieldLabel htmlFor="create-user-email">{t("emailLabel")}</FieldLabel>
                 <Input
                   id="create-user-email"
                   name="email"
@@ -133,7 +137,7 @@ export function CreateUserDialog({
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="create-user-name">Name</FieldLabel>
+                <FieldLabel htmlFor="create-user-name">{t("nameLabel")}</FieldLabel>
                 <Input
                   id="create-user-name"
                   name="name"
@@ -143,7 +147,9 @@ export function CreateUserDialog({
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="create-user-password">Password</FieldLabel>
+                <FieldLabel htmlFor="create-user-password">
+                  {t("passwordLabel")}
+                </FieldLabel>
                 <Input
                   id="create-user-password"
                   name="password"
@@ -152,12 +158,10 @@ export function CreateUserDialog({
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                 />
-                <FieldDescription>
-                  Optional — auto-generated when blank.
-                </FieldDescription>
+                <FieldDescription>{t("passwordHint")}</FieldDescription>
               </Field>
               <Field>
-                <FieldLabel>System role</FieldLabel>
+                <FieldLabel>{t("systemRoleLabel")}</FieldLabel>
                 <RadioGroup
                   value={systemRole}
                   onValueChange={(value) =>
@@ -167,11 +171,11 @@ export function CreateUserDialog({
                 >
                   <Label className="flex items-center gap-2 font-normal">
                     <Radio value="user" />
-                    User
+                    {tRoles("user")}
                   </Label>
                   <Label className="flex items-center gap-2 font-normal">
                     <Radio value="admin" />
-                    Admin
+                    {tRoles("admin")}
                   </Label>
                 </RadioGroup>
               </Field>
@@ -184,7 +188,7 @@ export function CreateUserDialog({
               onClick={() => handleOpenChange(false)}
               disabled={createMutation.isPending}
             >
-              Cancel
+              {tCommon("actions.cancel")}
             </Button>
             <Button
               type="submit"
@@ -192,7 +196,7 @@ export function CreateUserDialog({
               data-loading={createMutation.isPending ? "" : undefined}
             >
               {createMutation.isPending ? <Spinner /> : null}
-              Create user
+              {t("submit")}
             </Button>
           </DialogFooter>
         </Form>

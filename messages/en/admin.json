@@ -1,1 +1,153 @@
-{}
+{
+  "accessDenied": {
+    "title": "Access denied",
+    "description": "System administrator privileges are required to view this page."
+  },
+  "users": {
+    "title": "Users",
+    "description": "Manage local accounts and system roles.",
+    "garbageCollection": "Garbage collection",
+    "inviteUser": "Invite user",
+    "createUser": "Create user",
+    "loadError": "Failed to load users",
+    "backToUsers": "Back to users"
+  },
+  "usersTable": {
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "auth": "Auth",
+      "created": "Created"
+    },
+    "status": {
+      "active": "Active"
+    },
+    "auth": {
+      "passwordResetRequired": "Password reset required",
+      "local": "Local",
+      "oidc": "OIDC"
+    },
+    "actions": {
+      "aria": "Actions for {name}",
+      "edit": "Edit",
+      "reactivate": "Reactivate",
+      "delete": "Delete"
+    },
+    "deleteDialog": {
+      "title": "Delete {email}?",
+      "immediateDescription": "This action cannot be undone. Type the user email to confirm.",
+      "graceDescription": "The user will be signed out and scheduled for deletion.",
+      "confirmButton": "Delete user"
+    },
+    "toast": {
+      "reactivated": "User reactivated",
+      "reactivateFailed": "Reactivate failed",
+      "deleted": "User deleted",
+      "deleteFailed": "Delete failed"
+    }
+  },
+  "userDetail": {
+    "notFound": {
+      "title": "User not found",
+      "description": "This user may have been deleted."
+    },
+    "pendingDeletion": {
+      "title": "Pending deletion",
+      "reactivateButton": "Reactivate user"
+    },
+    "identity": {
+      "title": "Identity",
+      "description": "Update account details and system role.",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "systemRoleLegend": "System role",
+      "saveChanges": "Save changes"
+    },
+    "security": {
+      "title": "Security",
+      "passwordDescription": "Reset the local password. Leave blank to generate a temporary one.",
+      "newPasswordLabel": "New password",
+      "blankPasswordHint": "Blank password forces a change on next login.",
+      "emailResetLink": "Email reset link",
+      "oidcDescription": "This account authenticates via OIDC."
+    },
+    "dangerZone": {
+      "title": "Danger zone",
+      "immediateDescription": "This will permanently delete the user immediately.",
+      "graceDescription": "This schedules the user for deletion after the grace period.",
+      "deleteButton": "Delete user"
+    },
+    "deleteDialog": {
+      "title": "Delete {email}?",
+      "immediateDescription": "This action cannot be undone. Type the user email to confirm.",
+      "graceDescription": "The user will be signed out and scheduled for deletion.",
+      "confirmButton": "Delete user"
+    },
+    "toast": {
+      "updated": "User updated",
+      "updateFailed": "Update failed",
+      "resetEmailSent": "Reset email sent",
+      "smtpNotConfigured": "SMTP not configured",
+      "resetEmailSentDescription": "A password reset link was sent to {email}.",
+      "smtpNotConfiguredDescription": "Configure SMTP to send password reset emails.",
+      "resetEmailFailed": "Failed to send reset email",
+      "deleted": "User deleted",
+      "deleteFailed": "Delete failed",
+      "reactivated": "User reactivated",
+      "reactivateFailed": "Reactivate failed"
+    }
+  },
+  "createUser": {
+    "title": "Create local user",
+    "description": "Leave password empty to auto-generate one and email a set-password link when SMTP is configured.",
+    "fieldsetLegend": "User details",
+    "emailLabel": "Email",
+    "nameLabel": "Name",
+    "passwordLabel": "Password",
+    "passwordHint": "Optional — auto-generated when blank.",
+    "systemRoleLabel": "System role",
+    "submit": "Create user",
+    "toast": {
+      "success": "User created",
+      "withPassword": "{email} can sign in with the provided password.",
+      "setPasswordEmail": "{email} will receive a set-password email shortly.",
+      "mustChangePassword": "{email} must change password on first login.",
+      "error": "Failed to create user"
+    }
+  },
+  "inviteUser": {
+    "title": "Invite user",
+    "description": "Send an email invitation to join this Berth instance.",
+    "fieldsetLegend": "Invite details",
+    "emailLabel": "Email",
+    "nameLabel": "Name",
+    "systemRoleLabel": "System role",
+    "submit": "Send invite",
+    "toast": {
+      "success": "Invite sent",
+      "emailSent": "{email} will receive an invite email shortly.",
+      "noSmtp": "{email} was invited, but SMTP is not configured.",
+      "error": "Failed to send invite"
+    }
+  },
+  "gc": {
+    "title": "Garbage collection",
+    "description": "Storage usage and operator runbook for registry GC.",
+    "warningTitle": "Operator warning",
+    "storage": {
+      "title": "Storage usage",
+      "description": "Approximate size of the registry-data volume at <path></path>",
+      "bytes": "{count} bytes"
+    },
+    "run": {
+      "title": "Run garbage collection",
+      "description": "Stop or set the registry to read-only, then run this command on the host. There is no live trigger in the portal.",
+      "copyButton": "Copy command"
+    },
+    "toast": {
+      "copied": "Copied GC command"
+    }
+  }
+}

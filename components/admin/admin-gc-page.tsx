@@ -5,6 +5,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { AlertTriangleIcon, CopyIcon, HardDriveIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRef } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -32,6 +33,8 @@ type GcStatusResponse = {
 };
 
 export function AdminGcPage() {
+  const t = useTranslations("admin.gc");
+  const tUsers = useTranslations("admin.users");
   const copyRef = useRef<HTMLButtonElement>(null);
 
   const statusQuery = useQuery({
@@ -48,7 +51,7 @@ export function AdminGcPage() {
     void navigator.clipboard.writeText(command);
     anchoredToastManager.add({
       type: "success",
-      title: "Copied GC command",
+      title: t("toast.copied"),
       description: command,
       positionerProps: {
         anchor: copyRef.current,
@@ -62,22 +65,18 @@ export function AdminGcPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Garbage collection
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Storage usage and operator runbook for registry GC.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("description")}</p>
         </div>
         <Button variant="outline" render={<Link href="/admin" />}>
-          Back to users
+          {tUsers("backToUsers")}
         </Button>
       </div>
 
       {statusQuery.data?.status.warnings.map((warning) => (
         <Alert key={warning} variant="warning">
           <AlertTriangleIcon />
-          <AlertTitle>Operator warning</AlertTitle>
+          <AlertTitle>{t("warningTitle")}</AlertTitle>
           <AlertDescription>{warning}</AlertDescription>
         </Alert>
       ))}
@@ -92,13 +91,16 @@ export function AdminGcPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <HardDriveIcon className="size-5" />
-                Storage usage
+                {t("storage.title")}
               </CardTitle>
               <CardDescription>
-                Approximate size of the registry-data volume at{" "}
-                <code className="text-foreground">
-                  {statusQuery.data.status.registryDataPath}
-                </code>
+                {t.rich("storage.description", {
+                  path: () => (
+                    <code className="text-foreground">
+                      {statusQuery.data.status.registryDataPath}
+                    </code>
+                  ),
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -107,7 +109,9 @@ export function AdminGcPage() {
               </p>
               {statusQuery.data.status.storageBytes !== null ? (
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {statusQuery.data.status.storageBytes.toLocaleString()} bytes
+                  {t("storage.bytes", {
+                    count: statusQuery.data.status.storageBytes.toLocaleString(),
+                  })}
                 </p>
               ) : null}
             </CardContent>
@@ -115,11 +119,8 @@ export function AdminGcPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Run garbage collection</CardTitle>
-              <CardDescription>
-                Stop or set the registry to read-only, then run this command on
-                the host. There is no live trigger in the portal.
-              </CardDescription>
+              <CardTitle>{t("run.title")}</CardTitle>
+              <CardDescription>{t("run.description")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Textarea
@@ -129,7 +130,7 @@ export function AdminGcPage() {
               />
               <Button ref={copyRef} type="button" onClick={copyCommand}>
                 <CopyIcon className="size-4" />
-                Copy command
+                {t("run.copyButton")}
               </Button>
             </CardContent>
           </Card>

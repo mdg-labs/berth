@@ -36,7 +36,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { formatDeletionCountdown } from "@/lib/users/presentation";
 import { toastManager } from "@/components/ui/toast";
 
@@ -51,7 +52,11 @@ export function AdminUsersTable({
 }: AdminUsersTableProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations("admin.usersTable");
+  const tCommon = useTranslations("common");
+  const tRoles = useTranslations("roles.system");
   const tDeletion = useTranslations("common.deletion");
+  const tErrors = useTranslations("errors.api");
   const [deleteTarget, setDeleteTarget] = useState<AdminUserRow | null>(null);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
 
@@ -64,15 +69,14 @@ export function AdminUsersTable({
       void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       toastManager.add({
         type: "success",
-        title: "User reactivated",
+        title: t("toast.reactivated"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Reactivate failed",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.reactivateFailed"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -86,15 +90,14 @@ export function AdminUsersTable({
       setDeleteConfirmEmail("");
       toastManager.add({
         type: "success",
-        title: "User deleted",
+        title: t("toast.deleted"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Delete failed",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.deleteFailed"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -105,12 +108,12 @@ export function AdminUsersTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Auth</TableHead>
-              <TableHead>Created</TableHead>
+              <TableHead>{t("columns.name")}</TableHead>
+              <TableHead>{t("columns.email")}</TableHead>
+              <TableHead>{t("columns.role")}</TableHead>
+              <TableHead>{t("columns.status")}</TableHead>
+              <TableHead>{t("columns.auth")}</TableHead>
+              <TableHead>{t("columns.created")}</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -130,7 +133,7 @@ export function AdminUsersTable({
                   <Badge
                     variant={user.systemRole === "admin" ? "default" : "secondary"}
                   >
-                    {user.systemRole}
+                    {tRoles(user.systemRole)}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -141,18 +144,20 @@ export function AdminUsersTable({
                       )}
                     </Badge>
                   ) : (
-                    <Badge variant="secondary">Active</Badge>
+                    <Badge variant="secondary">{t("status.active")}</Badge>
                   )}
                 </TableCell>
                 <TableCell>
                   {user.hasPassword ? (
                     user.mustChangePassword ? (
-                      <Badge variant="secondary">Password reset required</Badge>
+                      <Badge variant="secondary">
+                        {t("auth.passwordResetRequired")}
+                      </Badge>
                     ) : (
-                      <Badge variant="secondary">Local</Badge>
+                      <Badge variant="secondary">{t("auth.local")}</Badge>
                     )
                   ) : (
-                    <Badge variant="secondary">OIDC</Badge>
+                    <Badge variant="secondary">{t("auth.oidc")}</Badge>
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
@@ -165,7 +170,7 @@ export function AdminUsersTable({
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          aria-label={`Actions for ${user.name}`}
+                          aria-label={t("actions.aria", { name: user.name })}
                         />
                       }
                     >
@@ -175,17 +180,17 @@ export function AdminUsersTable({
                       <MenuItem
                         onClick={() => router.push(`/admin/users/${user.id}`)}
                       >
-                        Edit
+                        {t("actions.edit")}
                       </MenuItem>
                       {user.status === "pending_deletion" ? (
                         <MenuItem
                           onClick={() => void reactivateMutation.mutate(user.id)}
                         >
-                          Reactivate
+                          {t("actions.reactivate")}
                         </MenuItem>
                       ) : (
                         <MenuItem onClick={() => setDeleteTarget(user)}>
-                          Delete
+                          {t("actions.delete")}
                         </MenuItem>
                       )}
                     </MenuPopup>
@@ -208,11 +213,13 @@ export function AdminUsersTable({
       >
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleteTarget?.email}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("deleteDialog.title", { email: deleteTarget?.email ?? "" })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {immediateDelete
-                ? "This action cannot be undone. Type the user email to confirm."
-                : "The user will be signed out and scheduled for deletion."}
+                ? t("deleteDialog.immediateDescription")
+                : t("deleteDialog.graceDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {immediateDelete && deleteTarget ? (
@@ -224,7 +231,7 @@ export function AdminUsersTable({
           ) : null}
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" />}>
-              Cancel
+              {tCommon("actions.cancel")}
             </AlertDialogClose>
             <Button
               variant="destructive"
@@ -239,7 +246,7 @@ export function AdminUsersTable({
                 }
               }}
             >
-              Delete user
+              {t("deleteDialog.confirmButton")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

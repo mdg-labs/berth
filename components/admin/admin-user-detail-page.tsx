@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import type { AdminUserRow } from "@/components/admin/admin-users-page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   AlertDialogPopup,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { formatDeletionCountdown } from "@/lib/users/presentation";
 import { toastManager } from "@/components/ui/toast";
 
@@ -52,7 +53,13 @@ type AdminUserDetailPageProps = {
 export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations("admin.userDetail");
+  const tUsers = useTranslations("admin.users");
+  const tTable = useTranslations("admin.usersTable");
+  const tCommon = useTranslations("common");
+  const tRoles = useTranslations("roles.system");
   const tDeletion = useTranslations("common.deletion");
+  const tErrors = useTranslations("errors.api");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
 
@@ -92,15 +99,14 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       queryClient.setQueryData(["admin-user", userId], response);
       toastManager.add({
         type: "success",
-        title: "User updated",
+        title: t("toast.updated"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Update failed",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.updateFailed"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -114,18 +120,19 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
     onSuccess: (response) => {
       toastManager.add({
         type: "success",
-        title: response.emailSent ? "Reset email sent" : "SMTP not configured",
+        title: response.emailSent
+          ? t("toast.resetEmailSent")
+          : t("toast.smtpNotConfigured"),
         description: response.emailSent
-          ? `A password reset link was sent to ${user?.email}.`
-          : "Configure SMTP to send password reset emails.",
+          ? t("toast.resetEmailSentDescription", { email: user?.email ?? "" })
+          : t("toast.smtpNotConfiguredDescription"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to send reset email",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.resetEmailFailed"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -137,16 +144,15 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       toastManager.add({
         type: "success",
-        title: "User deleted",
+        title: t("toast.deleted"),
       });
       router.replace("/admin");
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Delete failed",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.deleteFailed"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -159,15 +165,14 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       void userQuery.refetch();
       toastManager.add({
         type: "success",
-        title: "User reactivated",
+        title: t("toast.reactivated"),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Reactivate failed",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.reactivateFailed"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -179,8 +184,8 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
   if (userQuery.isError || !user) {
     return (
       <ErrorAlert
-        title="User not found"
-        message="This user may have been deleted."
+        title={t("notFound.title")}
+        message={t("notFound.description")}
         onRetry={() => void userQuery.refetch()}
       />
     );
@@ -198,14 +203,14 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
           <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
         <Button variant="outline" render={<Link href="/admin" />}>
-          Back to users
+          {tUsers("backToUsers")}
         </Button>
       </div>
 
       {user.status === "pending_deletion" ? (
         <Card className="border-destructive/30">
           <CardHeader>
-            <CardTitle>Pending deletion</CardTitle>
+            <CardTitle>{t("pendingDeletion.title")}</CardTitle>
             <CardDescription>
               {formatDeletionCountdown(user.purgesAt, (key, values) =>
                 tDeletion(key, values),
@@ -217,7 +222,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
               onClick={() => void reactivateMutation.mutate()}
               disabled={reactivateMutation.isPending}
             >
-              Reactivate user
+              {t("pendingDeletion.reactivateButton")}
             </Button>
           </CardContent>
         </Card>
@@ -225,8 +230,8 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Identity</CardTitle>
-          <CardDescription>Update account details and system role.</CardDescription>
+          <CardTitle>{t("identity.title")}</CardTitle>
+          <CardDescription>{t("identity.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form
@@ -237,7 +242,9 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
             }}
           >
             <Field>
-              <FieldLabel htmlFor="admin-user-name">Name</FieldLabel>
+              <FieldLabel htmlFor="admin-user-name">
+                {t("identity.nameLabel")}
+              </FieldLabel>
               <Input
                 id="admin-user-name"
                 value={name}
@@ -245,7 +252,9 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="admin-user-email">Email</FieldLabel>
+              <FieldLabel htmlFor="admin-user-email">
+                {t("identity.emailLabel")}
+              </FieldLabel>
               <Input
                 id="admin-user-email"
                 type="email"
@@ -254,7 +263,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
               />
             </Field>
             <Fieldset>
-              <FieldsetLegend>System role</FieldsetLegend>
+              <FieldsetLegend>{t("identity.systemRoleLegend")}</FieldsetLegend>
               <RadioGroup
                 value={systemRole}
                 onValueChange={(value) =>
@@ -263,11 +272,11 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
               >
                 <Label className="flex items-center gap-2">
                   <Radio value="user" />
-                  User
+                  {tRoles("user")}
                 </Label>
                 <Label className="flex items-center gap-2">
                   <Radio value="admin" />
-                  Admin
+                  {tRoles("admin")}
                 </Label>
               </RadioGroup>
             </Fieldset>
@@ -277,7 +286,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
               data-loading={updateMutation.isPending ? "" : undefined}
             >
               {updateMutation.isPending ? <Spinner /> : null}
-              Save changes
+              {t("identity.saveChanges")}
             </Button>
           </Form>
         </CardContent>
@@ -286,23 +295,21 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       {user.hasPassword ? (
         <Card>
           <CardHeader>
-            <CardTitle>Security</CardTitle>
-            <CardDescription>
-              Reset the local password. Leave blank to generate a temporary one.
-            </CardDescription>
+            <CardTitle>{t("security.title")}</CardTitle>
+            <CardDescription>{t("security.passwordDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Field>
-              <FieldLabel htmlFor="admin-user-password">New password</FieldLabel>
+              <FieldLabel htmlFor="admin-user-password">
+                {t("security.newPasswordLabel")}
+              </FieldLabel>
               <Input
                 id="admin-user-password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              <FieldDescription>
-                Blank password forces a change on next login.
-              </FieldDescription>
+              <FieldDescription>{t("security.blankPasswordHint")}</FieldDescription>
             </Field>
             <Button
               type="button"
@@ -311,17 +318,17 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
               disabled={sendResetEmailMutation.isPending}
             >
               {sendResetEmailMutation.isPending ? <Spinner /> : null}
-              Email reset link
+              {t("security.emailResetLink")}
             </Button>
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Security</CardTitle>
+            <CardTitle>{t("security.title")}</CardTitle>
             <CardDescription>
-              <Badge variant="secondary">OIDC</Badge> This account authenticates
-              via OIDC.
+              <Badge variant="secondary">{tTable("auth.oidc")}</Badge>{" "}
+              {t("security.oidcDescription")}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -330,16 +337,16 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       {canDelete ? (
         <Card className="border-destructive/30">
           <CardHeader>
-            <CardTitle>Danger zone</CardTitle>
+            <CardTitle>{t("dangerZone.title")}</CardTitle>
             <CardDescription>
               {immediateDelete
-                ? "This will permanently delete the user immediately."
-                : "This schedules the user for deletion after the grace period."}
+                ? t("dangerZone.immediateDescription")
+                : t("dangerZone.graceDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
-              Delete user
+              {t("dangerZone.deleteButton")}
             </Button>
           </CardContent>
         </Card>
@@ -348,11 +355,13 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {user.email}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("deleteDialog.title", { email: user.email })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {immediateDelete
-                ? "This action cannot be undone. Type the user email to confirm."
-                : "The user will be signed out and scheduled for deletion."}
+                ? t("deleteDialog.immediateDescription")
+                : t("deleteDialog.graceDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {immediateDelete ? (
@@ -364,7 +373,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
           ) : null}
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" />}>
-              Cancel
+              {tCommon("actions.cancel")}
             </AlertDialogClose>
             <Button
               variant="destructive"
@@ -374,7 +383,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
               }
               onClick={() => void deleteMutation.mutate()}
             >
-              Delete user
+              {t("deleteDialog.confirmButton")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

@@ -3,6 +3,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
+import { formatApiError } from "@/lib/i18n/api-error";
 import { toastManager } from "@/components/ui/toast";
 
 type InviteUserDialogProps = {
@@ -54,6 +56,10 @@ export function InviteUserDialog({
   onOpenChange,
   onInvited,
 }: InviteUserDialogProps) {
+  const t = useTranslations("admin.inviteUser");
+  const tCommon = useTranslations("common");
+  const tRoles = useTranslations("roles.system");
+  const tErrors = useTranslations("errors.api");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [systemRole, setSystemRole] = useState<"admin" | "user">("user");
@@ -71,10 +77,10 @@ export function InviteUserDialog({
     onSuccess: (data) => {
       toastManager.add({
         type: "success",
-        title: "Invite sent",
+        title: t("toast.success"),
         description: data.emailSent
-          ? `${email} will receive an invite email shortly.`
-          : `${email} was invited, but SMTP is not configured.`,
+          ? t("toast.emailSent", { email })
+          : t("toast.noSmtp", { email }),
       });
       resetFormState(setEmail, setName, setSystemRole);
       onOpenChange(false);
@@ -83,9 +89,8 @@ export function InviteUserDialog({
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to send invite",
-        description:
-          error instanceof ApiError ? error.message : "Request failed",
+        title: t("toast.error"),
+        description: formatApiError(tErrors, error, "request_failed"),
       });
     },
   });
@@ -101,10 +106,8 @@ export function InviteUserDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPopup>
         <DialogHeader>
-          <DialogTitle>Invite user</DialogTitle>
-          <DialogDescription>
-            Send an email invitation to join this Berth instance.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <Form
           className="contents"
@@ -115,9 +118,11 @@ export function InviteUserDialog({
         >
           <div className="space-y-4 px-6 pb-2">
             <Fieldset className="space-y-4">
-              <FieldsetLegend className="sr-only">Invite details</FieldsetLegend>
+              <FieldsetLegend className="sr-only">
+                {t("fieldsetLegend")}
+              </FieldsetLegend>
               <Field>
-                <FieldLabel htmlFor="invite-user-email">Email</FieldLabel>
+                <FieldLabel htmlFor="invite-user-email">{t("emailLabel")}</FieldLabel>
                 <Input
                   id="invite-user-email"
                   name="email"
@@ -128,7 +133,7 @@ export function InviteUserDialog({
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="invite-user-name">Name</FieldLabel>
+                <FieldLabel htmlFor="invite-user-name">{t("nameLabel")}</FieldLabel>
                 <Input
                   id="invite-user-name"
                   name="name"
@@ -138,7 +143,7 @@ export function InviteUserDialog({
                 />
               </Field>
               <Field>
-                <FieldLabel>System role</FieldLabel>
+                <FieldLabel>{t("systemRoleLabel")}</FieldLabel>
                 <RadioGroup
                   value={systemRole}
                   onValueChange={(value) =>
@@ -148,11 +153,11 @@ export function InviteUserDialog({
                 >
                   <Label className="flex items-center gap-2 font-normal">
                     <Radio value="user" />
-                    User
+                    {tRoles("user")}
                   </Label>
                   <Label className="flex items-center gap-2 font-normal">
                     <Radio value="admin" />
-                    Admin
+                    {tRoles("admin")}
                   </Label>
                 </RadioGroup>
               </Field>
@@ -165,7 +170,7 @@ export function InviteUserDialog({
               onClick={() => handleOpenChange(false)}
               disabled={inviteMutation.isPending}
             >
-              Cancel
+              {tCommon("actions.cancel")}
             </Button>
             <Button
               type="submit"
@@ -173,7 +178,7 @@ export function InviteUserDialog({
               data-loading={inviteMutation.isPending ? "" : undefined}
             >
               {inviteMutation.isPending ? <Spinner /> : null}
-              Send invite
+              {t("submit")}
             </Button>
           </DialogFooter>
         </Form>

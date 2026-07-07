@@ -5,6 +5,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { MailIcon, PlusIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { AdminUsersTable } from "@/components/admin/admin-users-table";
@@ -34,6 +35,7 @@ type UsersResponse = {
 };
 
 export function AdminUsersPage() {
+  const t = useTranslations("admin.users");
   const [createOpen, setCreateOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -47,22 +49,20 @@ export function AdminUsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage local accounts and system roles.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("description")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" render={<Link href="/admin/gc" />}>
-            Garbage collection
+            {t("garbageCollection")}
           </Button>
           <Button type="button" onClick={() => setInviteOpen(true)}>
             <MailIcon />
-            Invite user
+            {t("inviteUser")}
           </Button>
           <Button type="button" onClick={() => setCreateOpen(true)}>
             <PlusIcon />
-            Create user
+            {t("createUser")}
           </Button>
         </div>
       </div>
@@ -77,12 +77,8 @@ export function AdminUsersPage() {
 
       {usersQuery.isError ? (
         <ErrorAlert
-          title="Failed to load users"
-          message={
-            usersQuery.error instanceof Error
-              ? usersQuery.error.message
-              : "Something went wrong"
-          }
+          title={t("loadError")}
+          error={usersQuery.error}
           onRetry={() => void usersQuery.refetch()}
         />
       ) : null}
