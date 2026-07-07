@@ -3,11 +3,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { PlusIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
-import { apiFetch, ApiError } from "@/lib/api/client";
+import { apiFetch } from "@/lib/api/client";
 import type { RepositorySummary } from "@/lib/api/types";
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { toastManager } from "@/components/ui/toast";
+import { formatApiError } from "@/lib/i18n/api-error";
+import { Link } from "@/lib/i18n/navigation";
 
 type RepositoriesResponse = {
   repositories: RepositorySummary[];
@@ -43,6 +45,10 @@ function RepositoryListSkeleton() {
 export default function RepositoriesPage() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const queryClient = useQueryClient();
+  const t = useTranslations("repositories");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors.api");
+  const tRoles = useTranslations("roles.repository");
   const [name, setName] = useState("");
   const [isPublic, setIsPublic] = useState(false);
 
@@ -65,20 +71,18 @@ export default function RepositoriesPage() {
       }));
       toastManager.add({
         type: "success",
-        title: "Repository created",
-        description: `${data.repository.name} is ready.`,
+        title: t("toast.successTitle"),
+        description: t("toast.successDescription", { name: data.repository.name }),
       });
       setName("");
       setIsPublic(false);
       dialogRef.current?.close();
     },
     onError: (error) => {
-      const message =
-        error instanceof ApiError ? error.message : "Failed to create repository";
       toastManager.add({
         type: "error",
-        title: "Create repository failed",
-        description: message,
+        title: t("toast.errorTitle"),
+        description: formatApiError(tErrors, error, "generic"),
       });
     },
   });
@@ -96,14 +100,12 @@ export default function RepositoriesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">Repositories</h1>
-          <p className="text-sm text-muted-foreground">
-            Create and manage registry repositories.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("description")}</p>
         </div>
         <Button type="button" className="shrink-0" onClick={openDialog}>
           <PlusIcon />
-          New repository
+          {t("newRepository")}
         </Button>
       </div>
 
@@ -111,12 +113,8 @@ export default function RepositoriesPage() {
 
       {repositoriesQuery.isError ? (
         <ErrorAlert
-          title="Failed to load repositories"
-          message={
-            repositoriesQuery.error instanceof Error
-              ? repositoriesQuery.error.message
-              : "Something went wrong"
-          }
+          title={t("loadError")}
+          error={repositoriesQuery.error}
           onRetry={() => void repositoriesQuery.refetch()}
         />
       ) : null}
@@ -126,10 +124,8 @@ export default function RepositoriesPage() {
       repositoriesQuery.data?.repositories.length === 0 ? (
         <Empty className="rounded-lg border border-dashed">
           <EmptyHeader>
-            <EmptyTitle>No repositories yet</EmptyTitle>
-            <EmptyDescription>
-              Create your first repository to start pushing images.
-            </EmptyDescription>
+            <EmptyTitle>{t("empty.title")}</EmptyTitle>
+            <EmptyDescription>{t("empty.description")}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : null}
@@ -148,14 +144,18 @@ export default function RepositoriesPage() {
                 <p className="font-medium">{repository.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {repository.imageCount}{" "}
-                  {repository.imageCount === 1 ? "image" : "images"}
+                  {repository.imageCount === 1 ? t("image") : t("images")}
                   {" · "}
-                  Created {new Date(repository.createdAt).toLocaleDateString()}
+                  {t("created", {
+                    date: new Date(repository.createdAt).toLocaleDateString(),
+                  })}
                 </p>
               </Link>
               <div className="flex items-center gap-2">
-                {repository.isPublic ? <Badge variant="secondary">Public</Badge> : null}
-                {repository.role ? <Badge>{repository.role}</Badge> : null}
+                {repository.isPublic ? (
+                  <Badge variant="secondary">{t("badges.public")}</Badge>
+                ) : null}
+                {repository.role ? <Badge>{tRoles(repository.role)}</Badge> : null}
               </div>
             </li>
           ))}
@@ -173,15 +173,13 @@ export default function RepositoriesPage() {
         <form className="space-y-4 p-6" onSubmit={handleCreate}>
           <div className="space-y-1">
             <h2 id="create-repository-title" className="text-lg font-semibold">
-              Create repository
+              {t("create.title")}
             </h2>
-            <p className="text-sm text-muted-foreground">
-              Use a DNS-like slug (lowercase letters, numbers, hyphens).
-            </p>
+            <p className="text-sm text-muted-foreground">{t("create.description")}</p>
           </div>
           <div className="space-y-2">
             <label htmlFor="repository-name" className="text-sm font-medium">
-              Repository name
+              {t("create.nameLabel")}
             </label>
             <input
               id="repository-name"
@@ -194,7 +192,7 @@ export default function RepositoriesPage() {
               maxLength={63}
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="my-repository"
+              placeholder={t("create.namePlaceholder")}
               className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
@@ -204,7 +202,7 @@ export default function RepositoriesPage() {
               checked={isPublic}
               onChange={(event) => setIsPublic(event.target.checked)}
             />
-            Public repository (anonymous pull)
+            {t("create.publicLabel")}
           </label>
           <div className="flex justify-end gap-2">
             <Button
@@ -212,7 +210,7 @@ export default function RepositoriesPage() {
               variant="outline"
               onClick={() => dialogRef.current?.close()}
             >
-              Cancel
+              {tCommon("actions.cancel")}
             </Button>
             <Button
               type="submit"
@@ -220,7 +218,7 @@ export default function RepositoriesPage() {
               data-loading={createMutation.isPending ? "" : undefined}
             >
               {createMutation.isPending ? <Spinner /> : null}
-              Create
+              {t("create.submit")}
             </Button>
           </div>
         </form>

@@ -3,6 +3,7 @@
 "use client";
 
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { useTheme } from "@/components/providers/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -15,14 +16,15 @@ import {
 } from "@/components/ui/menu";
 import type { ThemeMode } from "@/lib/theme/config";
 
-const THEME_OPTIONS: { value: ThemeMode; label: string; icon: React.ReactNode }[] = [
-  { value: "light", label: "Light", icon: <SunIcon className="size-4" /> },
-  { value: "dark", label: "Dark", icon: <MoonIcon className="size-4" /> },
-  { value: "system", label: "System", icon: <MonitorIcon className="size-4" /> },
+const THEME_OPTIONS: { value: ThemeMode; labelKey: "light" | "dark" | "system"; icon: React.ReactNode }[] = [
+  { value: "light", labelKey: "light", icon: <SunIcon className="size-4" /> },
+  { value: "dark", labelKey: "dark", icon: <MoonIcon className="size-4" /> },
+  { value: "system", labelKey: "system", icon: <MonitorIcon className="size-4" /> },
 ];
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const t = useTranslations("navigation.theme");
   const active =
     THEME_OPTIONS.find((option) => option.value === theme) ?? THEME_OPTIONS[2];
 
@@ -30,7 +32,7 @@ export function ThemeToggle() {
     <Menu>
       <MenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Toggle theme" />
+          <Button variant="ghost" size="icon-sm" aria-label={t("toggle")} />
         }
       >
         {active.icon}
@@ -41,7 +43,7 @@ export function ThemeToggle() {
             <MenuRadioItem key={option.value} value={option.value}>
               <span className="flex items-center gap-2">
                 {option.icon}
-                {option.label}
+                {t(option.labelKey)}
               </span>
             </MenuRadioItem>
           ))}

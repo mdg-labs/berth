@@ -3,9 +3,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { PackageIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   Command,
@@ -23,20 +23,24 @@ import { useRepositoryByName, useRepositoriesList } from "@/lib/hooks/use-reposi
 import { apiFetch } from "@/lib/api/client";
 import type { CatalogResponse } from "@/lib/registry/client/types";
 import { imagePathSegments } from "@/lib/catalog/format";
+import { useRouter } from "@/lib/i18n/navigation";
 
 type CommandPaletteProps = {
   currentRepository?: string;
 };
 
+type PaletteGroup = "repositories" | "images";
+
 type PaletteItem = {
   id: string;
   label: string;
   href: string;
-  group: string;
+  group: PaletteGroup;
 };
 
 export function CommandPalette({ currentRepository }: CommandPaletteProps) {
   const router = useRouter();
+  const t = useTranslations("navigation.commandPalette");
   const [open, setOpen] = useState(false);
   const repositoriesQuery = useRepositoriesList();
   const repositoryQuery = useRepositoryByName(currentRepository ?? "");
@@ -59,7 +63,7 @@ export function CommandPalette({ currentRepository }: CommandPaletteProps) {
         id: `repository:${repository.id}`,
         label: repository.name,
         href: `/r/${repository.name}`,
-        group: "Repositories",
+        group: "repositories",
       });
     }
 
@@ -69,7 +73,7 @@ export function CommandPalette({ currentRepository }: CommandPaletteProps) {
           id: `image:${currentRepository}/${image.name}`,
           label: image.name,
           href: `/r/${currentRepository}/i/${imagePathSegments(image.name)}`,
-          group: `Images in ${currentRepository}`,
+          group: "images",
         });
       }
     }
@@ -94,18 +98,18 @@ export function CommandPalette({ currentRepository }: CommandPaletteProps) {
       <button
         type="button"
         className="inline-flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs text-muted-foreground sm:hidden"
-        aria-label="Open command palette"
+        aria-label={t("open")}
         onClick={() => setOpen(true)}
       >
-        Search
+        {t("search")}
       </button>
       <button
         type="button"
         className="hidden items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs text-muted-foreground sm:inline-flex"
-        aria-label="Open command palette"
+        aria-label={t("open")}
         onClick={() => setOpen(true)}
       >
-        Search…
+        {t("searchWithShortcut")}
         <Kbd>Ctrl</Kbd>
         <Kbd>K</Kbd>
       </button>
@@ -128,13 +132,13 @@ export function CommandPalette({ currentRepository }: CommandPaletteProps) {
               router.push(selected.href);
             }}
           >
-            <CommandInput placeholder="Jump to repository or image…" />
+            <CommandInput placeholder={t("placeholder")} />
             <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandEmpty>{t("empty")}</CommandEmpty>
               <CommandGroup>
-                <CommandGroupLabel>Repositories</CommandGroupLabel>
+                <CommandGroupLabel>{t("groups.repositories")}</CommandGroupLabel>
                 {items
-                  .filter((item) => item.group === "Repositories")
+                  .filter((item) => item.group === "repositories")
                   .map((item) => (
                     <CommandItem
                       key={item.id}
@@ -152,10 +156,10 @@ export function CommandPalette({ currentRepository }: CommandPaletteProps) {
               {currentRepository ? (
                 <CommandGroup>
                   <CommandGroupLabel>
-                    Images in {currentRepository}
+                    {t("groups.imagesIn", { repository: currentRepository })}
                   </CommandGroupLabel>
                   {items
-                    .filter((item) => item.group.startsWith("Images"))
+                    .filter((item) => item.group === "images")
                     .map((item) => (
                       <CommandItem
                         key={item.id}

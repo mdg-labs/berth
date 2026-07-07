@@ -11,5 +11,24 @@
   "garbageCollection": "Garbage collection",
   "profile": "Profile",
   "reactivateAccount": "Reactivate account",
-  "admin": "Admin"
+  "admin": "Admin",
+  "accountMenu": "Account menu",
+  "signOut": "Sign out",
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "commandPalette": {
+    "open": "Open command palette",
+    "search": "Search",
+    "searchWithShortcut": "Search…",
+    "placeholder": "Jump to repository or image…",
+    "empty": "No results found.",
+    "groups": {
+      "repositories": "Repositories",
+      "imagesIn": "Images in {repository}"
+    }
+  }
 }

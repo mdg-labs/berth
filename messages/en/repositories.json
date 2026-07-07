@@ -1,1 +1,29 @@
-{}
+{
+  "title": "Repositories",
+  "description": "Create and manage registry repositories.",
+  "newRepository": "New repository",
+  "loadError": "Failed to load repositories",
+  "empty": {
+    "title": "No repositories yet",
+    "description": "Create your first repository to start pushing images."
+  },
+  "image": "image",
+  "images": "images",
+  "created": "Created {date}",
+  "badges": {
+    "public": "Public"
+  },
+  "create": {
+    "title": "Create repository",
+    "description": "Use a DNS-like slug (lowercase letters, numbers, hyphens).",
+    "nameLabel": "Repository name",
+    "namePlaceholder": "my-repository",
+    "publicLabel": "Public repository (anonymous pull)",
+    "submit": "Create"
+  },
+  "toast": {
+    "successTitle": "Repository created",
+    "successDescription": "{name} is ready.",
+    "errorTitle": "Create repository failed"
+  }
+}

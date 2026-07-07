@@ -2,10 +2,9 @@
 
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronsUpDownIcon, LogOutIcon, UserIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +22,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { apiFetch } from "@/lib/api/client";
+import { Link, useRouter } from "@/lib/i18n/navigation";
 
 function userInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -36,6 +36,7 @@ function userInitials(name: string): string {
 export function PortalSidebarUser() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations("navigation");
   const { data } = useAuthUser();
   const user = data?.user;
 
@@ -58,7 +59,7 @@ export function PortalSidebarUser() {
               render={
                 <SidebarMenuButton
                   size="lg"
-                  aria-label="Account menu"
+                  aria-label={t("accountMenu")}
                   tooltip={user.name}
                 />
               }
@@ -79,7 +80,7 @@ export function PortalSidebarUser() {
             <MenuPopup side="top" align="start" className="w-56">
               <MenuItem render={<Link href="/profile" />}>
                 <UserIcon className="size-4" />
-                Profile
+                {t("profile")}
               </MenuItem>
               <MenuSeparator />
               <div className="px-2 py-1.5 text-sm">
@@ -89,7 +90,7 @@ export function PortalSidebarUser() {
               <MenuSeparator />
               <MenuItem onClick={() => void handleLogout()}>
                 <LogOutIcon className="size-4" />
-                Sign out
+                {t("signOut")}
               </MenuItem>
             </MenuPopup>
           </Menu>

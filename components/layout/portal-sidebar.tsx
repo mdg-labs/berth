@@ -2,8 +2,7 @@
 
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   FolderKanbanIcon,
   PackageIcon,
@@ -26,6 +25,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { Link, usePathname } from "@/lib/i18n/navigation";
 
 function currentRepositoryFromPath(pathname: string): string | undefined {
   const segments = pathname.split("/").filter(Boolean);
@@ -44,6 +44,7 @@ function titleCase(segment: string): string {
 
 export function PortalSidebar() {
   const pathname = usePathname();
+  const t = useTranslations("navigation");
   const { data } = useAuthUser();
   const user = data?.user;
   const repositoryName = currentRepositoryFromPath(pathname);
@@ -69,29 +70,29 @@ export function PortalSidebar() {
             <SidebarMenuButton
               size="lg"
               render={<Link href="/repositories" />}
-              tooltip="Berth"
+              tooltip={t("appName")}
             >
               <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
                 B
               </span>
-              <span className="truncate font-semibold">Berth</span>
+              <span className="truncate font-semibold">{t("appName")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("groups.main")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={isRepositoriesActive}
                   render={<Link href="/repositories" />}
-                  tooltip="Repositories"
+                  tooltip={t("repositories")}
                 >
                   <FolderKanbanIcon />
-                  <span>Repositories</span>
+                  <span>{t("repositories")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -107,20 +108,20 @@ export function PortalSidebar() {
                   <SidebarMenuButton
                     isActive={isCatalogActive}
                     render={<Link href={repositoryPath} />}
-                    tooltip="Images"
+                    tooltip={t("images")}
                   >
                     <PackageIcon />
-                    <span>Images</span>
+                    <span>{t("images")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={isSettingsActive}
                     render={<Link href={`${repositoryPath}/settings`} />}
-                    tooltip="Settings"
+                    tooltip={t("settings")}
                   >
                     <SettingsIcon />
-                    <span>Settings</span>
+                    <span>{t("settings")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -130,27 +131,27 @@ export function PortalSidebar() {
 
         {user?.systemRole === "admin" ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("groups.admin")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={isAdminUsersActive}
                     render={<Link href="/admin" />}
-                    tooltip="Users"
+                    tooltip={t("users")}
                   >
                     <UsersIcon />
-                    <span>Users</span>
+                    <span>{t("users")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={isAdminGcActive}
                     render={<Link href="/admin/gc" />}
-                    tooltip="Garbage collection"
+                    tooltip={t("garbageCollection")}
                   >
                     <Trash2Icon />
-                    <span>Garbage collection</span>
+                    <span>{t("garbageCollection")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
