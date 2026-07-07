@@ -55,6 +55,14 @@ export function checkLoginRateLimit(ip: string, email: string): boolean {
   );
 }
 
+export function checkForgotPasswordRateLimit(ip: string, email: string): boolean {
+  const normalizedEmail = email.trim().toLowerCase();
+  return (
+    consumeRateLimit(`forgot-password:ip:${ip}`) &&
+    consumeRateLimit(`forgot-password:email:${normalizedEmail}`)
+  );
+}
+
 export function resetRateLimits(): void {
   buckets.clear();
 }

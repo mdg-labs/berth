@@ -3,36 +3,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { createLocalUser, listUsers } from "@/lib/admin/users";
-import { getUserDeleteGracePeriodDays } from "@/lib/users/config";
+import { createUserInvite } from "@/lib/admin/invites";
 import { isSessionSystemAdmin } from "@/lib/admin/guard";
 import { apiError } from "@/lib/api/errors";
 import type { SystemRole } from "@/lib/rbac/types";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 
-type CreateUserBody = {
+type CreateInviteBody = {
   email?: string;
   name?: string;
-  password?: string;
   systemRole?: SystemRole;
 };
-
-export async function GET(request: NextRequest) {
-  const user = await getSessionUserFromRequest(request);
-  if (!user) {
-    return apiError("not_authenticated", "Not authenticated", 401);
-  }
-
-  if (!isSessionSystemAdmin(user)) {
-    return apiError("forbidden", "System admin required", 403);
-  }
-
-  const users = await listUsers();
-  return NextResponse.json({
-    users,
-    meta: { deleteGracePeriodDays: getUserDeleteGracePeriodDays() },
-  });
-}
 
 export async function POST(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
@@ -44,9 +25,9 @@ export async function POST(request: NextRequest) {
     return apiError("forbidden", "System admin required", 403);
   }
 
-  let body: CreateUserBody;
+  let body: CreateInviteBody;
   try {
-    body = (await request.json()) as CreateUserBody;
+    body = (await request.json()) as CreateInviteBody;
   } catch {
     return apiError("bad_request", "Invalid JSON body", 400);
   }
@@ -59,10 +40,9 @@ export async function POST(request: NextRequest) {
     return apiError("bad_request", "Invalid system role", 400);
   }
 
-  const result = await createLocalUser(user.id, {
+  const result = await createUserInvite(user.id, {
     email: body.email,
     name: body.name,
-    password: body.password,
     systemRole: body.systemRole,
   });
 
@@ -70,11 +50,17 @@ export async function POST(request: NextRequest) {
     if (result.error === "email_taken") {
       return apiError("conflict", "A user with this email already exists", 409);
     }
-    return apiError("bad_request", "Invalid user input", 400);
+    if (result.error === "invite_pending") {
+      return apiError("conflict", "A pending invite already exists for this email", 409);
+    }
+    return apiError("bad_request", "Invalid invite input", 400);
   }
 
   return NextResponse.json(
-    { user: result.user, emailSent: result.emailSent },
+    {
+      invite: result.invite,
+      emailSent: result.emailSent,
+    },
     { status: 201 },
   );
 }

@@ -4,11 +4,12 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
-import { useRef } from "react";
+import { MailIcon, PlusIcon } from "lucide-react";
+import { useState } from "react";
 
 import { AdminUsersTable } from "@/components/admin/admin-users-table";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
+import { InviteUserDialog } from "@/components/admin/invite-user-dialog";
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,7 +34,8 @@ type UsersResponse = {
 };
 
 export function AdminUsersPage() {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const usersQuery = useQuery({
@@ -54,7 +56,11 @@ export function AdminUsersPage() {
           <Button variant="outline" render={<Link href="/admin/gc" />}>
             Garbage collection
           </Button>
-          <Button type="button" onClick={() => dialogRef.current?.showModal()}>
+          <Button type="button" onClick={() => setInviteOpen(true)}>
+            <MailIcon />
+            Invite user
+          </Button>
+          <Button type="button" onClick={() => setCreateOpen(true)}>
             <PlusIcon />
             Create user
           </Button>
@@ -89,8 +95,16 @@ export function AdminUsersPage() {
       ) : null}
 
       <CreateUserDialog
-        dialogRef={dialogRef}
+        open={createOpen}
+        onOpenChange={setCreateOpen}
         onCreated={() => {
+          void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+        }}
+      />
+      <InviteUserDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onInvited={() => {
           void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
         }}
       />

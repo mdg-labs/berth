@@ -5,7 +5,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { AdminUserRow } from "@/components/admin/admin-users-page";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +14,7 @@ import {
   DialogPopup,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Fieldset, FieldsetLegend } from "@/components/ui/fieldset";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -25,69 +24,66 @@ import { Spinner } from "@/components/ui/spinner";
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { toastManager } from "@/components/ui/toast";
 
-type CreateUserDialogProps = {
+type InviteUserDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: () => void;
+  onInvited: () => void;
 };
 
-type CreateUserResponse = {
-  user: AdminUserRow;
-  emailSent?: boolean;
+type InviteResponse = {
+  invite: {
+    id: string;
+    email: string;
+    name: string;
+  };
+  emailSent: boolean;
 };
 
 function resetFormState(
   setEmail: (value: string) => void,
   setName: (value: string) => void,
-  setPassword: (value: string) => void,
   setSystemRole: (value: "admin" | "user") => void,
 ) {
   setEmail("");
   setName("");
-  setPassword("");
   setSystemRole("user");
 }
 
-export function CreateUserDialog({
+export function InviteUserDialog({
   open,
   onOpenChange,
-  onCreated,
-}: CreateUserDialogProps) {
+  onInvited,
+}: InviteUserDialogProps) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
   const [systemRole, setSystemRole] = useState<"admin" | "user">("user");
 
-  const createMutation = useMutation({
+  const inviteMutation = useMutation({
     mutationFn: () =>
-      apiFetch<CreateUserResponse>("/api/admin/users", {
+      apiFetch<InviteResponse>("/api/admin/invites", {
         method: "POST",
         body: {
           email,
           name,
-          password: password.trim() || undefined,
           systemRole,
         },
       }),
     onSuccess: (data) => {
-      const hadPassword = Boolean(password.trim());
       toastManager.add({
         type: "success",
-        title: "User created",
-        description: hadPassword
-          ? `${email} can sign in with the provided password.`
-          : data.emailSent
-            ? `${email} will receive a set-password email shortly.`
-            : `${email} must change password on first login.`,
+        title: "Invite sent",
+        description: data.emailSent
+          ? `${email} will receive an invite email shortly.`
+          : `${email} was invited, but SMTP is not configured.`,
       });
-      resetFormState(setEmail, setName, setPassword, setSystemRole);
+      resetFormState(setEmail, setName, setSystemRole);
       onOpenChange(false);
-      onCreated();
+      onInvited();
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Failed to create user",
+        title: "Failed to send invite",
         description:
           error instanceof ApiError ? error.message : "Request failed",
       });
@@ -95,8 +91,8 @@ export function CreateUserDialog({
   });
 
   function handleOpenChange(next: boolean) {
-    if (!next && !createMutation.isPending) {
-      resetFormState(setEmail, setName, setPassword, setSystemRole);
+    if (!next && !inviteMutation.isPending) {
+      resetFormState(setEmail, setName, setSystemRole);
     }
     onOpenChange(next);
   }
@@ -105,26 +101,25 @@ export function CreateUserDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPopup>
         <DialogHeader>
-          <DialogTitle>Create local user</DialogTitle>
+          <DialogTitle>Invite user</DialogTitle>
           <DialogDescription>
-            Leave password empty to auto-generate one and email a set-password
-            link when SMTP is configured.
+            Send an email invitation to join this Berth instance.
           </DialogDescription>
         </DialogHeader>
         <Form
           className="contents"
           onSubmit={(event) => {
             event.preventDefault();
-            createMutation.mutate();
+            inviteMutation.mutate();
           }}
         >
           <div className="space-y-4 px-6 pb-2">
             <Fieldset className="space-y-4">
-              <FieldsetLegend className="sr-only">User details</FieldsetLegend>
+              <FieldsetLegend className="sr-only">Invite details</FieldsetLegend>
               <Field>
-                <FieldLabel htmlFor="create-user-email">Email</FieldLabel>
+                <FieldLabel htmlFor="invite-user-email">Email</FieldLabel>
                 <Input
-                  id="create-user-email"
+                  id="invite-user-email"
                   name="email"
                   type="email"
                   required
@@ -133,28 +128,14 @@ export function CreateUserDialog({
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="create-user-name">Name</FieldLabel>
+                <FieldLabel htmlFor="invite-user-name">Name</FieldLabel>
                 <Input
-                  id="create-user-name"
+                  id="invite-user-name"
                   name="name"
                   required
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                 />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="create-user-password">Password</FieldLabel>
-                <Input
-                  id="create-user-password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-                <FieldDescription>
-                  Optional — auto-generated when blank.
-                </FieldDescription>
               </Field>
               <Field>
                 <FieldLabel>System role</FieldLabel>
@@ -182,17 +163,17 @@ export function CreateUserDialog({
               type="button"
               variant="outline"
               onClick={() => handleOpenChange(false)}
-              disabled={createMutation.isPending}
+              disabled={inviteMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={createMutation.isPending}
-              data-loading={createMutation.isPending ? "" : undefined}
+              disabled={inviteMutation.isPending}
+              data-loading={inviteMutation.isPending ? "" : undefined}
             >
-              {createMutation.isPending ? <Spinner /> : null}
-              Create user
+              {inviteMutation.isPending ? <Spinner /> : null}
+              Send invite
             </Button>
           </DialogFooter>
         </Form>

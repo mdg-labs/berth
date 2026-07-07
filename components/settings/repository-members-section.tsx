@@ -82,17 +82,25 @@ export function RepositoryMembersSection({ repositoryId }: RepositoryMembersSect
 
   const addMutation = useMutation({
     mutationFn: (input: { email: string; role: RepositoryRole }) =>
-      apiFetch(`/api/repositories/${repositoryId}/members`, {
-        method: "POST",
-        body: input,
-      }),
-    onSuccess: () => {
+      apiFetch<{ member: { type: string }; emailSent: boolean }>(
+        `/api/repositories/${repositoryId}/members`,
+        {
+          method: "POST",
+          body: input,
+        },
+      ),
+    onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ["repository-members", repositoryId] });
       setEmail("");
       toastManager.add({
         type: "success",
         title: "Member added",
-        description: "The member or invite was created.",
+        description:
+          data.member.type === "invite"
+            ? data.emailSent
+              ? "Invite email sent."
+              : "Invite created, but SMTP is not configured."
+            : "The member was added.",
       });
     },
     onError: (error) => {

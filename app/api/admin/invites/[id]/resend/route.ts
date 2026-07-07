@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { reactivateAdminUser } from "@/lib/admin/users";
+import { resendUserInvite } from "@/lib/admin/invites";
 import { isSessionSystemAdmin } from "@/lib/admin/guard";
 import { apiError } from "@/lib/api/errors";
 import { getSessionUserFromRequest } from "@/lib/session/request";
@@ -23,14 +23,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const result = await reactivateAdminUser(user.id, id);
+  const result = await resendUserInvite(user.id, id);
 
   if ("error" in result) {
     if (result.error === "not_found") {
-      return apiError("not_found", "User not found", 404);
+      return apiError("not_found", "Invite not found", 404);
     }
-    return apiError("bad_request", "User is not pending deletion", 400);
+    if (result.error === "accepted") {
+      return apiError("bad_request", "Invite has already been accepted", 400);
+    }
+    return apiError("bad_request", "Invite has expired", 400);
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    invite: result.invite,
+    emailSent: result.emailSent,
+  });
 }

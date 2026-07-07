@@ -73,5 +73,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return apiError("conflict", "Member or invite already exists", 409);
   }
 
-  return NextResponse.json({ member: result }, { status: 201 });
+  return NextResponse.json(
+    { member: result, emailSent: result.emailSent },
+    { status: 201 },
+  );
 }

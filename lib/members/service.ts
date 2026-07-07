@@ -11,6 +11,8 @@ import {
   repositories,
   users,
 } from "@/lib/db/schema";
+import { trySendEmail } from "@/lib/email/send";
+import { buildLoginUrl, repositoryInviteEmail } from "@/lib/email/templates";
 import { canPerformRepositoryAction } from "@/lib/rbac/check";
 import { getRepositoryMemberRole } from "@/lib/rbac/roles";
 import type { RepositoryRole, SystemRole } from "@/lib/rbac/types";
@@ -111,13 +113,13 @@ export async function addProjectMember(
   systemRole: SystemRole,
   input: { email: string; role: RepositoryRole },
 ): Promise<
-  | { type: "user"; userId: string; email: string; role: RepositoryRole }
-  | { type: "invite"; inviteId: string; email: string; role: RepositoryRole }
+  | { type: "user"; userId: string; email: string; role: RepositoryRole; emailSent: boolean }
+  | { type: "invite"; inviteId: string; email: string; role: RepositoryRole; emailSent: boolean }
   | { error: "not_found" | "forbidden" | "invalid_role" | "already_member" }
 > {
   const db = getDb();
   const [project] = await db
-    .select({ id: repositories.id })
+    .select({ id: repositories.id, name: repositories.name })
     .from(repositories)
     .where(eq(repositories.id, repositoryId))
     .limit(1);
@@ -160,6 +162,7 @@ export async function addProjectMember(
       userId: existingUser.id,
       email: existingUser.email,
       role: input.role,
+      emailSent: false,
     };
   }
 
@@ -193,11 +196,28 @@ export async function addProjectMember(
     throw new Error("Failed to create invite");
   }
 
+  const [inviter] = await db
+    .select({ name: users.name })
+    .from(users)
+    .where(eq(users.id, actorId))
+    .limit(1);
+
+  const sendResult = await trySendEmail(
+    repositoryInviteEmail({
+      to: email,
+      repositoryName: project.name,
+      role: input.role,
+      inviterName: inviter?.name ?? "A Berth user",
+      loginUrl: buildLoginUrl(),
+    }),
+  );
+
   return {
     type: "invite",
     inviteId: invite.id,
     email,
     role: input.role,
+    emailSent: sendResult.sent,
   };
 }
 
