@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       invite: result.invite,
-      emailSent: result.emailSent,
+      emailStatus: result.emailStatus,
     },
     { status: 201 },
   );

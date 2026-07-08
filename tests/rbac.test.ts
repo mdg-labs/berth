@@ -28,6 +28,9 @@ describe("RBAC matrix", () => {
       expect(roleAllowsAction(row.role, "manage_members")).toBe(
         row.manageMembers,
       );
+      expect(roleAllowsAction(row.role, "update_repository")).toBe(
+        row.manageSettings,
+      );
       expect(roleAllowsAction(row.role, "delete_repository")).toBe(
         row.deleteRepository,
       );
@@ -97,6 +100,15 @@ describe("RBAC role × action × public/private", () => {
     ).toBe(false);
     expect(
       canPerformRepositoryAction("user", "admin", "manage_members"),
+    ).toBe(true);
+  });
+
+  it("repository settings access requires update_repository", () => {
+    expect(
+      canPerformRepositoryAction("user", "maintainer", "update_repository"),
+    ).toBe(false);
+    expect(
+      canPerformRepositoryAction("user", "admin", "update_repository"),
     ).toBe(true);
   });
 });

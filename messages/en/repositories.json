@@ -13,6 +13,7 @@
   "badges": {
     "public": "Public"
   },
+  "settingsFor": "Repository settings for {name}",
   "create": {
     "title": "Create repository",
     "description": "Use a DNS-like slug (lowercase letters, numbers, hyphens).",

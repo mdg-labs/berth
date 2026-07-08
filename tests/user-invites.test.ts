@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acceptUserInvite,
   createUserInvite,
+  listPendingUserInvites,
   validateUserInvite,
 } from "@/lib/admin/invites";
 import { hashToken } from "@/lib/email/tokens";
@@ -40,9 +41,13 @@ vi.mock("@/lib/auth/credentials", () => ({
   hashPassword: hashPasswordMock,
 }));
 
-vi.mock("@/lib/email/send", () => ({
-  trySendEmail: trySendEmailMock,
-}));
+vi.mock("@/lib/email/send", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/email/send")>();
+  return {
+    ...actual,
+    trySendEmail: trySendEmailMock,
+  };
+});
 
 vi.mock("@/lib/audit/log", () => ({
   writeAuditLog: writeAuditLogMock,
@@ -78,7 +83,7 @@ describe("user invites", () => {
             name: "New User",
             systemRole: "user",
             createdAt: new Date("2026-01-01T00:00:00.000Z"),
-            expiresAt: new Date("2026-01-04T00:00:00.000Z"),
+            expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
             acceptedAt: null,
           },
         ]),
@@ -93,9 +98,63 @@ describe("user invites", () => {
     expect("error" in result).toBe(false);
     if (!("error" in result)) {
       expect(result.invite.email).toBe("new@example.com");
-      expect(result.emailSent).toBe(true);
+      expect(result.emailStatus).toBe("sent");
+      expect(result.invite.expired).toBe(false);
     }
     expect(trySendEmailMock).toHaveBeenCalled();
+  });
+
+  it("keeps invite when email delivery fails", async () => {
+    mockPendingInviteLookup(null);
+    trySendEmailMock.mockResolvedValue({ sent: false, reason: "failed" });
+    insertMock.mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([
+          {
+            id: "invite-1",
+            email: "new@example.com",
+            name: "New User",
+            systemRole: "user",
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
+            acceptedAt: null,
+          },
+        ]),
+      }),
+    });
+
+    const result = await createUserInvite("admin-1", {
+      email: "new@example.com",
+      name: "New User",
+    });
+
+    expect("error" in result).toBe(false);
+    if (!("error" in result)) {
+      expect(result.emailStatus).toBe("failed");
+    }
+  });
+
+  it("lists pending invites with expired flag", async () => {
+    const past = new Date("2020-01-01T00:00:00.000Z");
+    const where = vi.fn().mockResolvedValue([
+      {
+        id: "invite-1",
+        email: "pending@example.com",
+        name: "Pending User",
+        systemRole: "user",
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        expiresAt: past,
+        acceptedAt: null,
+      },
+    ]);
+    selectMock.mockReturnValue({
+      from: vi.fn().mockReturnValue({ where }),
+    });
+
+    const invites = await listPendingUserInvites();
+    expect(invites).toHaveLength(1);
+    expect(invites[0]?.email).toBe("pending@example.com");
+    expect(invites[0]?.expired).toBe(true);
   });
 
   it("rejects duplicate pending invites", async () => {

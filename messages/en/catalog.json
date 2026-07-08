@@ -7,6 +7,7 @@
   "pullCount": "{count, plural, one {# pull} other {# pulls}}",
   "tagCount": "{count, plural, one {# tag} other {# tags}}",
   "settingsFor": "Settings for {image}",
+  "repositorySettings": "Repository settings",
   "browseDescription": "Browse images in this repository",
   "repositoryPullCount": " · {count, plural, one {# pull} other {# pulls}}",
   "searchPlaceholder": "Search images…",

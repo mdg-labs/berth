@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   index,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -140,15 +141,31 @@ export const repositoryInvites = pgTable("repository_invites", {
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),
 });
 
-export const auditLog = pgTable("audit_log", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id),
-  action: varchar("action", { length: 255 }).notNull(),
-  resource: text("resource").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id),
+    repositoryId: uuid("repository_id").references(() => repositories.id, {
+      onDelete: "set null",
+    }),
+    action: varchar("action", { length: 255 }).notNull(),
+    resource: text("resource").notNull(),
+    metadata: jsonb("metadata"),
+    clientIp: varchar("client_ip", { length: 45 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    createdAtIdx: index("audit_log_created_at_idx").on(table.createdAt),
+    repositoryCreatedAtIdx: index("audit_log_repository_created_at_idx").on(
+      table.repositoryId,
+      table.createdAt,
+    ),
+    actionIdx: index("audit_log_action_idx").on(table.action),
+  }),
+);
 
 export const imageSettings = pgTable(
   "image_settings",

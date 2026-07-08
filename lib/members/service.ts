@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, ilike, isNull, notInArray, or } from "drizzle-orm";
 
 import { writeAuditLog } from "@/lib/audit/log";
 import { findUserByEmail } from "@/lib/auth/credentials";
@@ -11,13 +11,16 @@ import {
   repositories,
   users,
 } from "@/lib/db/schema";
-import { trySendEmail } from "@/lib/email/send";
-import { buildLoginUrl, repositoryInviteEmail } from "@/lib/email/templates";
-import type { Locale } from "@/lib/i18n/config";
-import { getServerTranslator } from "@/lib/i18n/server-translator";
 import { canPerformRepositoryAction } from "@/lib/rbac/check";
 import { getRepositoryMemberRole } from "@/lib/rbac/roles";
 import type { RepositoryRole, SystemRole } from "@/lib/rbac/types";
+import { getUserDeletionState } from "@/lib/users/presentation";
+
+export type MemberCandidate = {
+  id: string;
+  email: string;
+  name: string;
+};
 
 export type MemberListEntry =
   | {
@@ -27,6 +30,7 @@ export type MemberListEntry =
       name: string;
       role: RepositoryRole;
       joinedAt: string;
+      accountStatus: "active" | "pending_deletion";
     }
   | {
       type: "invite";
@@ -67,6 +71,7 @@ export async function listProjectMembers(
       name: users.name,
       role: repositoryMembers.role,
       joinedAt: repositoryMembers.createdAt,
+      deletedAt: users.deletedAt,
     })
     .from(repositoryMembers)
     .innerJoin(users, eq(repositoryMembers.userId, users.id))
@@ -95,6 +100,7 @@ export async function listProjectMembers(
       name: row.name,
       role: row.role,
       joinedAt: row.joinedAt.toISOString(),
+      accountStatus: getUserDeletionState(row.deletedAt).status,
     })),
     ...inviteRows.map((row) => ({
       type: "invite" as const,
@@ -109,15 +115,71 @@ export async function listProjectMembers(
   return entries;
 }
 
+export async function searchMemberCandidates(
+  repositoryId: string,
+  actorId: string,
+  systemRole: SystemRole,
+  query: string,
+): Promise<MemberCandidate[] | { error: "not_found" | "forbidden" }> {
+  const db = getDb();
+  const [project] = await db
+    .select({ id: repositories.id })
+    .from(repositories)
+    .where(eq(repositories.id, repositoryId))
+    .limit(1);
+
+  if (!project) {
+    return { error: "not_found" };
+  }
+
+  const actorRole = await getRepositoryMemberRole(actorId, repositoryId);
+  if (!canPerformRepositoryAction(systemRole, actorRole, "manage_members")) {
+    return { error: "forbidden" };
+  }
+
+  const trimmed = query.trim();
+  if (trimmed.length < 2) {
+    return [];
+  }
+
+  const pattern = `%${trimmed}%`;
+  const memberRows = await db
+    .select({ userId: repositoryMembers.userId })
+    .from(repositoryMembers)
+    .where(eq(repositoryMembers.repositoryId, repositoryId));
+  const excludeIds = memberRows.map((row) => row.userId);
+
+  const conditions = [
+    isNull(users.deletedAt),
+    or(ilike(users.email, pattern), ilike(users.name, pattern)),
+  ];
+
+  if (excludeIds.length > 0) {
+    conditions.push(notInArray(users.id, excludeIds));
+  }
+
+  const rows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+    })
+    .from(users)
+    .where(and(...conditions))
+    .orderBy(users.email)
+    .limit(10);
+
+  return rows;
+}
+
 export async function addProjectMember(
   repositoryId: string,
   actorId: string,
   systemRole: SystemRole,
-  input: { email: string; role: RepositoryRole; locale?: Locale },
+  input: { email?: string; userId?: string; role: RepositoryRole },
 ): Promise<
-  | { type: "user"; userId: string; email: string; role: RepositoryRole; emailSent: boolean }
-  | { type: "invite"; inviteId: string; email: string; role: RepositoryRole; emailSent: boolean }
-  | { error: "not_found" | "forbidden" | "invalid_role" | "already_member" }
+  | { type: "user"; userId: string; email: string; role: RepositoryRole }
+  | { error: "not_found" | "forbidden" | "invalid_role" | "already_member" | "user_not_found" }
 > {
   const db = getDb();
   const [project] = await db
@@ -141,89 +203,50 @@ export async function addProjectMember(
     return { error: "invalid_role" };
   }
 
-  const email = input.email.trim().toLowerCase();
-  const existingUser = await findUserByEmail(email);
+  let existingUser: { id: string; email: string } | null = null;
 
-  if (existingUser) {
-    const existingRole = await getRepositoryMemberRole(
-      existingUser.id,
-      repositoryId,
-    );
-    if (existingRole) {
-      return { error: "already_member" };
-    }
-
-    await db.insert(repositoryMembers).values({
-      repositoryId,
-      userId: existingUser.id,
-      role: input.role,
-    });
-
-    return {
-      type: "user",
-      userId: existingUser.id,
-      email: existingUser.email,
-      role: input.role,
-      emailSent: false,
-    };
+  if (input.userId) {
+    const [user] = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(and(eq(users.id, input.userId), isNull(users.deletedAt)))
+      .limit(1);
+    existingUser = user ?? null;
+  } else if (input.email?.trim()) {
+    const user = await findUserByEmail(input.email);
+    existingUser = user ? { id: user.id, email: user.email } : null;
   }
 
-  const [pendingInvite] = await db
-    .select({ id: repositoryInvites.id })
-    .from(repositoryInvites)
-    .where(
-      and(
-        eq(repositoryInvites.repositoryId, repositoryId),
-        eq(repositoryInvites.email, email),
-        isNull(repositoryInvites.acceptedAt),
-      ),
-    )
-    .limit(1);
+  if (!existingUser) {
+    return { error: "user_not_found" };
+  }
 
-  if (pendingInvite) {
+  const existingRole = await getRepositoryMemberRole(
+    existingUser.id,
+    repositoryId,
+  );
+  if (existingRole) {
     return { error: "already_member" };
   }
 
-  const [invite] = await db
-    .insert(repositoryInvites)
-    .values({
-      repositoryId,
-      email,
-      role: input.role,
-      invitedBy: actorId,
-    })
-    .returning({ id: repositoryInvites.id });
+  await db.insert(repositoryMembers).values({
+    repositoryId,
+    userId: existingUser.id,
+    role: input.role,
+  });
 
-  if (!invite) {
-    throw new Error("Failed to create invite");
-  }
-
-  const [inviter] = await db
-    .select({ name: users.name })
-    .from(users)
-    .where(eq(users.id, actorId))
-    .limit(1);
-
-  const locale = input.locale ?? "en";
-  const t = await getServerTranslator(locale, "emails");
-
-  const sendResult = await trySendEmail(
-    await repositoryInviteEmail({
-      to: email,
-      repositoryName: project.name,
-      role: input.role,
-      inviterName: inviter?.name ?? t("repositoryInvite.defaultInviterName"),
-      loginUrl: buildLoginUrl(),
-      locale,
-    }),
-  );
+  await writeAuditLog({
+    userId: actorId,
+    action: "member.add",
+    resource: `repository:${project.name}/user:${existingUser.id}:${input.role}`,
+    repositoryId,
+  });
 
   return {
-    type: "invite",
-    inviteId: invite.id,
-    email,
+    type: "user",
+    userId: existingUser.id,
+    email: existingUser.email,
     role: input.role,
-    emailSent: sendResult.sent,
   };
 }
 
@@ -275,6 +298,7 @@ export async function updateRepositoryMemberRole(
     userId: actorId,
     action: "member.role_change",
     resource: `repository:${project.name}/user:${targetUserId}:${targetRole}->${role}`,
+    repositoryId,
   });
 
   return { ok: true };
@@ -322,6 +346,7 @@ export async function removeProjectMember(
     userId: actorId,
     action: "member.remove",
     resource: `repository:${project.name}/user:${targetUserId}:${targetRole}`,
+    repositoryId,
   });
 
   return { ok: true };
@@ -373,6 +398,7 @@ export async function removeProjectInvite(
     userId: actorId,
     action: "member.invite_remove",
     resource: `repository:${project.name}/invite:${invite.email}`,
+    repositoryId,
   });
 
   return { ok: true };

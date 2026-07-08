@@ -193,6 +193,7 @@ export async function upsertImageSettings(
     userId: actorId,
     action: "image.settings.update",
     resource: `repository:${access.repository.name}/image:${normalizedName}`,
+    repositoryId,
   });
 
   return toImageSettings(access.repository.isPublic, anonymousPull);

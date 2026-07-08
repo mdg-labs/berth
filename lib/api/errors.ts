@@ -16,6 +16,7 @@ export const API_ERROR_CODES = [
   "repository_not_found",
   "request_failed",
   "server_error",
+  "user_not_found",
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

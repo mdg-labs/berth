@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { apiError } from "@/lib/api/errors";
+import { writeAuditLog } from "@/lib/audit/log";
 import { acceptPendingInvitesForEmail } from "@/lib/auth/invites";
 import {
   findUserByEmail,
@@ -59,6 +60,13 @@ export async function POST(request: NextRequest) {
 
   const sessionId = await createSession(user.id);
   const deletion = getUserDeletionState(user.deletedAt);
+
+  await writeAuditLog({
+    userId: user.id,
+    action: "auth.login",
+    resource: `user:${user.email}`,
+    clientIp,
+  });
 
   return NextResponse.json(
     {

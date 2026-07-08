@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { createLocalUser, listUsers } from "@/lib/admin/users";
+import { listPendingUserInvites } from "@/lib/admin/invites";
 import { getUserDeleteGracePeriodDays } from "@/lib/users/config";
 import { isSessionSystemAdmin } from "@/lib/admin/guard";
 import { apiError } from "@/lib/api/errors";
@@ -28,9 +29,10 @@ export async function GET(request: NextRequest) {
     return apiError("forbidden", "System admin required", 403);
   }
 
-  const users = await listUsers();
+  const [users, invites] = await Promise.all([listUsers(), listPendingUserInvites()]);
   return NextResponse.json({
     users,
+    invites,
     meta: { deleteGracePeriodDays: getUserDeleteGracePeriodDays() },
   });
 }
@@ -76,7 +78,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { user: result.user, emailSent: result.emailSent },
+    {
+      user: result.user,
+      ...(result.emailStatus !== undefined
+        ? { emailStatus: result.emailStatus }
+        : {}),
+    },
     { status: 201 },
   );
 }

@@ -24,6 +24,8 @@ import { Label } from "@/components/ui/label";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { apiFetch } from "@/lib/api/client";
+import type { EmailDeliveryStatus } from "@/lib/email/send";
+import { emailDeliveryToast } from "@/lib/email/delivery-feedback";
 import { formatApiError } from "@/lib/i18n/api-error";
 import { toastManager } from "@/components/ui/toast";
 
@@ -35,7 +37,7 @@ type CreateUserDialogProps = {
 
 type CreateUserResponse = {
   user: AdminUserRow;
-  emailSent?: boolean;
+  emailStatus?: EmailDeliveryStatus;
 };
 
 function resetFormState(
@@ -77,15 +79,35 @@ export function CreateUserDialog({
       }),
     onSuccess: (data) => {
       const hadPassword = Boolean(password.trim());
-      toastManager.add({
-        type: "success",
-        title: t("toast.success"),
-        description: hadPassword
-          ? t("toast.withPassword", { email })
-          : data.emailSent
-            ? t("toast.setPasswordEmail", { email })
-            : t("toast.mustChangePassword", { email }),
-      });
+      if (hadPassword) {
+        toastManager.add({
+          type: "success",
+          title: t("toast.success"),
+          description: t("toast.withPassword", { email }),
+        });
+      } else if (data.emailStatus) {
+        const toast = emailDeliveryToast(data.emailStatus, {
+          sent: {
+            title: t("toast.success"),
+            description: t("toast.setPasswordEmail", { email }),
+          },
+          not_configured: {
+            title: t("toast.setPasswordEmailNoSmtp"),
+            description: t("toast.setPasswordEmailNoSmtpDescription", { email }),
+          },
+          failed: {
+            title: t("toast.setPasswordEmailFailed"),
+            description: t("toast.setPasswordEmailFailedDescription", { email }),
+          },
+        });
+        toastManager.add(toast);
+      } else {
+        toastManager.add({
+          type: "success",
+          title: t("toast.success"),
+          description: t("toast.withPassword", { email }),
+        });
+      }
       resetFormState(setEmail, setName, setPassword, setSystemRole);
       onOpenChange(false);
       onCreated();

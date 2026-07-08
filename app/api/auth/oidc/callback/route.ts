@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { apiError } from "@/lib/api/errors";
+import { writeAuditLog } from "@/lib/audit/log";
 import { acceptPendingInvitesForEmail } from "@/lib/auth/invites";
+import { getClientIp } from "@/lib/auth/credentials";
 import { upsertOidcUser } from "@/lib/auth/oidc-user";
 import { getOidcConfiguration, oidcClient } from "@/lib/oidc/client";
 import {
@@ -90,6 +92,13 @@ export async function GET(request: NextRequest) {
   });
 
   const sessionId = await createSession(user.id);
+
+  await writeAuditLog({
+    userId: user.id,
+    action: "auth.oidc_login",
+    resource: `user:${user.email}`,
+    clientIp: getClientIp(request),
+  });
 
   const redirectPath =
     authState === "pending_deletion" ? "/reactivate-account" : "/repositories";

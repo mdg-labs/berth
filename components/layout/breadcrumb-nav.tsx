@@ -2,8 +2,6 @@
 
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Fragment } from "react";
 
@@ -15,6 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Link, usePathname } from "@/lib/i18n/navigation";
 import { buildBreadcrumbItems } from "@/lib/navigation/breadcrumbs";
 
 export function BreadcrumbNav() {

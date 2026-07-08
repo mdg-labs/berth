@@ -4,6 +4,7 @@ import { desc, eq } from "drizzle-orm";
 
 import { writeAuditLog } from "@/lib/audit/log";
 import { sendSetPasswordEmailForUser } from "@/lib/auth/password-reset";
+import type { EmailDeliveryStatus } from "@/lib/email/send";
 import { findUserByEmail, hashPassword } from "@/lib/auth/credentials";
 import { generateBootstrapPassword } from "@/lib/bootstrap/admin";
 import { getDb } from "@/lib/db";
@@ -86,7 +87,7 @@ export async function createLocalUser(
     locale?: Locale;
   },
 ): Promise<
-  | { user: AdminUserSummary; emailSent: boolean }
+  | { user: AdminUserSummary; emailStatus?: EmailDeliveryStatus }
   | { error: "email_taken" | "invalid_input" }
 > {
   const email = input.email.trim().toLowerCase();
@@ -132,10 +133,13 @@ export async function createLocalUser(
       created.id,
       input.locale,
     );
-    return { user: toSummary(created), emailSent: emailResult.emailSent };
+    return {
+      user: toSummary(created),
+      emailStatus: emailResult.emailStatus,
+    };
   }
 
-  return { user: toSummary(created), emailSent: false };
+  return { user: toSummary(created) };
 }
 
 export async function getUserById(userId: string): Promise<AdminUserSummary | null> {

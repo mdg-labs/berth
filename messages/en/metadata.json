@@ -6,5 +6,9 @@
   "publicCatalog": {
     "title": "Berth — Public images",
     "description": "Browse publicly available container images on this registry."
+  },
+  "publicImageDetail": {
+    "title": "{image} — Berth",
+    "description": "Pull tags for {image} from this registry."
   }
 }

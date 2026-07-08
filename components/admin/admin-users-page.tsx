@@ -29,8 +29,19 @@ export type AdminUserRow = {
   purgesAt: string | null;
 };
 
+export type AdminInviteRow = {
+  id: string;
+  email: string;
+  name: string;
+  systemRole: "admin" | "user";
+  invitedAt: string;
+  expiresAt: string;
+  expired: boolean;
+};
+
 type UsersResponse = {
   users: AdminUserRow[];
+  invites: AdminInviteRow[];
   meta: { deleteGracePeriodDays: number };
 };
 
@@ -86,6 +97,7 @@ export function AdminUsersPage() {
       {usersQuery.data ? (
         <AdminUsersTable
           users={usersQuery.data.users}
+          invites={usersQuery.data.invites}
           deleteGracePeriodDays={usersQuery.data.meta.deleteGracePeriodDays}
         />
       ) : null}

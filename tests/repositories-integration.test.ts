@@ -77,7 +77,7 @@ describe("repositories and members integration", () => {
     expect(body.error.code).toBe("repository_not_found");
   });
 
-  it("creates project and lists members with pending invite", async () => {
+  it("rejects adding a non-existent user to a repository", async () => {
     if (!credentialsReady) {
       return;
     }
@@ -104,7 +104,7 @@ describe("repositories and members integration", () => {
     expect(created.repository.name).toBe(repositoryName);
     expect(created.repository.role).toBe("admin");
 
-    const addInvite = await fetch(
+    const addMember = await fetch(
       `${INTEGRATION_BASE_URL}/api/repositories/${created.repository.id}/members`,
       {
         method: "POST",
@@ -113,31 +113,17 @@ describe("repositories and members integration", () => {
           ...cookieHeader(SESSION_COOKIE, sessionId),
         },
         body: JSON.stringify({
-          email: "pending-invite@example.com",
+          email: "nonexistent-user@example.com",
           role: "developer",
         }),
       },
     );
 
-    expect(addInvite.status).toBe(201);
-    const inviteBody = (await addInvite.json()) as {
-      member: { type: string; email: string };
+    expect(addMember.status).toBe(404);
+    const errorBody = (await addMember.json()) as {
+      error: { code: string };
     };
-    expect(inviteBody.member.type).toBe("invite");
-
-    const members = await fetch(
-      `${INTEGRATION_BASE_URL}/api/repositories/${created.repository.id}/members`,
-      { headers: cookieHeader(SESSION_COOKIE, sessionId) },
-    );
-
-    expect(members.status).toBe(200);
-    const membersBody = (await members.json()) as {
-      members: { type: string; email: string }[];
-    };
-    const pending = membersBody.members.find(
-      (entry) => entry.email === "pending-invite@example.com",
-    );
-    expect(pending?.type).toBe("invite");
+    expect(errorBody.error.code).toBe("user_not_found");
   });
 
   it("token scopes differ by project role", async () => {

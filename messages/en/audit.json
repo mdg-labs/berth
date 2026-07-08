@@ -1,0 +1,37 @@
+{
+  "title": "Audit log",
+  "description": "Review security-relevant actions across the platform.",
+  "repositoryTitle": "Repository audit log",
+  "repositoryDescription": "Actions performed in this repository.",
+  "backToUsers": "Back to users",
+  "searchPlaceholder": "Search actions, resources, or actors…",
+  "clearFilters": "Clear filters",
+  "fromDate": "From",
+  "toDate": "To",
+  "allActions": "All actions",
+  "actorPlaceholder": "Filter actor…",
+  "resourcePlaceholder": "Filter resource…",
+  "columns": {
+    "timestamp": "Timestamp",
+    "actor": "Actor",
+    "action": "Action",
+    "resource": "Resource",
+    "clientIp": "Client IP"
+  },
+  "actor": {
+    "system": "System",
+    "anonymous": "Anonymous",
+    "unknown": "Unknown"
+  },
+  "empty": {
+    "title": "No audit entries",
+    "description": "No events match the current filters."
+  },
+  "loadError": "Failed to load audit log.",
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "page": "Page {page} of {totalPages}",
+    "previous": "Previous",
+    "next": "Next"
+  }
+}

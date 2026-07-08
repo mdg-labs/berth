@@ -10,11 +10,13 @@ import {
 const t: NavigationTranslator = (key) => {
   const labels: Record<Parameters<NavigationTranslator>[0], string> = {
     repositories: "Repositories",
-    settings: "Settings",
+    settings: "Repository settings",
+    imageSettings: "Settings",
     images: "Images",
     admin: "Admin",
     users: "Users",
     garbageCollection: "Garbage collection",
+    auditLog: "Audit log",
     profile: "Profile",
     reactivateAccount: "Reactivate account",
   };
@@ -40,7 +42,15 @@ describe("buildBreadcrumbItems", () => {
     expect(buildBreadcrumbItems("/r/demo-app/settings", t)).toEqual([
       { label: "Repositories", href: "/repositories" },
       { label: "demo-app", href: "/r/demo-app" },
-      { label: "Settings" },
+      { label: "Repository settings" },
+    ]);
+  });
+
+  it("maps repository settings for my-repo", () => {
+    expect(buildBreadcrumbItems("/r/my-repo/settings", t)).toEqual([
+      { label: "Repositories", href: "/repositories" },
+      { label: "my-repo", href: "/r/my-repo" },
+      { label: "Repository settings" },
     ]);
   });
 
@@ -82,6 +92,13 @@ describe("buildBreadcrumbItems", () => {
       { label: "Admin", href: "/admin" },
       { label: "Users", href: "/admin" },
       { label: "user-123" },
+    ]);
+  });
+
+  it("maps admin audit route", () => {
+    expect(buildBreadcrumbItems("/admin/audit", t)).toEqual([
+      { label: "Admin", href: "/admin" },
+      { label: "Audit log" },
     ]);
   });
 

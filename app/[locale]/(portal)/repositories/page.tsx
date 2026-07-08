@@ -3,13 +3,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SettingsIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
 import { apiFetch } from "@/lib/api/client";
 import type { RepositorySummary } from "@/lib/api/types";
 import { ErrorAlert } from "@/components/catalog/error-alert";
+import { useAuthUser } from "@/components/providers/auth-guard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +50,7 @@ export default function RepositoriesPage() {
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errorsApi");
   const tRoles = useTranslations("roles.repository");
+  const { data: authData } = useAuthUser();
   const [name, setName] = useState("");
   const [isPublic, setIsPublic] = useState(false);
 
@@ -156,6 +158,21 @@ export default function RepositoriesPage() {
                   <Badge variant="secondary">{t("badges.public")}</Badge>
                 ) : null}
                 {repository.role ? <Badge>{tRoles(repository.role)}</Badge> : null}
+                {authData?.user.systemRole === "admin" ||
+                repository.role === "admin" ? (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("settingsFor", { name: repository.name })}
+                    render={
+                      <Link
+                        href={`/r/${encodeURIComponent(repository.name)}/settings`}
+                      />
+                    }
+                  >
+                    <SettingsIcon className="size-4" />
+                  </Button>
+                ) : null}
               </div>
             </li>
           ))}

@@ -119,22 +119,16 @@ export function PublicCatalogPage() {
         cell: ({ row }) => {
           const { repository, name } = row.original;
           const qualified = `${repository}/${name}`;
-          const nextPath = `/r/${encodeURIComponent(repository)}/i/${imagePathSegments(name)}`;
+          const detailPath = `/images/${encodeURIComponent(repository)}/${imagePathSegments(name)}`;
           return (
             <Link
-              href={`/login?next=${encodeURIComponent(nextPath)}`}
+              href={detailPath}
               className="font-mono text-sm transition-colors hover:text-primary"
             >
               {qualified}
             </Link>
           );
         },
-      }),
-      columnHelper.accessor("repository", {
-        header: t("columns.repository"),
-        cell: (info) => (
-          <span className="text-muted-foreground">{info.getValue()}</span>
-        ),
       }),
       columnHelper.accessor("tagCount", {
         header: t("columns.tags"),

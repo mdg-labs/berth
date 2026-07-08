@@ -4,6 +4,7 @@
 
 import { useTranslations } from "next-intl";
 import {
+  ClipboardListIcon,
   FolderKanbanIcon,
   PackageIcon,
   SettingsIcon,
@@ -61,6 +62,7 @@ export function PortalSidebar() {
   );
   const isAdminUsersActive = pathname === "/admin";
   const isAdminGcActive = pathname === "/admin/gc";
+  const isAdminAuditActive = pathname === "/admin/audit";
 
   return (
     <Sidebar collapsible="icon">
@@ -152,6 +154,16 @@ export function PortalSidebar() {
                   >
                     <Trash2Icon />
                     <span>{t("garbageCollection")}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={isAdminAuditActive}
+                    render={<Link href="/admin/audit" />}
+                    tooltip={t("auditLog")}
+                  >
+                    <ClipboardListIcon />
+                    <span>{t("auditLog")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

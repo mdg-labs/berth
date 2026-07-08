@@ -2,8 +2,9 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 
+import { writeAuditLog } from "@/lib/audit/log";
 import { getDb } from "@/lib/db";
-import { repositoryInvites, repositoryMembers } from "@/lib/db/schema";
+import { repositoryInvites, repositoryMembers, repositories } from "@/lib/db/schema";
 
 export async function acceptPendingInvitesForEmail(
   userId: string,
@@ -47,6 +48,19 @@ export async function acceptPendingInvitesForEmail(
       .update(repositoryInvites)
       .set({ acceptedAt: new Date() })
       .where(eq(repositoryInvites.id, invite.id));
+
+    const [repository] = await db
+      .select({ name: repositories.name })
+      .from(repositories)
+      .where(eq(repositories.id, invite.repositoryId))
+      .limit(1);
+
+    await writeAuditLog({
+      userId,
+      action: "member.invite_accept",
+      resource: `repository:${repository?.name ?? invite.repositoryId}/user:${normalizedEmail}:${invite.role}`,
+      repositoryId: invite.repositoryId,
+    });
 
     accepted += 1;
   }

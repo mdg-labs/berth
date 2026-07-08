@@ -2,12 +2,14 @@
 
 import { and, eq, isNull } from "drizzle-orm";
 
+import { writeAuditLog } from "@/lib/audit/log";
 import { findUserByEmail, hashPassword } from "@/lib/auth/credentials";
 import type { Locale } from "@/lib/i18n/config";
 import { getDb } from "@/lib/db";
 import { passwordResetTokens, users } from "@/lib/db/schema";
 import { getPasswordResetTtlHours } from "@/lib/email/config";
-import { trySendEmail } from "@/lib/email/send";
+import { trySendEmail, toEmailDeliveryStatus } from "@/lib/email/send";
+import type { EmailDeliveryStatus } from "@/lib/email/send";
 import {
   buildPasswordResetUrl,
   passwordResetEmail,
@@ -151,13 +153,25 @@ export async function completePasswordReset(
     .set({ usedAt: new Date() })
     .where(eq(passwordResetTokens.id, row.id));
 
+  const [user] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, row.userId))
+    .limit(1);
+
+  await writeAuditLog({
+    userId: row.userId,
+    action: "auth.password_reset",
+    resource: `user:${user?.email ?? row.userId}`,
+  });
+
   return { ok: true };
 }
 
 export async function sendSetPasswordEmailForUser(
   userId: string,
   locale: Locale = "en",
-): Promise<{ emailSent: boolean }> {
+): Promise<{ emailStatus: EmailDeliveryStatus }> {
   const db = getDb();
   const [user] = await db
     .select({
@@ -170,7 +184,7 @@ export async function sendSetPasswordEmailForUser(
     .limit(1);
 
   if (!user || !user.passwordHash) {
-    return { emailSent: false };
+    return { emailStatus: "not_configured" };
   }
 
   const rawToken = generateToken();
@@ -192,5 +206,5 @@ export async function sendSetPasswordEmailForUser(
     }),
   );
 
-  return { emailSent: result.sent };
+  return { emailStatus: toEmailDeliveryStatus(result) };
 }

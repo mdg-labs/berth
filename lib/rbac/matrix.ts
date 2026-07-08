@@ -53,6 +53,7 @@ export const RBAC_MATRIX: {
   push: boolean;
   delete: boolean;
   manageMembers: boolean;
+  manageSettings: boolean;
   deleteRepository: boolean;
 }[] = [
   {
@@ -61,6 +62,7 @@ export const RBAC_MATRIX: {
     push: false,
     delete: false,
     manageMembers: false,
+    manageSettings: false,
     deleteRepository: false,
   },
   {
@@ -69,6 +71,7 @@ export const RBAC_MATRIX: {
     push: true,
     delete: false,
     manageMembers: false,
+    manageSettings: false,
     deleteRepository: false,
   },
   {
@@ -77,6 +80,7 @@ export const RBAC_MATRIX: {
     push: true,
     delete: true,
     manageMembers: false,
+    manageSettings: false,
     deleteRepository: false,
   },
   {
@@ -85,6 +89,16 @@ export const RBAC_MATRIX: {
     push: true,
     delete: true,
     manageMembers: true,
+    manageSettings: true,
     deleteRepository: true,
   },
 ];
+
+export const RBAC_MATRIX_COLUMNS = [
+  "pull",
+  "push",
+  "delete",
+  "manageMembers",
+  "manageSettings",
+  "deleteRepository",
+] as const satisfies ReadonlyArray<keyof (typeof RBAC_MATRIX)[number]>;

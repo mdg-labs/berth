@@ -10,6 +10,7 @@ import {
 } from "@/lib/registry/client/manifest";
 import { getTagSiblings } from "@/lib/registry/client/tags";
 import { registryJson } from "@/lib/registry/client/fetch";
+import { getRepositoryByName } from "@/lib/rbac/roles";
 
 type TagsPage = {
   tags?: string[];
@@ -56,10 +57,12 @@ export async function deleteTag(
 
   await deleteManifestReference(fullName, tag, token);
 
+  const repository = await getRepositoryByName(repositoryName);
   await writeAuditLog({
     userId: user.id,
     action: "tag.delete",
     resource: `repository:${repositoryName}/${imageName}:tag:${tag}`,
+    repositoryId: repository?.id ?? null,
   });
 
   return { tag, siblings };
@@ -103,10 +106,12 @@ export async function bulkDeleteTags(
   }
 
   if (deletedTags.length > 0) {
+    const repository = await getRepositoryByName(repositoryName);
     await writeAuditLog({
       userId: user.id,
       action: "tag.bulk_delete",
       resource: `repository:${repositoryName}/${imageName}:tags:${deletedTags.join(",")}`,
+      repositoryId: repository?.id ?? null,
     });
   }
 
@@ -143,10 +148,12 @@ export async function deleteImage(
   }
 
   if (allTags.length > 0) {
+    const repository = await getRepositoryByName(repositoryName);
     await writeAuditLog({
       userId: user.id,
       action: "repository.delete",
       resource: `repository:${repositoryName}/${imageName}`,
+      repositoryId: repository?.id ?? null,
     });
   }
 

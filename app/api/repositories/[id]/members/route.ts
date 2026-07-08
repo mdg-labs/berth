@@ -5,7 +5,6 @@ import type { NextRequest } from "next/server";
 
 import { apiError } from "@/lib/api/errors";
 import { addProjectMember, listProjectMembers } from "@/lib/members/service";
-import { getLocaleFromRequest } from "@/lib/i18n/request-locale";
 import type { RepositoryRole } from "@/lib/rbac/types";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 
@@ -15,6 +14,7 @@ type RouteContext = {
 
 type AddMemberBody = {
   email?: string;
+  userId?: string;
   role?: RepositoryRole;
 };
 
@@ -52,14 +52,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return apiError("bad_request", "Invalid JSON body", 400);
   }
 
-  if (!body.email?.trim() || !body.role) {
-    return apiError("bad_request", "Email and role are required", 400);
+  if ((!body.email?.trim() && !body.userId) || !body.role) {
+    return apiError("bad_request", "User and role are required", 400);
   }
 
   const result = await addProjectMember(id, user.id, user.systemRole, {
     email: body.email,
+    userId: body.userId,
     role: body.role,
-    locale: getLocaleFromRequest(request),
   });
 
   if ("error" in result) {
@@ -72,11 +72,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (result.error === "invalid_role") {
       return apiError("bad_request", "Invalid member role", 400);
     }
-    return apiError("conflict", "Member or invite already exists", 409);
+    if (result.error === "user_not_found") {
+      return apiError(
+        "user_not_found",
+        "No user found with this email. Create the user in Admin first.",
+        404,
+      );
+    }
+    return apiError("conflict", "Member already exists", 409);
   }
 
-  return NextResponse.json(
-    { member: result, emailSent: result.emailSent },
-    { status: 201 },
-  );
+  return NextResponse.json({ member: result }, { status: 201 });
 }

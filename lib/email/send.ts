@@ -14,6 +14,20 @@ import {
 } from "./config";
 import { EmailNotConfiguredError, type EmailMessage } from "./types";
 
+export type EmailDeliveryStatus = "sent" | "not_configured" | "failed";
+
+export type TrySendEmailResult =
+  | { sent: true }
+  | { sent: false; reason: "not_configured" | "failed" };
+
+export function toEmailDeliveryStatus(result: TrySendEmailResult): EmailDeliveryStatus {
+  if (result.sent) {
+    return "sent";
+  }
+
+  return result.reason === "not_configured" ? "not_configured" : "failed";
+}
+
 let transport: Mail | null = null;
 
 function getTransport(): Mail {
@@ -57,7 +71,7 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
 
 export async function trySendEmail(
   message: EmailMessage,
-): Promise<{ sent: true } | { sent: false; reason: "not_configured" | "failed" }> {
+): Promise<TrySendEmailResult> {
   if (!isEmailConfigured()) {
     return { sent: false, reason: "not_configured" };
   }

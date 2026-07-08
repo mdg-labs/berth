@@ -15,6 +15,13 @@
       "when": 1783438284254,
       "tag": "0001_dapper_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783518898819,
+      "tag": "0002_glorious_jazinda",
+      "breakpoints": true
     }
   ]
 }

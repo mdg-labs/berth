@@ -25,24 +25,38 @@
   },
   "members": {
     "title": "Members",
-    "description": "Add collaborators by email and assign repository roles.",
+    "description": "Add existing users to this repository and assign roles. New users must be created in Admin first.",
     "pendingAlert": {
       "title": "Pending invites need attention",
       "description": "This invite stays pending until the user signs in with a verified email address. If they logged in via OIDC without email_verified, a system admin must link or remove the invite manually."
     },
-    "emailLabel": "Email",
-    "emailPlaceholder": "teammate@example.com",
+    "userLabel": "User",
+    "userPlaceholder": "Search by email or name…",
+    "searchMinLength": "Type at least 2 characters to search.",
+    "searching": "Searching…",
+    "noUsersFound": "No matching users found.",
+    "createUserHint": "Create the user in <adminLink>Admin → Users</adminLink> first, then add them here.",
+    "createUserHintNoAccess": "Ask a system admin to create the user in Admin → Users first.",
+    "selectUserRequired": "Select a user from the search results.",
     "roleLabel": "Role",
     "addMember": "Add member",
     "loading": "Loading members…",
     "empty": "No members yet.",
+    "table": {
+      "email": "Email",
+      "name": "Name",
+      "role": "Role",
+      "status": "Status",
+      "actions": "Actions"
+    },
     "pending": "Pending",
+    "active": "Active",
+    "accountDeleting": "Account deleting",
+    "joinedSince": "Joined {date}",
     "pendingSince": "Pending invite since {date}",
     "removeMember": "Remove {email}",
     "toast": {
       "added": "Member added",
-      "inviteSent": "Invite email sent.",
-      "inviteNoSmtp": "Invite created, but SMTP is not configured.",
       "memberAdded": "The member was added.",
       "addError": "Failed to add member",
       "roleUpdated": "Role updated",
@@ -52,6 +66,22 @@
       "inviteRemoved": "Invite removed",
       "inviteRemoveError": "Failed to remove invite"
     }
+  },
+  "rolesMatrix": {
+    "title": "Role permissions",
+    "description": "What each repository role can do in this registry.",
+    "columns": {
+      "role": "Role",
+      "pull": "Pull",
+      "push": "Push",
+      "delete": "Delete",
+      "manageMembers": "Members",
+      "manageSettings": "Settings",
+      "deleteRepository": "Delete repo"
+    },
+    "allowed": "Allowed",
+    "denied": "Not allowed",
+    "systemAdminNote": "System administrators can perform any action regardless of repository role."
   },
   "repositoryDanger": {
     "title": "Danger zone",

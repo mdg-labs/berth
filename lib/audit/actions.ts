@@ -1,0 +1,35 @@
+// Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
+
+export const AUDIT_ACTIONS = [
+  "account.update",
+  "auth.login",
+  "auth.logout",
+  "auth.oidc_login",
+  "auth.password_change",
+  "auth.password_reset",
+  "image.settings.update",
+  "member.add",
+  "member.invite_accept",
+  "member.invite_remove",
+  "member.remove",
+  "member.role_change",
+  "registry.manifest.push",
+  "repository.create",
+  "repository.delete",
+  "repository.force_delete",
+  "repository.settings.update",
+  "repository.update",
+  "tag.bulk_delete",
+  "tag.delete",
+  "user.create",
+  "user.hard_delete",
+  "user.invite",
+  "user.invite.accept",
+  "user.invite.resend",
+  "user.reactivate",
+  "user.reset_password",
+  "user.soft_delete",
+  "user.update",
+] as const;
+
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];

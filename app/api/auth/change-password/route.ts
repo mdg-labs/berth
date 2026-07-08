@@ -5,8 +5,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { apiError } from "@/lib/api/errors";
+import { writeAuditLog } from "@/lib/audit/log";
 import {
   findUserByEmail,
+  getClientIp,
   hashPassword,
   verifyPassword,
 } from "@/lib/auth/credentials";
@@ -75,6 +77,13 @@ export async function POST(request: NextRequest) {
     .where(eq(users.id, user.id));
 
   const deletion = getUserDeletionState(user.deletedAt ?? null);
+
+  await writeAuditLog({
+    userId: user.id,
+    action: "auth.password_change",
+    resource: `user:${user.email}`,
+    clientIp: getClientIp(request),
+  });
 
   return NextResponse.json({
     user: toAuthUser({

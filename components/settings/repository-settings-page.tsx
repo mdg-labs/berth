@@ -6,8 +6,10 @@ import Link from "next/link";
 import { SettingsIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { RepositoryAuditSection } from "@/components/settings/repository-audit-section";
 import { RepositoryDangerZone } from "@/components/settings/repository-danger-zone";
 import { RepositoryMembersSection } from "@/components/settings/repository-members-section";
+import { RepositoryRolesMatrix } from "@/components/settings/repository-roles-matrix";
 import { RepositoryVisibilitySection } from "@/components/settings/repository-visibility-section";
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { Button } from "@/components/ui/button";
@@ -79,6 +81,8 @@ export function RepositorySettingsPage({ repositoryName }: RepositorySettingsPag
         isPublic={repository.isPublic}
       />
       <RepositoryMembersSection repositoryId={repository.id} />
+      <RepositoryRolesMatrix />
+      <RepositoryAuditSection repositoryId={repository.id} />
       <RepositoryDangerZone repositoryId={repository.id} repositoryName={repository.name} />
     </div>
   );

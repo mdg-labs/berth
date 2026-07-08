@@ -38,6 +38,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   return NextResponse.json({
     invite: result.invite,
-    emailSent: result.emailSent,
+    emailStatus: result.emailStatus,
   });
 }

@@ -6,10 +6,12 @@ export type NavigationTranslator = (
   key:
     | "repositories"
     | "settings"
+    | "imageSettings"
     | "images"
     | "admin"
     | "users"
     | "garbageCollection"
+    | "auditLog"
     | "profile"
     | "reactivateAccount",
 ) => string;
@@ -94,7 +96,7 @@ function buildRepositoryBreadcrumbs(
       const imageName = imageSegments.slice(0, -1).join("/");
       const imageHref = `/r/${encodeURIComponent(repository)}/i/${imagePathSegments(imageName)}`;
       items.push({ label: imageName, href: imageHref });
-      items.push({ label: t("settings") });
+      items.push({ label: t("imageSettings") });
       return items;
     }
 
@@ -158,6 +160,11 @@ export function buildBreadcrumbItems(
 
     if (segments[1] === "gc") {
       items.push({ label: t("garbageCollection") });
+      return items;
+    }
+
+    if (segments[1] === "audit") {
+      items.push({ label: t("auditLog") });
       return items;
     }
 

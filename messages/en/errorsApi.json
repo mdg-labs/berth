@@ -12,5 +12,6 @@
   "repository_not_found": "The repository was not found or you do not have access.",
   "request_failed": "The request failed. Try again.",
   "server_error": "Something went wrong on the server. Try again later.",
+  "user_not_found": "No user found with this email. Create the user in Admin first.",
   "generic": "Something went wrong. Try again."
 }

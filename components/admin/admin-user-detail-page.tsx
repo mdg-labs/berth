@@ -38,6 +38,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatApiError } from "@/lib/i18n/api-error";
+import type { EmailDeliveryStatus } from "@/lib/email/send";
+import { emailDeliveryToast } from "@/lib/email/delivery-feedback";
 import { formatDeletionCountdown } from "@/lib/users/presentation";
 import { toastManager } from "@/components/ui/toast";
 
@@ -113,20 +115,28 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
 
   const sendResetEmailMutation = useMutation({
     mutationFn: () =>
-      apiFetch<{ emailSent: boolean }>(`/api/admin/users/${userId}`, {
+      apiFetch<{ emailStatus: EmailDeliveryStatus }>(`/api/admin/users/${userId}`, {
         method: "PATCH",
         body: { sendResetEmail: true },
       }),
     onSuccess: (response) => {
-      toastManager.add({
-        type: "success",
-        title: response.emailSent
-          ? t("toast.resetEmailSent")
-          : t("toast.smtpNotConfigured"),
-        description: response.emailSent
-          ? t("toast.resetEmailSentDescription", { email: user?.email ?? "" })
-          : t("toast.smtpNotConfiguredDescription"),
+      const toast = emailDeliveryToast(response.emailStatus, {
+        sent: {
+          title: t("toast.resetEmailSent"),
+          description: t("toast.resetEmailSentDescription", {
+            email: user?.email ?? "",
+          }),
+        },
+        not_configured: {
+          title: t("toast.smtpNotConfigured"),
+          description: t("toast.smtpNotConfiguredDescription"),
+        },
+        failed: {
+          title: t("toast.resetEmailFailed"),
+          description: t("toast.resetEmailFailedDescription"),
+        },
       });
+      toastManager.add(toast);
     },
     onError: (error) => {
       toastManager.add({

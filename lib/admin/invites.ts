@@ -7,7 +7,11 @@ import { findUserByEmail, hashPassword } from "@/lib/auth/credentials";
 import { getDb } from "@/lib/db";
 import { userInvites, users } from "@/lib/db/schema";
 import { getUserInviteTtlHours } from "@/lib/email/config";
-import { trySendEmail } from "@/lib/email/send";
+import {
+  toEmailDeliveryStatus,
+  trySendEmail,
+  type EmailDeliveryStatus,
+} from "@/lib/email/send";
 import { buildUserInviteUrl, userInviteEmail } from "@/lib/email/templates";
 import type { Locale } from "@/lib/i18n/config";
 import {
@@ -26,6 +30,7 @@ export type UserInviteSummary = {
   invitedAt: string;
   expiresAt: string;
   acceptedAt: string | null;
+  expired: boolean;
 };
 
 export type UserInviteValidation =
@@ -54,6 +59,7 @@ function toSummary(row: {
     invitedAt: row.createdAt.toISOString(),
     expiresAt: row.expiresAt.toISOString(),
     acceptedAt: row.acceptedAt?.toISOString() ?? null,
+    expired: isTokenExpired(row.expiresAt),
   };
 }
 
@@ -86,7 +92,7 @@ export async function createUserInvite(
     locale?: Locale;
   },
 ): Promise<
-  | { invite: UserInviteSummary; emailSent: boolean; rawToken: string }
+  | { invite: UserInviteSummary; emailStatus: EmailDeliveryStatus; rawToken: string }
   | { error: "email_taken" | "invite_pending" | "invalid_input" }
 > {
   const email = input.email.trim().toLowerCase();
@@ -143,7 +149,7 @@ export async function createUserInvite(
 
   return {
     invite: toSummary(created),
-    emailSent: sendResult.sent,
+    emailStatus: toEmailDeliveryStatus(sendResult),
     rawToken,
   };
 }
@@ -153,7 +159,7 @@ export async function resendUserInvite(
   inviteId: string,
   locale: Locale = "en",
 ): Promise<
-  | { invite: UserInviteSummary; emailSent: boolean }
+  | { invite: UserInviteSummary; emailStatus: EmailDeliveryStatus }
   | { error: "not_found" | "accepted" | "expired" }
 > {
   const db = getDb();
@@ -205,7 +211,7 @@ export async function resendUserInvite(
 
   return {
     invite: toSummary(updated),
-    emailSent: sendResult.sent,
+    emailStatus: toEmailDeliveryStatus(sendResult),
   };
 }
 

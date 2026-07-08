@@ -23,6 +23,8 @@ import { Label } from "@/components/ui/label";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { apiFetch } from "@/lib/api/client";
+import type { EmailDeliveryStatus } from "@/lib/email/send";
+import { emailDeliveryToast } from "@/lib/email/delivery-feedback";
 import { formatApiError } from "@/lib/i18n/api-error";
 import { toastManager } from "@/components/ui/toast";
 
@@ -38,7 +40,7 @@ type InviteResponse = {
     email: string;
     name: string;
   };
-  emailSent: boolean;
+  emailStatus: EmailDeliveryStatus;
 };
 
 function resetFormState(
@@ -75,13 +77,21 @@ export function InviteUserDialog({
         },
       }),
     onSuccess: (data) => {
-      toastManager.add({
-        type: "success",
-        title: t("toast.success"),
-        description: data.emailSent
-          ? t("toast.emailSent", { email })
-          : t("toast.noSmtp", { email }),
+      const toast = emailDeliveryToast(data.emailStatus, {
+        sent: {
+          title: t("toast.success"),
+          description: t("toast.emailSent", { email }),
+        },
+        not_configured: {
+          title: t("toast.noSmtp"),
+          description: t("toast.noSmtpDescription", { email }),
+        },
+        failed: {
+          title: t("toast.emailFailed"),
+          description: t("toast.emailFailedDescription", { email }),
+        },
       });
+      toastManager.add(toast);
       resetFormState(setEmail, setName, setSystemRole);
       onOpenChange(false);
       onInvited();

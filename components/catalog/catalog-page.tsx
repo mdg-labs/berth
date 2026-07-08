@@ -2,7 +2,7 @@
 
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/lib/i18n/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   DownloadIcon,
@@ -238,16 +238,32 @@ export function CatalogPage({ repositoryName }: CatalogPageProps) {
             .
           </p>
         </div>
-        <InputGroup className="max-w-sm">
-          <InputGroupAddon>
-            <SearchIcon />
-          </InputGroupAddon>
-          <InputGroupInput
-            placeholder={t("searchPlaceholder")}
-            value={search}
-            onChange={(event) => void setSearch(event.target.value)}
-          />
-        </InputGroup>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {canManage ? (
+            <Button
+              variant="outline"
+              className="shrink-0"
+              render={
+                <Link
+                  href={`/r/${encodeURIComponent(repositoryName)}/settings`}
+                />
+              }
+            >
+              <SettingsIcon className="size-4" />
+              {t("repositorySettings")}
+            </Button>
+          ) : null}
+          <InputGroup className="max-w-sm">
+            <InputGroupAddon>
+              <SearchIcon />
+            </InputGroupAddon>
+            <InputGroupInput
+              placeholder={t("searchPlaceholder")}
+              value={search}
+              onChange={(event) => void setSearch(event.target.value)}
+            />
+          </InputGroup>
+        </div>
       </div>
 
       {isLoading ? <CatalogSkeleton /> : null}

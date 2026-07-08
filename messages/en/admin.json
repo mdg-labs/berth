@@ -22,18 +22,22 @@
       "created": "Created"
     },
     "status": {
-      "active": "Active"
+      "active": "Active",
+      "pendingInvitation": "Pending invitation",
+      "expiredInvitation": "Expired"
     },
     "auth": {
       "passwordResetRequired": "Password reset required",
       "local": "Local",
-      "oidc": "OIDC"
+      "oidc": "OIDC",
+      "invitation": "Invitation"
     },
     "actions": {
       "aria": "Actions for {name}",
       "edit": "Edit",
       "reactivate": "Reactivate",
-      "delete": "Delete"
+      "delete": "Delete",
+      "resendInvitation": "Resend invitation"
     },
     "deleteDialog": {
       "title": "Delete {email}?",
@@ -45,7 +49,13 @@
       "reactivated": "User reactivated",
       "reactivateFailed": "Reactivate failed",
       "deleted": "User deleted",
-      "deleteFailed": "Delete failed"
+      "deleteFailed": "Delete failed",
+      "inviteResent": "Invitation email sent",
+      "inviteResentNoSmtp": "SMTP not configured",
+      "inviteResentNoSmtpDescription": "Configure SMTP to send invitation emails.",
+      "inviteResendFailed": "Failed to send invitation email",
+      "inviteResendFailedDescription": "The invitation is still pending. Check SMTP settings and try again.",
+      "inviteResendError": "Resend failed"
     }
   },
   "userDetail": {
@@ -93,6 +103,7 @@
       "resetEmailSentDescription": "A password reset link was sent to {email}.",
       "smtpNotConfiguredDescription": "Configure SMTP to send password reset emails.",
       "resetEmailFailed": "Failed to send reset email",
+      "resetEmailFailedDescription": "Check SMTP settings and try again.",
       "deleted": "User deleted",
       "deleteFailed": "Delete failed",
       "reactivated": "User reactivated",
@@ -113,7 +124,10 @@
       "success": "User created",
       "withPassword": "{email} can sign in with the provided password.",
       "setPasswordEmail": "{email} will receive a set-password email shortly.",
-      "mustChangePassword": "{email} must change password on first login.",
+      "setPasswordEmailNoSmtp": "User created without email",
+      "setPasswordEmailNoSmtpDescription": "{email} must change password on first login. SMTP is not configured.",
+      "setPasswordEmailFailed": "User created, but email failed",
+      "setPasswordEmailFailedDescription": "{email} must change password on first login. Check SMTP settings and send a reset email from the user detail page.",
       "error": "Failed to create user"
     }
   },
@@ -128,7 +142,10 @@
     "toast": {
       "success": "Invite sent",
       "emailSent": "{email} will receive an invite email shortly.",
-      "noSmtp": "{email} was invited, but SMTP is not configured.",
+      "noSmtp": "Invitation saved without email",
+      "noSmtpDescription": "{email} was invited, but SMTP is not configured.",
+      "emailFailed": "Invitation saved, but email failed",
+      "emailFailedDescription": "{email} was invited, but the email could not be sent. Check SMTP settings and resend from the users list.",
       "error": "Failed to send invite"
     }
   },

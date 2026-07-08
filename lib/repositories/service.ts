@@ -214,6 +214,13 @@ export async function createRepository(
     role: "admin",
   });
 
+  await writeAuditLog({
+    userId,
+    action: "repository.create",
+    resource: `repository:${created.name}`,
+    repositoryId: created.id,
+  });
+
   return {
     id: created.id,
     name: created.name,
@@ -308,6 +315,17 @@ export async function updateRepository(
     return { error: "not_found" };
   }
 
+  await writeAuditLog({
+    userId,
+    action: "repository.update",
+    resource: `repository:${updated.name}`,
+    repositoryId: updated.id,
+    metadata: {
+      previousName: existing.name !== updated.name ? existing.name : undefined,
+      isPublic: updated.isPublic,
+    },
+  });
+
   const imageCounts = await countNonEmptyImagesForRepositories(user, [updated.name]);
 
   return {
@@ -362,12 +380,14 @@ export async function deleteRepository(
       userId,
       action: "repository.force_delete",
       resource: `repository:${existing.name}`,
+      repositoryId: existing.id,
     });
   } else {
     await writeAuditLog({
       userId,
       action: "repository.delete",
       resource: `repository:${existing.name}`,
+      repositoryId: existing.id,
     });
   }
 

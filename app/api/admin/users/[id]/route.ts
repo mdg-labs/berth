@@ -12,6 +12,7 @@ import {
 import { isSessionSystemAdmin } from "@/lib/admin/guard";
 import { apiError } from "@/lib/api/errors";
 import { sendSetPasswordEmailForUser } from "@/lib/auth/password-reset";
+import type { EmailDeliveryStatus } from "@/lib/email/send";
 import { getLocaleFromRequest } from "@/lib/i18n/request-locale";
 import type { SystemRole } from "@/lib/rbac/types";
 import { getUserDeleteGracePeriodDays } from "@/lib/users/config";
@@ -94,19 +95,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return apiError("bad_request", "Invalid user input", 400);
   }
 
-  let emailSent = false;
+  let emailStatus: EmailDeliveryStatus | undefined;
   if (body.sendResetEmail) {
     const emailResult = await sendSetPasswordEmailForUser(
       id,
       getLocaleFromRequest(request),
     );
-    emailSent = emailResult.emailSent;
+    emailStatus = emailResult.emailStatus;
   }
 
   return NextResponse.json({
     user: result,
     meta: { deleteGracePeriodDays: getUserDeleteGracePeriodDays() },
-    emailSent,
+    ...(emailStatus !== undefined ? { emailStatus } : {}),
   });
 }
 

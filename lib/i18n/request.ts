@@ -17,6 +17,7 @@ const namespaces = [
   "tags",
   "settings",
   "delete",
+  "audit",
   "public",
   "roles",
   "errorsApi",

@@ -17,9 +17,27 @@
   },
   "columns": {
     "image": "Image",
-    "repository": "Repository",
     "tags": "Tags",
     "pulls": "Pulls"
   },
-  "tagCount": "{count, plural, one {# tag} other {# tags}}"
+  "tagCount": "{count, plural, one {# tag} other {# tags}}",
+  "detail": {
+    "back": "Back to public images",
+    "pullLatest": "Pull latest",
+    "pullLatestDescription": "Recommended tag: {tag}",
+    "copyPullCommand": "Copy pull command",
+    "tags": "Tags",
+    "loadError": "Failed to load image tags",
+    "notFound": "This image is not available for anonymous pull.",
+    "pullCount": "{count, plural, one {# pull} other {# pulls}}",
+    "columns": {
+      "tag": "Tag",
+      "pull": "Pull command"
+    },
+    "toast": {
+      "copyPullCommand": {
+        "title": "Pull command copied"
+      }
+    }
+  }
 }

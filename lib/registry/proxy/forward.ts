@@ -8,6 +8,7 @@ import { getRegistryProxyTimeoutMs } from "@/lib/registry/proxy/config";
 import { getPublicOrigin } from "@/lib/registry/proxy/public-url";
 import { rewriteResponseHeaderValue } from "@/lib/registry/proxy/rewrite";
 import { parseManifestPath } from "@/lib/registry/proxy/parse-manifest-path";
+import { scheduleManifestPushRecording } from "@/lib/audit/push";
 import { schedulePullEventRecording } from "@/lib/pulls/record";
 import { getTokenService } from "@/lib/token/config";
 import {
@@ -164,6 +165,13 @@ export async function proxyRegistryRequest(
     const responseHeaders = copyResponseHeaders(upstream, publicOrigin);
 
     maybeRecordManifestPull(request, upstream, auth.subject);
+
+    scheduleManifestPushRecording({
+      request,
+      upstreamStatus: upstream.status,
+      tokenSubject: auth.subject,
+      digest: upstream.headers.get("docker-content-digest"),
+    });
 
     return new NextResponse(upstream.body, {
       status: upstream.status,

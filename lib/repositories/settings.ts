@@ -100,6 +100,7 @@ export async function updateRepositorySettings(
     userId,
     action: "repository.settings.update",
     resource: `repository:${access.repository.name}`,
+    repositoryId,
   });
 
   return {
