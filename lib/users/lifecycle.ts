@@ -6,6 +6,7 @@ import { writeAuditLog } from "@/lib/audit/log";
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { revokeAllSessionsForUser } from "@/lib/session/store";
+import { revokeAllPersonalAccessTokensForUser } from "@/lib/pat/store";
 import {
   getUserDeleteGracePeriodDays,
   getUserDeleteGracePeriodMs,
@@ -102,6 +103,7 @@ export async function softDeleteUser(
     .where(eq(users.id, targetUserId));
 
   await revokeAllSessionsForUser(targetUserId);
+  await revokeAllPersonalAccessTokensForUser(targetUserId);
 
   await writeAuditLog({
     userId: actorId,

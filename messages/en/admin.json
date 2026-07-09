@@ -149,6 +149,26 @@
       "error": "Failed to send invite"
     }
   },
+  "settings": {
+    "title": "System settings",
+    "description": "Configure instance-wide policies.",
+    "backToUsers": "Back to users",
+    "saveChanges": "Save changes",
+    "pat": {
+      "title": "Personal access tokens",
+      "description": "Control how users can create registry tokens for docker login and CI.",
+      "maxValidityDays": "Max validity (days)",
+      "maxValidityDaysPlaceholder": "No limit",
+      "maxValidityDaysHint": "Leave empty for no cap. Users cannot set an expiry beyond this limit.",
+      "allowNeverExpire": "Allow never-expiring tokens",
+      "allowNeverExpireHint": "When disabled, every token must have an expiration date within the max validity."
+    },
+    "toast": {
+      "successTitle": "Settings saved",
+      "successDescription": "Instance settings were updated.",
+      "errorTitle": "Save failed"
+    }
+  },
   "gc": {
     "title": "Garbage collection",
     "description": "Storage usage and operator runbook for registry GC.",

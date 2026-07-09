@@ -10,6 +10,14 @@ import {
   getClientIp,
   verifyPassword,
 } from "@/lib/auth/credentials";
+import { PAT_PREFIX } from "@/lib/pat/config";
+import { isPasswordAuthAllowedForUser } from "@/lib/pat/password-auth";
+import {
+  recordPatUsageAudit,
+  resolvePersonalAccessToken,
+  touchPersonalAccessTokenLastUsed,
+} from "@/lib/pat/store";
+import type { PatContext } from "@/lib/pat/types";
 import { checkTokenRateLimit } from "@/lib/rate-limit/token";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 import { authorizeTokenAccess } from "@/lib/token/authorize";
@@ -24,7 +32,9 @@ type TokenIdentity = {
     id: string;
     email: string;
     systemRole: "admin" | "user";
-  } | null;
+  };
+  pat?: PatContext;
+  patLastUsedAt?: Date | null;
 };
 
 async function resolveIdentity(
@@ -32,20 +42,49 @@ async function resolveIdentity(
 ): Promise<TokenIdentity | null> {
   const basic = parseBasicAuth(request.headers.get("authorization"));
   if (basic) {
-    const user = await findUserByEmail(basic.username);
-    if (!user || !(await verifyPassword(user.passwordHash, basic.password))) {
+    if (basic.password.startsWith(PAT_PREFIX)) {
+      const resolved = await resolvePersonalAccessToken(basic.password);
+      if (resolved) {
+        return {
+          subject: resolved.user.email,
+          rateLimitKey: `pat:${resolved.pat.id}`,
+          user: resolved.user,
+          pat: resolved.pat,
+          patLastUsedAt: resolved.lastUsedAt,
+        };
+      }
       return null;
     }
 
-    return {
-      subject: user.email,
-      rateLimitKey: user.email,
-      user: {
-        id: user.id,
-        email: user.email,
-        systemRole: user.systemRole,
-      },
-    };
+    const user = await findUserByEmail(basic.username);
+    if (
+      user &&
+      (await isPasswordAuthAllowedForUser(user)) &&
+      (await verifyPassword(user.passwordHash, basic.password))
+    ) {
+      return {
+        subject: user.email,
+        rateLimitKey: user.email,
+        user: {
+          id: user.id,
+          email: user.email,
+          systemRole: user.systemRole,
+        },
+      };
+    }
+
+    const resolvedPat = await resolvePersonalAccessToken(basic.password);
+    if (resolvedPat) {
+      return {
+        subject: resolvedPat.user.email,
+        rateLimitKey: `pat:${resolvedPat.pat.id}`,
+        user: resolvedPat.user,
+        pat: resolvedPat.pat,
+        patLastUsedAt: resolvedPat.lastUsedAt,
+      };
+    }
+
+    return null;
   }
 
   const sessionUser = await getSessionUserFromRequest(request);
@@ -120,12 +159,24 @@ export async function GET(request: NextRequest) {
     return apiError("rate_limited", "Too many token requests", 429);
   }
 
-  const authorized = await authorizeTokenAccess(identity.user, access);
+  const authorized = await authorizeTokenAccess(
+    identity.user,
+    access,
+    identity.pat,
+  );
   if (!authorized.ok) {
     if (authorized.code === "repository_not_found") {
       return apiError("repository_not_found", authorized.message, 403);
     }
     return apiError("forbidden", authorized.message, 403);
+  }
+
+  if (identity.pat) {
+    void touchPersonalAccessTokenLastUsed(
+      identity.pat.id,
+      identity.patLastUsedAt ?? null,
+    );
+    void recordPatUsageAudit(identity.user.id, identity.pat.id, clientIp);
   }
 
   const issued = await issueRegistryToken(

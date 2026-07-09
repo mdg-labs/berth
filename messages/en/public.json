@@ -2,6 +2,7 @@
   "appName": "Berth",
   "tagline": "Self-hosted OCI artifact registry with identity, repositories, and RBAC.",
   "signIn": "Sign in",
+  "github": "GitHub",
   "empty": {
     "title": "No public images yet",
     "description": "Images marked for anonymous pull will appear here. Sign in to manage repositories and publish container images."

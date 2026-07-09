@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -44,11 +45,31 @@ export const users = pgTable("users", {
   oidcSub: varchar("oidc_sub", { length: 255 }),
   systemRole: systemRoleEnum("system_role").notNull().default("user"),
   mustChangePassword: boolean("must_change_password").notNull().default(false),
+  totpSecretEnc: text("totp_secret_enc"),
+  totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
+
+export const mfaBackupCodes = pgTable(
+  "mfa_backup_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    codeHash: text("code_hash").notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("mfa_backup_codes_user_id_idx").on(table.userId),
+  }),
+);
 
 export const repositories = pgTable("repositories", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -214,6 +235,58 @@ export const pullEvents = pgTable(
     repositoryDigestPulledAtIdx: index(
       "pull_events_repository_digest_pulled_at_idx",
     ).on(table.repositoryId, table.digest, table.pulledAt),
+  }),
+);
+
+export const systemSettings = pgTable("system_settings", {
+  id: text("id").primaryKey().default("default"),
+  patMaxValidityDays: integer("pat_max_validity_days"),
+  patAllowNeverExpire: boolean("pat_allow_never_expire").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedBy: uuid("updated_by").references(() => users.id),
+});
+
+export const personalAccessTokens = pgTable(
+  "personal_access_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    tokenPrefix: varchar("token_prefix", { length: 12 }).notNull(),
+    tokenHash: text("token_hash").notNull(),
+    allowPull: boolean("allow_pull").notNull(),
+    allowPush: boolean("allow_push").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    tokenHashIdx: index("personal_access_tokens_token_hash_idx").on(
+      table.tokenHash,
+    ),
+    userIdIdx: index("personal_access_tokens_user_id_idx").on(table.userId),
+  }),
+);
+
+export const personalAccessTokenRepositories = pgTable(
+  "personal_access_token_repositories",
+  {
+    tokenId: uuid("token_id")
+      .notNull()
+      .references(() => personalAccessTokens.id, { onDelete: "cascade" }),
+    repositoryId: uuid("repository_id")
+      .notNull()
+      .references(() => repositories.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.tokenId, table.repositoryId] }),
   }),
 );
 

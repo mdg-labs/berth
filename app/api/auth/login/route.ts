@@ -14,6 +14,12 @@ import {
 import { checkLoginRateLimit } from "@/lib/rate-limit/login";
 import { buildSessionCookie } from "@/lib/session/cookie";
 import { createSession } from "@/lib/session/store";
+import { getUserMfaEnabledAt } from "@/lib/mfa/store";
+import {
+  buildMfaPendingCookie,
+  createMfaPendingState,
+  encodeMfaPendingState,
+} from "@/lib/mfa/pending";
 import { getUserDeletionState } from "@/lib/users/presentation";
 import { resolveUserForAuthentication } from "@/lib/users/lifecycle";
 import { toAuthUser } from "@/lib/users/serialize";
@@ -58,6 +64,24 @@ export async function POST(request: NextRequest) {
     requireEmailVerified: false,
   });
 
+  const mfaEnabledAt = await getUserMfaEnabledAt(user.id);
+  if (mfaEnabledAt) {
+    const pendingState = createMfaPendingState(user.id);
+    const pendingCookie = buildMfaPendingCookie(
+      encodeMfaPendingState(pendingState),
+    );
+
+    return NextResponse.json(
+      { mfaRequired: true },
+      {
+        status: 200,
+        headers: {
+          "Set-Cookie": pendingCookie,
+        },
+      },
+    );
+  }
+
   const sessionId = await createSession(user.id);
   const deletion = getUserDeletionState(user.deletedAt);
 
@@ -77,6 +101,7 @@ export async function POST(request: NextRequest) {
         systemRole: user.systemRole,
         mustChangePassword: user.mustChangePassword,
         hasPassword: user.passwordHash !== null,
+        mfaEnabled: mfaEnabledAt !== null,
         pendingDeletion: deletion.pendingDeletion,
         deletedAt: deletion.deletedAt,
         purgesAt: deletion.purgesAt,

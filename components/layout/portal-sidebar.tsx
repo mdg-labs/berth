@@ -8,10 +8,13 @@ import {
   FolderKanbanIcon,
   PackageIcon,
   SettingsIcon,
+  SlidersHorizontalIcon,
   Trash2Icon,
   UsersIcon,
 } from "lucide-react";
 
+import { BerthIcon } from "@/components/brand/berth-icon";
+import { berthSidebarErthClassName } from "@/components/brand/berth-sidebar-brand";
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { PortalSidebarUser } from "@/components/layout/portal-sidebar-user";
 import {
@@ -62,6 +65,7 @@ export function PortalSidebar() {
   );
   const isAdminUsersActive = pathname === "/admin";
   const isAdminGcActive = pathname === "/admin/gc";
+  const isAdminSettingsActive = pathname === "/admin/settings";
   const isAdminAuditActive = pathname === "/admin/audit";
 
   return (
@@ -71,13 +75,12 @@ export function PortalSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
+              className="!items-end !gap-1 overflow-visible"
               render={<Link href="/repositories" />}
               tooltip={t("appName")}
             >
-              <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary font-semibold text-sidebar-primary-foreground">
-                B
-              </span>
-              <span className="truncate font-semibold">{t("appName")}</span>
+              <BerthIcon className="size-8 shrink-0" />
+              <span className={berthSidebarErthClassName}>erth</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -154,6 +157,16 @@ export function PortalSidebar() {
                   >
                     <Trash2Icon />
                     <span>{t("garbageCollection")}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={isAdminSettingsActive}
+                    render={<Link href="/admin/settings" />}
+                    tooltip={t("systemSettings")}
+                  >
+                    <SlidersHorizontalIcon />
+                    <span>{t("systemSettings")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

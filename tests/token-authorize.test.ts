@@ -37,6 +37,16 @@ vi.mock("@/lib/repositories/settings", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/pat/store", () => ({
+  buildRepositoryNameToIdMap: vi.fn(async (names: string[]) => {
+    const map = new Map<string, string>();
+    for (const name of names) {
+      map.set(name, `${name}-id`);
+    }
+    return map;
+  }),
+}));
+
 describe("token authorization", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -126,6 +136,39 @@ describe("token authorization", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.access[0]?.actions).toEqual(["delete"]);
+    }
+  });
+
+  it("applies PAT ceiling after RBAC for developer", async () => {
+    findMissingRepositoriesMock.mockResolvedValue([]);
+    getRepositoryByNameMock.mockResolvedValue({
+      id: "p1",
+      name: "proj",
+      isPublic: false,
+    });
+    getEffectiveRepositoryRoleMock.mockResolvedValue("developer");
+
+    const result = await authorizeTokenAccess(
+      { id: "u1", email: "dev@example.com", systemRole: "user" },
+      [
+        {
+          type: "repository",
+          name: "proj/repo",
+          actions: ["pull", "push"],
+        },
+      ],
+      {
+        id: "pat-1",
+        userId: "u1",
+        allowPull: true,
+        allowPush: false,
+        repositoryIds: [],
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.access[0]?.actions).toEqual(["pull"]);
     }
   });
 

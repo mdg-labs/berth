@@ -9,6 +9,7 @@ import { hasValidCsrfHeader, requiresCsrfHeader } from "@/lib/csrf/check";
 import { locales } from "@/lib/i18n/config";
 import { routing } from "@/lib/i18n/config";
 import { getSessionIdFromCookie } from "@/lib/session/cookie";
+import { hasMfaPendingCookiePresent } from "@/lib/mfa/cookie";
 
 const PUBLIC_PATHS = new Set([
   "/login",
@@ -17,6 +18,7 @@ const PUBLIC_PATHS = new Set([
   "/accept-invite",
 ]);
 const AUTH_ONLY_PATHS = new Set(["/change-password"]);
+const MFA_CHALLENGE_PATH = "/mfa-challenge";
 const PROTECTED_PREFIXES = ["/repositories", "/r", "/admin", "/projects", "/p"];
 
 const intlMiddleware = createIntlMiddleware(routing);
@@ -45,11 +47,28 @@ function hasSession(request: NextRequest): boolean {
   return Boolean(getSessionIdFromCookie(request.headers.get("cookie")));
 }
 
+function hasMfaPending(request: NextRequest): boolean {
+  return hasMfaPendingCookiePresent(request.headers.get("cookie"));
+}
+
 function applyAuthRedirects(
   request: NextRequest,
   pathname: string,
 ): NextResponse | null {
   const sessionPresent = hasSession(request);
+  const mfaPending = hasMfaPending(request);
+
+  if (pathname === MFA_CHALLENGE_PATH) {
+    if (sessionPresent) {
+      return NextResponse.redirect(new URL("/repositories", request.url));
+    }
+
+    if (!mfaPending) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    return null;
+  }
 
   if (pathname === "/" && sessionPresent) {
     return NextResponse.redirect(new URL("/repositories", request.url));

@@ -16,6 +16,7 @@ export type SessionUser = {
   systemRole: "admin" | "user";
   mustChangePassword: boolean;
   hasPassword: boolean;
+  mfaEnabled: boolean;
   pendingDeletion: boolean;
   deletedAt: string | null;
   purgesAt: string | null;
@@ -73,6 +74,7 @@ export async function getActiveSession(
       systemRole: users.systemRole,
       mustChangePassword: users.mustChangePassword,
       passwordHash: users.passwordHash,
+      totpEnabledAt: users.totpEnabledAt,
       deletedAt: users.deletedAt,
     })
     .from(sessions)
@@ -107,6 +109,7 @@ export async function getActiveSession(
     systemRole: row.systemRole,
     mustChangePassword: row.mustChangePassword,
     hasPassword: row.passwordHash !== null,
+    mfaEnabled: row.totpEnabledAt !== null,
     pendingDeletion: deletion.pendingDeletion,
     deletedAt: deletion.deletedAt,
     purgesAt: deletion.purgesAt,

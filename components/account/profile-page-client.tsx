@@ -5,7 +5,9 @@
 import { useTranslations } from "next-intl";
 
 import { useAuthUser } from "@/components/providers/auth-guard";
+import { AccountMfaSection } from "@/components/account/account-mfa-section";
 import { AccountProfileSection } from "@/components/account/account-profile-section";
+import { AccountTokensSection } from "@/components/account/account-tokens-section";
 import { ChangePasswordSection } from "@/components/account/change-password-section";
 
 export function ProfilePageClient() {
@@ -20,7 +22,9 @@ export function ProfilePageClient() {
         <p className="text-sm text-muted-foreground">{t("description")}</p>
       </div>
       <AccountProfileSection />
+      <AccountTokensSection />
       {user?.hasPassword ? <ChangePasswordSection /> : null}
+      {user?.hasPassword ? <AccountMfaSection /> : null}
     </div>
   );
 }

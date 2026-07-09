@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftIcon, CopyIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRef } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { PublicShell } from "@/components/public/public-shell";
@@ -27,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { anchoredToastManager } from "@/components/ui/toast";
+import { toastManager } from "@/components/ui/toast";
 import { apiFetch, ApiError } from "@/lib/api/client";
 import { buildPullCommand, imagePathSegments } from "@/lib/catalog/format";
 import type { PublicImageTagsResponse } from "@/lib/public/image-tags";
@@ -63,29 +62,18 @@ function CopyPullButton({
   label: string;
 }) {
   const t = useTranslations("public.detail");
-  const copyButtonRef = useRef<HTMLButtonElement>(null);
 
   function copyPullCommand() {
     void navigator.clipboard.writeText(command);
-    anchoredToastManager.add({
+    toastManager.add({
       type: "success",
       title: t("toast.copyPullCommand.title"),
       description: command,
-      positionerProps: {
-        anchor: copyButtonRef.current,
-        side: "top",
-        align: "center",
-      },
     });
   }
 
   return (
-    <Button
-      ref={copyButtonRef}
-      variant="outline"
-      size="sm"
-      onClick={copyPullCommand}
-    >
+    <Button variant="outline" size="sm" onClick={copyPullCommand}>
       <CopyIcon />
       {label}
     </Button>

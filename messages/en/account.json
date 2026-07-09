@@ -32,6 +32,112 @@
       "passwordMismatchDescription": "Confirm password must match the new password."
     }
   },
+  "tokens": {
+    "title": "Personal access tokens",
+    "description": "Create tokens for docker login and CI when password or MFA login is not available.",
+    "createToken": "New token",
+    "empty": "No personal access tokens yet.",
+    "allRepositories": "All accessible repositories",
+    "revoke": "Revoke token",
+    "columns": {
+      "name": "Name",
+      "prefix": "Prefix",
+      "scopes": "Scopes",
+      "repositories": "Repositories",
+      "expires": "Expires",
+      "lastUsed": "Last used"
+    },
+    "scope": {
+      "pull": "Pull",
+      "push": "Push"
+    },
+    "status": {
+      "never": "Never",
+      "revoked": "Revoked"
+    },
+    "createDialog": {
+      "title": "Create personal access token",
+      "description": "This token can authenticate registry push and pull operations.",
+      "name": "Name",
+      "scopes": "Scopes",
+      "repositories": "Repositories",
+      "allRepositories": "All accessible repositories",
+      "selectedRepositories": "Selected repositories only",
+      "expiration": "Expiration",
+      "neverExpire": "Never expire",
+      "customExpiry": "Custom expiry date",
+      "maxValidityHint": "Maximum allowed validity is {days} days.",
+      "cancel": "Cancel",
+      "submit": "Create token"
+    },
+    "createdDialog": {
+      "title": "Token created",
+      "description": "Copy this token now. You will not be able to see it again.",
+      "token": "Token",
+      "copied": "Token copied",
+      "dockerTitle": "Docker login",
+      "dockerInstructions": "docker login <registry-host>\nUsername: {email}\nPassword: <paste token>",
+      "done": "Done"
+    },
+    "toast": {
+      "createErrorTitle": "Failed to create token",
+      "revokeSuccessTitle": "Token revoked",
+      "revokeSuccessDescription": "The token can no longer be used.",
+      "revokeErrorTitle": "Revoke failed"
+    }
+  },
+  "mfa": {
+    "title": "Two-factor authentication",
+    "description": "Add an extra layer of security to your password sign-in with an authenticator app.",
+    "enable": "Enable MFA",
+    "disable": "Disable MFA",
+    "regenerateBackupCodes": "Regenerate backup codes",
+    "loadErrorTitle": "Could not load MFA settings",
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "setup": {
+      "title": "Set up authenticator app",
+      "description": "Scan the QR code with your authenticator app, then enter the 6-digit code to confirm.",
+      "qrAlt": "Authenticator QR code",
+      "manualSecret": "Manual entry key",
+      "manualHint": "Issuer: {issuer}, Account: {account}",
+      "confirmCode": "Verification code",
+      "codeSlot": "Character {index} of 6",
+      "cancel": "Cancel",
+      "confirm": "Enable MFA"
+    },
+    "disableDialog": {
+      "title": "Disable MFA",
+      "description": "Enter your password and a current authenticator code to turn off two-factor authentication.",
+      "password": "Password",
+      "code": "Authenticator code",
+      "cancel": "Cancel",
+      "submit": "Disable MFA"
+    },
+    "backupCodes": {
+      "title": "Backup codes",
+      "description": "Save these codes in a secure place. Each code can be used once if you lose access to your authenticator app.",
+      "password": "Password",
+      "code": "Authenticator code",
+      "cancel": "Cancel",
+      "submit": "Generate new codes",
+      "done": "Done"
+    },
+    "toast": {
+      "setupErrorTitle": "Could not start MFA setup",
+      "confirmErrorTitle": "Could not enable MFA",
+      "enabledTitle": "MFA enabled",
+      "enabledDescription": "Two-factor authentication is now active on your account.",
+      "disabledTitle": "MFA disabled",
+      "disabledDescription": "Two-factor authentication has been turned off.",
+      "disableErrorTitle": "Could not disable MFA",
+      "backupCodesTitle": "Backup codes updated",
+      "backupCodesDescription": "Your previous backup codes are no longer valid.",
+      "backupCodesErrorTitle": "Could not regenerate backup codes"
+    }
+  },
   "reactivate": {
     "title": "Reactivate your account?",
     "description": "This account is scheduled for deletion on {purgeDate}. You can restore it now or sign out and leave the deletion in place.",

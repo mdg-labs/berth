@@ -7,6 +7,7 @@ export type AuthUser = {
   systemRole: "admin" | "user";
   mustChangePassword: boolean;
   hasPassword: boolean;
+  mfaEnabled: boolean;
   pendingDeletion: boolean;
   deletedAt: string | null;
   purgesAt: string | null;

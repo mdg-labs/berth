@@ -7,6 +7,7 @@ import { findUserByEmail, hashPassword, verifyPassword } from "@/lib/auth/creden
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { reactivateUser } from "@/lib/users/lifecycle";
+import { clearMfaForUser } from "@/lib/mfa/store";
 import { getUserDeletionState } from "@/lib/users/presentation";
 
 export type AccountUser = {
@@ -16,6 +17,7 @@ export type AccountUser = {
   systemRole: "admin" | "user";
   mustChangePassword: boolean;
   hasPassword: boolean;
+  mfaEnabled: boolean;
   pendingDeletion: boolean;
   deletedAt: string | null;
   purgesAt: string | null;
@@ -28,6 +30,7 @@ function toAccountUser(row: {
   systemRole: "admin" | "user";
   mustChangePassword: boolean;
   passwordHash: string | null;
+  totpEnabledAt: Date | null;
   deletedAt: Date | null;
 }): AccountUser {
   const deletion = getUserDeletionState(row.deletedAt);
@@ -39,6 +42,7 @@ function toAccountUser(row: {
     systemRole: row.systemRole,
     mustChangePassword: row.mustChangePassword,
     hasPassword: row.passwordHash !== null,
+    mfaEnabled: row.totpEnabledAt !== null,
     pendingDeletion: deletion.pendingDeletion,
     deletedAt: deletion.deletedAt,
     purgesAt: deletion.purgesAt,
@@ -57,6 +61,7 @@ export async function getAccountUserById(
       systemRole: users.systemRole,
       mustChangePassword: users.mustChangePassword,
       passwordHash: users.passwordHash,
+      totpEnabledAt: users.totpEnabledAt,
       deletedAt: users.deletedAt,
     })
     .from(users)
@@ -141,6 +146,7 @@ export async function updateAccount(
       systemRole: users.systemRole,
       mustChangePassword: users.mustChangePassword,
       passwordHash: users.passwordHash,
+      totpEnabledAt: users.totpEnabledAt,
       deletedAt: users.deletedAt,
     });
 
@@ -217,6 +223,8 @@ export async function adminResetUserPassword(
     .update(users)
     .set({ passwordHash, mustChangePassword })
     .where(eq(users.id, userId));
+
+  await clearMfaForUser(userId);
 
   await writeAuditLog({
     userId: actorId,

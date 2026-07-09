@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/credentials";
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { revokeAllPersonalAccessTokensForUser } from "@/lib/pat/store";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 import { getUserDeletionState } from "@/lib/users/presentation";
 import { toAuthUser } from "@/lib/users/serialize";
@@ -76,6 +77,8 @@ export async function POST(request: NextRequest) {
     })
     .where(eq(users.id, user.id));
 
+  await revokeAllPersonalAccessTokensForUser(user.id);
+
   const deletion = getUserDeletionState(user.deletedAt ?? null);
 
   await writeAuditLog({
@@ -93,6 +96,7 @@ export async function POST(request: NextRequest) {
       systemRole: user.systemRole,
       mustChangePassword: false,
       hasPassword: true,
+      mfaEnabled: user.totpEnabledAt !== null,
       pendingDeletion: deletion.pendingDeletion,
       deletedAt: deletion.deletedAt,
       purgesAt: deletion.purgesAt,

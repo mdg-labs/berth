@@ -13,6 +13,7 @@ const {
   selectMock,
   insertMock,
   updateMock,
+  deleteMock,
   findUserByEmailMock,
   hashPasswordMock,
   trySendEmailMock,
@@ -20,6 +21,7 @@ const {
   selectMock: vi.fn(),
   insertMock: vi.fn(),
   updateMock: vi.fn(),
+  deleteMock: vi.fn(),
   findUserByEmailMock: vi.fn(),
   hashPasswordMock: vi.fn(),
   trySendEmailMock: vi.fn(),
@@ -30,6 +32,7 @@ vi.mock("@/lib/db", () => ({
     select: selectMock,
     insert: insertMock,
     update: updateMock,
+    delete: deleteMock,
   }),
 }));
 
@@ -63,6 +66,9 @@ describe("password reset", () => {
     });
     insertMock.mockReturnValue({
       values: vi.fn().mockResolvedValue(undefined),
+    });
+    deleteMock.mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
     });
   });
 

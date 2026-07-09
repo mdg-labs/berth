@@ -15,7 +15,8 @@ import { formatApiError } from "@/lib/i18n/api-error";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 
 type LoginResponse = {
-  user: AuthUser;
+  user?: AuthUser;
+  mfaRequired?: boolean;
 };
 
 export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
@@ -33,6 +34,15 @@ export function LoginForm({ oidcEnabled }: { oidcEnabled: boolean }) {
         body: input,
       }),
     onSuccess: (data) => {
+      if (data.mfaRequired) {
+        router.replace("/mfa-challenge");
+        return;
+      }
+
+      if (!data.user) {
+        return;
+      }
+
       queryClient.setQueryData(["auth", "me"], data);
       toastManager.add({
         type: "success",

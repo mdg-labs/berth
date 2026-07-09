@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
+import { BerthWordmark } from "@/components/brand/berth-wordmark";
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { PublicShell } from "@/components/public/public-shell";
 import { Badge } from "@/components/ui/badge";
@@ -66,9 +67,11 @@ function PublicEmptyLanding() {
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center gap-10 py-8 text-center md:py-16">
       <div className="space-y-3">
-        <h1 className="font-heading text-3xl font-semibold tracking-tight md:text-4xl">
-          {t("appName")}
-        </h1>
+        <BerthWordmark
+          size="lg"
+          label={t("appName")}
+          className="justify-center"
+        />
         <p className="text-muted-foreground text-sm md:text-base">{t("tagline")}</p>
       </div>
 

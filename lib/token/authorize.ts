@@ -14,6 +14,11 @@ import {
   computeEffectiveAnonymousPull,
   getImageOverridesForRepository,
 } from "@/lib/repositories/settings";
+import type { PatContext } from "@/lib/pat/types";
+import {
+  filterAccessByPatRepositoryAllowlist,
+} from "@/lib/pat/authorize";
+import { buildRepositoryNameToIdMap } from "@/lib/pat/store";
 import type { RegistryAccess } from "@/lib/token/scope";
 import { parseRegistryScopePath } from "@/lib/token/scope";
 
@@ -32,6 +37,7 @@ export type AuthorizeTokenResult =
 export async function authorizeTokenAccess(
   user: TokenAuthUser | null,
   access: RegistryAccess[],
+  pat?: PatContext | null,
 ): Promise<AuthorizeTokenResult> {
   const missingRepositories = await findMissingRepositories(access);
   if (missingRepositories.length > 0) {
@@ -51,10 +57,51 @@ export async function authorizeTokenAccess(
   }
 
   if (isSystemAdmin(user.systemRole)) {
-    return { ok: true, access };
+    const adminAccess = pat
+      ? await applyPatFilter(access, pat)
+      : access;
+    if (pat && adminAccess.length === 0 && access.length > 0) {
+      return {
+        ok: false,
+        code: "forbidden",
+        message: "Token does not grant the requested scopes",
+      };
+    }
+    return { ok: true, access: adminAccess };
   }
 
-  return authorizeAuthenticatedAccess(user, access);
+  const result = await authorizeAuthenticatedAccess(user, access);
+  if (!result.ok) {
+    return result;
+  }
+
+  if (!pat) {
+    return result;
+  }
+
+  const patFiltered = await applyPatFilter(result.access, pat);
+  if (patFiltered.length === 0 && result.access.length > 0) {
+    return {
+      ok: false,
+      code: "forbidden",
+      message: "Token does not grant the requested scopes",
+    };
+  }
+
+  return { ok: true, access: patFiltered };
+}
+
+async function applyPatFilter(
+  access: RegistryAccess[],
+  pat: PatContext,
+): Promise<RegistryAccess[]> {
+  const repositoryNames = access
+    .filter((entry) => entry.type === "repository")
+    .map((entry) => parseRegistryScopePath(entry.name)?.repositoryName)
+    .filter((name): name is string => Boolean(name));
+
+  const repositoryNameToId = await buildRepositoryNameToIdMap(repositoryNames);
+  return filterAccessByPatRepositoryAllowlist(access, pat, repositoryNameToId);
 }
 
 async function authorizePublicPullAccess(

@@ -4,6 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { writeAuditLog } from "@/lib/audit/log";
 import { findUserByEmail, hashPassword } from "@/lib/auth/credentials";
+import { clearMfaForUser } from "@/lib/mfa/store";
 import type { Locale } from "@/lib/i18n/config";
 import { getDb } from "@/lib/db";
 import { passwordResetTokens, users } from "@/lib/db/schema";
@@ -152,6 +153,8 @@ export async function completePasswordReset(
     .update(passwordResetTokens)
     .set({ usedAt: new Date() })
     .where(eq(passwordResetTokens.id, row.id));
+
+  await clearMfaForUser(row.userId);
 
   const [user] = await db
     .select({ email: users.email })

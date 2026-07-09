@@ -150,6 +150,18 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | TLS guidance | Reverse proxy primary; compose edge TLS documented as pattern | App serves HTTP internally; no in-app ACME in MVP (spec §3.5) |
 | Dev signing certs | Documented as JWT trust material, distinct from HTTPS TLS | `rootcert.pem` / dev keypair ship in compose; upgrade path in key-rotation + tls docs |
 
+## MFA choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| MFA scope | Password portal login only | OIDC users rely on IdP MFA; avoids double step-up after OIDC callback |
+| Enrollment | Optional per-user from Profile | Self-hosted registry; admins can steer users via PAT requirement when MFA enabled |
+| Registry password auth | Blocked when MFA enabled; PATs remain valid | `docker login` cannot complete interactive MFA; PAT copy already documented on profile |
+| TOTP library | `otplib` + `qrcode` | RFC 6238 compatible; server-side QR as data URL for enrollment |
+| Secret storage | AES-256-GCM encrypted in `users.totp_secret_enc`, key derived from `SESSION_SECRET` | Reuses existing app secret; no separate KMS in MVP |
+| Backup codes | 10 single-use codes, SHA-256 hashed | Account recovery without weakening disable flow (disable requires TOTP, not backup code) |
+| Pending login state | HMAC-signed `berth_mfa_pending` cookie, 5 min TTL, `Path=/` | Short-lived bridge between password verify and MFA challenge without DB challenge table |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist

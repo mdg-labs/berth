@@ -12,6 +12,7 @@ export function toAuthUser(
   systemRole: "admin" | "user";
   mustChangePassword: boolean;
   hasPassword: boolean;
+  mfaEnabled: boolean;
   pendingDeletion: boolean;
   deletedAt: string | null;
   purgesAt: string | null;
@@ -23,6 +24,7 @@ export function toAuthUser(
     systemRole: user.systemRole,
     mustChangePassword: user.mustChangePassword,
     hasPassword: user.hasPassword,
+    mfaEnabled: user.mfaEnabled,
     pendingDeletion: user.pendingDeletion,
     deletedAt: user.deletedAt,
     purgesAt: user.purgesAt,
