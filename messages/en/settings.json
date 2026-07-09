@@ -1,5 +1,10 @@
 {
   "title": "Settings",
+  "tabs": {
+    "general": "General",
+    "access": "Access",
+    "audit": "Audit log"
+  },
   "backToCatalog": "Back to catalog",
   "backToTags": "Back to tags",
   "repository": {
@@ -92,6 +97,8 @@
       "conflict": "This repository still has images: {images}. Enable force delete to remove them first.",
       "blocked": "Deletion is blocked while non-empty images remain unless you force-delete.",
       "confirmLabel": "Type {phrase} to confirm",
+      "copyPhrase": "Copy confirmation phrase",
+      "copiedPhrase": "Copied to clipboard",
       "forceLabel": "Force delete (cascade-delete all images)",
       "forceDescription": "Force delete removes every image and manifest in this repository before deleting the repository record.",
       "forceButton": "Force delete repository"

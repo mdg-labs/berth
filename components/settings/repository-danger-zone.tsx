@@ -3,6 +3,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { CopyIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -22,6 +23,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogPanel,
   DialogPopup,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -118,6 +120,15 @@ export function RepositoryDangerZone({
 
   const phraseMatches = phrase.trim() === expectedPhrase;
 
+  function copyConfirmPhrase() {
+    void navigator.clipboard.writeText(expectedPhrase);
+    toastManager.add({
+      type: "success",
+      title: t("dialog.copiedPhrase"),
+      description: expectedPhrase,
+    });
+  }
+
   return (
     <Card className="border-destructive/40">
       <CardHeader>
@@ -139,29 +150,44 @@ export function RepositoryDangerZone({
                   : t("dialog.blocked")}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 px-6">
+            <DialogPanel className="space-y-4">
               <Field>
                 <FieldLabel htmlFor="repository-delete-phrase">
                   {t("dialog.confirmLabel", { phrase: expectedPhrase })}
                 </FieldLabel>
+                <div className="flex w-full items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 font-mono text-sm">
+                  <span className="min-w-0 flex-1 truncate">{expectedPhrase}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("dialog.copyPhrase")}
+                    onClick={copyConfirmPhrase}
+                  >
+                    <CopyIcon />
+                  </Button>
+                </div>
                 <Input
                   id="repository-delete-phrase"
                   value={phrase}
                   onChange={(event) => setPhrase(event.target.value)}
+                  placeholder={expectedPhrase}
                   autoComplete="off"
                 />
               </Field>
-              <Label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={force}
-                  onCheckedChange={(checked) => setForce(checked === true)}
-                />
-                {t("dialog.forceLabel")}
-              </Label>
-              {force ? (
-                <FieldDescription>{t("dialog.forceDescription")}</FieldDescription>
-              ) : null}
-            </div>
+              <Field>
+                <Label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={force}
+                    onCheckedChange={(checked) => setForce(checked === true)}
+                  />
+                  {t("dialog.forceLabel")}
+                </Label>
+                {force ? (
+                  <FieldDescription>{t("dialog.forceDescription")}</FieldDescription>
+                ) : null}
+              </Field>
+            </DialogPanel>
             <DialogFooter>
               <DialogClose render={<Button variant="ghost" />}>
                 {tCommon("cancel")}

@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CopyIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { useAuthUser } from "@/components/providers/auth-guard";
@@ -32,7 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTab } from "@/components/ui/tabs";
-import { anchoredToastManager, toastManager } from "@/components/ui/toast";
+import { toastManager } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api/client";
 import {
   buildPullCommand,
@@ -79,7 +79,6 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
   const queryClient = useQueryClient();
   const authQuery = useAuthUser();
   const repositoryQuery = useRepositoryByName(repositoryName);
-  const copyButtonRef = useRef<HTMLButtonElement>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [showGcInfo, setShowGcInfo] = useState(false);
 
@@ -137,7 +136,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
   });
 
   const pullCommand = buildPullCommand(
-    typeof window !== "undefined" ? window.location.origin : "localhost:8080",
+    typeof window !== "undefined" ? window.location.host : "localhost:8080",
     repositoryName,
     imageName,
     tag,
@@ -145,15 +144,10 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
 
   function copyPullCommand() {
     void navigator.clipboard.writeText(pullCommand);
-    anchoredToastManager.add({
+    toastManager.add({
       type: "success",
       title: t("toast.copyPullCommand.title"),
       description: pullCommand,
-      positionerProps: {
-        anchor: copyButtonRef.current,
-        side: "top",
-        align: "center",
-      },
     });
   }
 
@@ -191,7 +185,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button ref={copyButtonRef} variant="outline" onClick={copyPullCommand}>
+              <Button variant="outline" onClick={copyPullCommand}>
                 <CopyIcon />
                 {tDetail("copyPullCommand")}
               </Button>
