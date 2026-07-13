@@ -7,8 +7,8 @@
   "bulkDelete": {
     "confirmPhrase": "delete tags",
     "title": "Delete {count, plural, one {# tag} other {# tags}}?",
-    "typedConfirm": "You are about to delete {count} tags. Type \"{phrase}\" to confirm.",
-    "simpleConfirm": "This removes {count, plural, one {# tag reference} other {# tag references}} from the image.",
+    "typedConfirm": "You are about to delete {count} selected tags. Sibling tags sharing the same digest are kept unless selected. Type \"{phrase}\" to confirm.",
+    "simpleConfirm": "This removes {count, plural, one {# selected tag reference} other {# selected tag references}}. Tags sharing the same digest are kept unless you select them too.",
     "phraseLabel": "Confirmation phrase",
     "confirmButton": "Delete tags"
   },

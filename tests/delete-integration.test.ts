@@ -222,6 +222,49 @@ describe("delete API integration", () => {
     expect(siblings.siblings.map((entry) => entry.name)).toContain("v2");
   });
 
+  it("bulk-deletes only selected tags when siblings share a digest", async () => {
+    if (!dockerReady || !adminSessionId) {
+      return;
+    }
+
+    const repositoryName = `bulksib${Date.now()}`;
+    const repositoryId = await createRepository(adminSessionId, repositoryName);
+    if (!repositoryId) {
+      return;
+    }
+
+    const imageBase = `${registryHost}/${repositoryName}/hello`;
+    pushImage(registryHost, `${imageBase}:v1`);
+    runDocker(`docker tag ${imageBase}:v1 ${imageBase}:v2`);
+    runDocker(`docker push ${imageBase}:v2`);
+    runDocker(`docker tag ${imageBase}:v1 ${imageBase}:v3`);
+    runDocker(`docker push ${imageBase}:v3`);
+
+    const bulkDelete = await fetch(
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags/bulk-delete`,
+      {
+        method: "POST",
+        headers: {
+          ...csrfHeaders(CLIENT_IP),
+          ...cookieHeader(SESSION_COOKIE, adminSessionId),
+        },
+        body: JSON.stringify({ tags: ["v1", "v3"] }),
+      },
+    );
+    expect(bulkDelete.status).toBe(200);
+
+    const tagsAfterBulk = await fetch(
+      `${INTEGRATION_BASE_URL}/api/repositories/${repositoryId}/images/hello/tags`,
+      { headers: cookieHeader(SESSION_COOKIE, adminSessionId) },
+    );
+    const bulkBody = (await tagsAfterBulk.json()) as {
+      tags: { name: string }[];
+      total: number;
+    };
+    expect(bulkBody.total).toBe(1);
+    expect(bulkBody.tags.map((entry) => entry.name)).toEqual(["v2"]);
+  });
+
   it("denies delete for developer and allows maintainer", async () => {
     if (!dockerReady || !adminSessionId) {
       return;

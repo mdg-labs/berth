@@ -83,26 +83,19 @@ export async function bulkDeleteTags(
   const fullName = fullImageName(repositoryName, imageName);
 
   const uniqueTags = [...new Set(tags.map((entry) => entry.trim()).filter(Boolean))];
-  const digestToTags = new Map<string, string[]>();
+  const deletedTags: string[] = [];
+  const deletedDigests: string[] = [];
+  const seenDigests = new Set<string>();
 
   for (const tagName of uniqueTags) {
     const manifest = await getManifestDigest(fullName, tagName, token);
-    if (!manifest?.digest) {
-      continue;
+    await deleteManifestReference(fullName, tagName, token);
+    deletedTags.push(tagName);
+
+    if (manifest?.digest && !seenDigests.has(manifest.digest)) {
+      seenDigests.add(manifest.digest);
+      deletedDigests.push(manifest.digest);
     }
-
-    const existing = digestToTags.get(manifest.digest) ?? [];
-    existing.push(tagName);
-    digestToTags.set(manifest.digest, existing);
-  }
-
-  const deletedTags: string[] = [];
-  const deletedDigests: string[] = [];
-
-  for (const [digest, tagNames] of digestToTags) {
-    await deleteManifestReference(fullName, digest, token);
-    deletedDigests.push(digest);
-    deletedTags.push(...tagNames);
   }
 
   if (deletedTags.length > 0) {
