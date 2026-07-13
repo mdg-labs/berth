@@ -1,6 +1,6 @@
 # Production checklist
 
-Use this list before exposing Berth beyond localhost. Each item links to detailed runbooks.
+Complete [Production setup](production-setup.md) first, then verify this checklist before exposing Berth beyond localhost. Each item links to detailed runbooks.
 
 ## Secrets and bootstrap
 

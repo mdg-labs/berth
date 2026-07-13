@@ -1,0 +1,11 @@
+# Host-level Caddy TLS termination for Berth (alternative to nginx).
+# Berth app listens on 127.0.0.1:8080 only.
+#
+# 1. Copy to /etc/caddy/Caddyfile (or include from there)
+# 2. Replace registry.example.com
+# 3. Set your email for Let's Encrypt in the global block if needed
+# 4. systemctl reload caddy
+
+registry.example.com {
+    reverse_proxy 127.0.0.1:8080
+}

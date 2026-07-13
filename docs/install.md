@@ -6,7 +6,7 @@ Berth ships as a three-service Docker Compose stack: **app**, **registry**, and 
 
 - Docker Engine with Compose v2
 - Ports **8080** available on the host (or change the mapping in compose)
-- For production: read [TLS](tls.md) and [Production checklist](production-checklist.md) before exposing Berth to a network
+- For production: follow the [Production setup guide](production-setup.md) (TLS, secrets, compose override)
 
 ## Start the stack
 
@@ -163,6 +163,7 @@ Before upgrading production, take a [backup](backup.md).
 
 ## Next steps
 
+- [Production setup](production-setup.md) — deploy with TLS and production secrets
 - [TLS](tls.md) — HTTPS for production
 - [Backup](backup.md) — Postgres + blob storage
 - [Garbage collection](gc.md) — reclaim space after deletes

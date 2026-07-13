@@ -1,0 +1,59 @@
+# Production override for Berth — copy to compose.prod.yml and customize.
+#
+# Usage (from repository root):
+#   docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d --build
+#
+# Or with secrets outside the repo:
+#   docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d --build
+#
+# Replace every registry.example.com and path below before deploying.
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    # Do not publish Postgres to the internet (requires Compose v2.24+ !reset).
+    ports: !reset []
+
+  registry:
+    volumes:
+      - registry-data:/var/lib/registry
+      - ./registry/config.prod.local.yml:/etc/distribution/config.yml:ro
+      - ${BERTH_SECRETS_DIR:?set BERTH_SECRETS_DIR}/rootcert.pem:/etc/registry/certs/rootcert.pem:ro
+    environment:
+      REGISTRY_AUTH_TOKEN_REALM: https://registry.example.com/api/auth/token
+    ports: !reset []
+
+  app:
+    image: ghcr.io/mdg-labs/berth:latest
+    # build:
+    #   context: ..
+    #   dockerfile: docker/Dockerfile
+    # Replace dev 0.0.0.0:8080 publish — loopback only (Compose v2.24+ !reset).
+    ports: !reset
+      - "127.0.0.1:8080:3000"
+    volumes:
+      - registry-data:/var/lib/registry:ro
+      - ${BERTH_SECRETS_DIR}/token-signing-key.pem:/etc/berth/token/signing-key.pem:ro
+      - ${BERTH_SECRETS_DIR}/token-signing-cert.pem:/etc/berth/token/signing-cert.pem:ro
+    environment:
+      DATABASE_URL: postgresql://berth:${POSTGRES_PASSWORD}@postgres:5432/berth
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      APP_URL: https://registry.example.com
+      BOOTSTRAP_ADMIN_EMAIL: admin@example.com
+      # BOOTSTRAP_ADMIN_PASSWORD intentionally unset — password generated once in app logs
+      TOKEN_SIGNING_KEY_PATH: /etc/berth/token/signing-key.pem
+      TOKEN_CERT_PATH: /etc/berth/token/signing-cert.pem
+      RATE_LIMIT_LOGIN_MAX_ATTEMPTS: "10"
+      RATE_LIMIT_TOKEN_MAX_ATTEMPTS: "10"
+      RATE_LIMIT_WINDOW_SECONDS: "60"
+      # Optional OIDC:
+      # OIDC_ISSUER: https://idp.example.com
+      # OIDC_CLIENT_ID: berth
+      # OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
+      # Optional SMTP (password reset / invites):
+      # SMTP_HOST: smtp.example.com
+      # SMTP_PORT: "587"
+      # SMTP_USER: berth
+      # SMTP_PASSWORD: ${SMTP_PASSWORD}
+      # EMAIL_FROM: noreply@example.com

@@ -23,6 +23,10 @@ docker push localhost:8080/my-project/hello:1.0
 
 Default dev credentials are set in `docker/compose.yml` (`admin@localhost` / `test-admin-password`). Change these before any non-local deployment.
 
+### Production
+
+For a hardened deployment with TLS, secrets, and token signing certificates, follow the **[Production setup guide](docs/production-setup.md)**.
+
 ## Architecture
 
 Berth runs three containers on an internal Docker network. Only the **app** exposes a port to the host; the registry and Postgres are internal.
@@ -65,6 +69,7 @@ Clients (`docker login`, `docker push`) use the **same host and port** as the po
 
 | Guide | Purpose |
 |-------|---------|
+| [Production setup](docs/production-setup.md) | End-to-end deploy with TLS, secrets, and first push |
 | [Install](docs/install.md) | First boot, bootstrap admin, password recovery |
 | [TLS](docs/tls.md) | HTTPS with a reverse proxy or compose edge TLS |
 | [Backup](docs/backup.md) | Postgres dump + `registry-data` volume |

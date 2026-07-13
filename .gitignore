@@ -33,6 +33,11 @@ coverage/
 !docker/registry/certs/rootcert.pem
 !docker/token/dev-signing-key.pem
 
+# operator production overrides (copy from *.example)
+docker/compose.prod.yml
+docker/Caddyfile
+docker/registry/config.prod.local.yml
+
 # vitest
 .vitest/
 test-results/

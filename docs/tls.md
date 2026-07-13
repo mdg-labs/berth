@@ -1,5 +1,7 @@
 # TLS and HTTPS
 
+For a full production walkthrough (secrets, compose override, first push), see [Production setup](production-setup.md). This document covers TLS options in depth.
+
 Berth’s **app** serves plain HTTP on port **3000** inside the container. Compose maps it to **8080** on the host for local development. Production deployments should terminate TLS at the edge and set `APP_URL` to your `https://` URL.
 
 The self-signed material in `docker/registry/certs/rootcert.pem` and `docker/token/dev-signing-key.pem` is for **registry JWT signing trust**, not HTTPS. Do not confuse token-signing certs with TLS certificates.

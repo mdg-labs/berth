@@ -1,0 +1,18 @@
+# Production registry config — copy alongside compose.prod.yml or mount from repo.
+# auth.token.realm must match APP_URL and REGISTRY_AUTH_TOKEN_REALM on the registry service.
+version: 0.1
+log:
+  level: info
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  delete:
+    enabled: true
+http:
+  addr: :5000
+auth:
+  token:
+    realm: https://registry.example.com/api/auth/token
+    service: registry
+    issuer: registry
+    rootcertbundle: /etc/registry/certs/rootcert.pem
