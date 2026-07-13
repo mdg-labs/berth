@@ -1,0 +1,23 @@
+name: Dev
+
+on:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: dev-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build-push:
+    needs: ci
+    uses: ./.github/workflows/build-push.yml
+    with:
+      ref: dev
+      image-tags: dev
+    permissions:
+      contents: read
+      packages: write

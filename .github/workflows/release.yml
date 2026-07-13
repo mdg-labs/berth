@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  resolve-tags:
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.meta.outputs.ref }}
+      image-tags: ${{ steps.meta.outputs.image-tags }}
+    steps:
+      - name: Resolve build ref and image tags
+        id: meta
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          SEMVER="${TAG_NAME#v}"
+          echo "ref=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "image-tags=latest,${SEMVER}" >> "$GITHUB_OUTPUT"
+
+  build-push:
+    needs: resolve-tags
+    uses: ./.github/workflows/build-push.yml
+    with:
+      ref: ${{ needs.resolve-tags.outputs.ref }}
+      image-tags: ${{ needs.resolve-tags.outputs.image-tags }}
+    permissions:
+      contents: read
+      packages: write
