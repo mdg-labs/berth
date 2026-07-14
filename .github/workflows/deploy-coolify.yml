@@ -17,6 +17,11 @@ jobs:
     steps:
       - name: Validate deploy configuration
         run: |
+          COOLIFY_DEPLOY_WEBHOOK="$(printf '%s' "$COOLIFY_DEPLOY_WEBHOOK" | xargs)"
+          COOLIFY_API_KEY="$(printf '%s' "$COOLIFY_API_KEY" | xargs)"
+          echo "COOLIFY_DEPLOY_WEBHOOK=$COOLIFY_DEPLOY_WEBHOOK" >> "$GITHUB_ENV"
+          echo "COOLIFY_API_KEY=$COOLIFY_API_KEY" >> "$GITHUB_ENV"
+
           if [ -z "$COOLIFY_DEPLOY_WEBHOOK" ]; then
             echo "::error::COOLIFY_DEPLOY_WEBHOOK secret is empty or not passed to this workflow."
             exit 1
@@ -28,7 +33,31 @@ jobs:
 
       - name: Trigger Coolify deployment
         run: |
-          curl --fail --silent --show-error \
-            --request GET \
-            "$COOLIFY_DEPLOY_WEBHOOK" \
-            --header "Authorization: Bearer $COOLIFY_API_KEY"
+          response_file="$(mktemp)"
+          http_code="$(
+            curl --silent --show-error \
+              --request GET \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              "$COOLIFY_DEPLOY_WEBHOOK" \
+              --header "Authorization: Bearer $COOLIFY_API_KEY"
+          )"
+
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            cat "$response_file"
+            exit 0
+          fi
+
+          echo "Coolify deploy failed with HTTP ${http_code}"
+          if [ -s "$response_file" ]; then
+            echo "Response body:"
+            cat "$response_file"
+          fi
+
+          if [ "$http_code" = "401" ]; then
+            echo "::error::Coolify returned 401 Unauthenticated. Verify API access is enabled in Coolify (Settings -> Advanced -> API Settings), and that COOLIFY_API_KEY is a non-read-only token with deploy permission for https://coolify.mdg-labs.dev."
+          elif [ "$http_code" = "403" ]; then
+            echo "::error::Coolify returned 403 Forbidden. The API token is valid but lacks deploy permission for this application."
+          fi
+
+          exit 1
