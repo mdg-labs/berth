@@ -1,0 +1,20 @@
+name: Deploy Coolify
+
+on:
+  workflow_call:
+    secrets:
+      COOLIFY_DEPLOY_WEBHOOK:
+        required: true
+      COOLIFY_API_KEY:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify deployment
+        run: |
+          curl --fail --silent --show-error \
+            --request GET \
+            "${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}" \
+            --header "Authorization: Bearer ${{ secrets.COOLIFY_API_KEY }}"

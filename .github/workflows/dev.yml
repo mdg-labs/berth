@@ -21,3 +21,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+
+  deploy:
+    needs: build-push
+    uses: ./.github/workflows/deploy-coolify.yml
+    secrets:
+      COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+      COOLIFY_API_KEY: ${{ secrets.COOLIFY_API_KEY }}
