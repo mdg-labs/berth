@@ -19,12 +19,13 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
+  parseAsBoolean,
   parseAsInteger,
   parseAsString,
   parseAsStringLiteral,
   useQueryStates,
 } from "nuqs";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { useAuthUser } from "@/components/providers/auth-guard";
@@ -32,8 +33,11 @@ import { BulkDeleteDialog } from "@/components/delete/bulk-delete-dialog";
 import { GcInfoAlert } from "@/components/delete/gc-info-alert";
 import { canDeleteRegistryContent } from "@/components/delete/permissions";
 import { TagSiblingsCell } from "@/components/tags/tag-siblings-cell";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
   InputGroup,
   InputGroupAddon,
@@ -62,6 +66,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -78,6 +83,7 @@ import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import { formatApiError } from "@/lib/i18n/api-error";
 import { useRepositoryByName } from "@/lib/hooks/use-repository";
 import type { TagSummary, TagsListResponse } from "@/lib/registry/client/types";
+import type { BulkDeleteItem } from "@/lib/registry/delete/service";
 import { cn } from "@/lib/utils";
 
 type TagsPageProps = {
@@ -88,6 +94,10 @@ type TagsPageProps = {
 const columnHelper = createColumnHelper<TagSummary>();
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+function rowKey(tag: TagSummary): string {
+  return tag.isUntagged ? `digest:${tag.digest}` : `tag:${tag.name}`;
+}
 
 function encodeRepoPath(imageName: string): string {
   return imageName
@@ -143,14 +153,16 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
   const queryClient = useQueryClient();
   const authQuery = useAuthUser();
   const repositoryQuery = useRepositoryByName(repositoryName);
+  const showUntaggedSwitchId = useId();
   const [query, setQuery] = useQueryStates({
     search: parseAsString.withDefault(""),
     sort: parseAsStringLiteral(["name", "name_desc"] as const).withDefault("name"),
     page: parseAsInteger.withDefault(1),
     pageSize: parseAsInteger.withDefault(25),
+    showUntagged: parseAsBoolean.withDefault(false),
   });
 
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [showGcInfo, setShowGcInfo] = useState(false);
 
@@ -165,6 +177,7 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
       query.sort,
       query.page,
       query.pageSize,
+      query.showUntagged,
     ],
     queryFn: () => {
       const params = new URLSearchParams({
@@ -174,6 +187,9 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
       });
       if (debouncedSearch.trim()) {
         params.set("search", debouncedSearch.trim());
+      }
+      if (query.showUntagged) {
+        params.set("includeUntagged", "true");
       }
 
       return apiFetch<TagsListResponse>(
@@ -194,22 +210,21 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
   const canAccessSettings = canManage || canDelete;
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: (tagNames: string[]) =>
-      apiFetch<{ deletedTags: string[] }>(
+    mutationFn: (items: BulkDeleteItem[]) =>
+      apiFetch<{ deletedTags: string[]; deletedDigests: string[] }>(
         `/api/repositories/${repositoryQuery.data!.id}/images/${encodeRepoPath(imageName)}/tags/bulk-delete`,
-        { method: "POST", body: { tags: tagNames } },
+        { method: "POST", body: { tags: items } },
       ),
     onSuccess: (result) => {
       setBulkDeleteOpen(false);
-      setSelectedTags(new Set());
+      setSelectedRows(new Set());
       setShowGcInfo(true);
       void queryClient.invalidateQueries({ queryKey: ["tags"] });
+      const count = result.deletedTags.length + result.deletedDigests.length;
       toastManager.add({
         type: "success",
         title: t("toast.bulkDeleteSuccess.title"),
-        description: t("toast.bulkDeleteSuccess.description", {
-          count: result.deletedTags.length,
-        }),
+        description: t("toast.bulkDeleteSuccess.description", { count }),
       });
     },
     onError: (error) => {
@@ -221,13 +236,13 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
     },
   });
 
-  const toggleTag = useCallback((tagName: string, checked: boolean) => {
-    setSelectedTags((current) => {
+  const toggleRow = useCallback((key: string, checked: boolean) => {
+    setSelectedRows((current) => {
       const next = new Set(current);
       if (checked) {
-        next.add(tagName);
+        next.add(key);
       } else {
-        next.delete(tagName);
+        next.delete(key);
       }
       return next;
     });
@@ -236,13 +251,14 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
   const toggleAllOnPage = useCallback(
     (checked: boolean) => {
       const pageTags = tagsQuery.data?.tags ?? [];
-      setSelectedTags((current) => {
+      setSelectedRows((current) => {
         const next = new Set(current);
         for (const tag of pageTags) {
+          const key = rowKey(tag);
           if (checked) {
-            next.add(tag.name);
+            next.add(key);
           } else {
-            next.delete(tag.name);
+            next.delete(key);
           }
         }
         return next;
@@ -257,9 +273,9 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
     if (canDelete) {
       const pageTags = tagsQuery.data?.tags ?? [];
       const allSelected =
-        pageTags.length > 0 && pageTags.every((tag) => selectedTags.has(tag.name));
+        pageTags.length > 0 && pageTags.every((tag) => selectedRows.has(rowKey(tag)));
       const someSelected =
-        pageTags.some((tag) => selectedTags.has(tag.name)) && !allSelected;
+        pageTags.some((tag) => selectedRows.has(rowKey(tag))) && !allSelected;
 
       baseColumns.push(
         columnHelper.display({
@@ -274,11 +290,15 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
           ),
           cell: ({ row }) => (
             <Checkbox
-              checked={selectedTags.has(row.original.name)}
+              checked={selectedRows.has(rowKey(row.original))}
               onCheckedChange={(checked) =>
-                toggleTag(row.original.name, checked === true)
+                toggleRow(rowKey(row.original), checked === true)
               }
-              aria-label={t("selectTag", { name: row.original.name })}
+              aria-label={
+                row.original.isUntagged
+                  ? t("selectUntagged", { digest: formatDigest(row.original.digest) })
+                  : t("selectTag", { name: row.original.name })
+              }
             />
           ),
         }),
@@ -288,14 +308,30 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
     baseColumns.push(
       columnHelper.accessor("name", {
         header: t("columns.tag"),
-        cell: (info) => (
-          <Link
-            href={`/r/${repositoryName}/i/${imagePathSegments(imageName)}/t/${encodeURIComponent(info.getValue())}`}
-            className="font-medium hover:underline"
-          >
-            {info.getValue()}
-          </Link>
-        ),
+        cell: (info) => {
+          const tag = info.row.original;
+          const detailHref = `/r/${repositoryName}/i/${imagePathSegments(imageName)}/t/${encodeURIComponent(tag.isUntagged ? tag.digest : tag.name)}`;
+
+          if (tag.isUntagged) {
+            return (
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">{t("untaggedBadge")}</Badge>
+                <Link
+                  href={detailHref}
+                  className="font-mono text-xs text-muted-foreground hover:underline"
+                >
+                  {formatDigest(tag.digest)}
+                </Link>
+              </div>
+            );
+          }
+
+          return (
+            <Link href={detailHref} className="font-medium hover:underline">
+              {info.getValue()}
+            </Link>
+          );
+        },
       }),
       columnHelper.accessor("digest", {
         header: t("columns.digest"),
@@ -321,13 +357,16 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
       }),
       columnHelper.accessor("siblings", {
         header: t("columns.siblings"),
-        cell: (info) => (
-          <TagSiblingsCell
-            repositoryName={repositoryName}
-            imageName={imageName}
-            siblings={info.getValue()}
-          />
-        ),
+        cell: (info) =>
+          info.row.original.isUntagged ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <TagSiblingsCell
+              repositoryName={repositoryName}
+              imageName={imageName}
+              siblings={info.getValue()}
+            />
+          ),
       }),
     );
 
@@ -336,17 +375,18 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
     canDelete,
     repositoryName,
     imageName,
-    selectedTags,
+    selectedRows,
     tagsQuery.data?.tags,
     t,
     toggleAllOnPage,
-    toggleTag,
+    toggleRow,
   ]);
 
   const table = useReactTable({
     data: tagsQuery.data?.tags ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => rowKey(row),
   });
 
   const total = tagsQuery.data?.total ?? 0;
@@ -358,7 +398,17 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
 
   const isLoading = repositoryQuery.isLoading || tagsQuery.isLoading;
   const error = repositoryQuery.error ?? tagsQuery.error;
-  const selectedTagNames = [...selectedTags];
+  const selectedItems = (tagsQuery.data?.tags ?? [])
+    .filter((tag) => selectedRows.has(rowKey(tag)))
+    .map((tag) => ({
+      name: tag.isUntagged ? tag.digest : tag.name,
+      isUntagged: tag.isUntagged,
+    }));
+  const selectedLabels = selectedItems.map((item) =>
+    item.isUntagged ? formatDigest(item.name) : item.name,
+  );
+  const showUntaggedUnsupported =
+    query.showUntagged && tagsQuery.data?.untaggedSupported === false;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
@@ -369,7 +419,24 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
             {t("subtitle", { repository: repositoryName, image: imageName })}
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+          <Field className="w-full sm:w-auto">
+            <div className="flex items-center gap-3">
+              <Switch
+                id={showUntaggedSwitchId}
+                checked={query.showUntagged}
+                onCheckedChange={(checked) =>
+                  void setQuery({ showUntagged: checked === true, page: 1 })
+                }
+              />
+              <div className="flex flex-col gap-0.5">
+                <FieldLabel htmlFor={showUntaggedSwitchId}>
+                  {t("showUntagged")}
+                </FieldLabel>
+                <FieldDescription>{t("showUntaggedDescription")}</FieldDescription>
+              </div>
+            </div>
+          </Field>
           <InputGroup className="w-full sm:w-64">
             <InputGroupAddon>
               <SearchIcon />
@@ -412,16 +479,23 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
         </div>
       </div>
 
+      {showUntaggedUnsupported ? (
+        <Alert className="shrink-0" variant="warning">
+          <AlertTitle>{t("untaggedUnsupported.title")}</AlertTitle>
+          <AlertDescription>{t("untaggedUnsupported.description")}</AlertDescription>
+        </Alert>
+      ) : null}
+
       {showGcInfo ? (
         <div className="shrink-0">
           <GcInfoAlert onDismiss={() => setShowGcInfo(false)} />
         </div>
       ) : null}
 
-      {canDelete && selectedTagNames.length > 0 ? (
+      {canDelete && selectedItems.length > 0 ? (
         <Toolbar className="shrink-0">
           <ToolbarGroup className="flex-1 px-2 text-sm text-muted-foreground">
-            {t("selected", { count: selectedTagNames.length })}
+            {t("selected", { count: selectedItems.length })}
           </ToolbarGroup>
           <ToolbarButton
             render={
@@ -599,9 +673,9 @@ export function TagsPage({ repositoryName, imageName }: TagsPageProps) {
       <BulkDeleteDialog
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}
-        tagNames={selectedTagNames}
+        tagNames={selectedLabels}
         isPending={bulkDeleteMutation.isPending}
-        onConfirm={() => bulkDeleteMutation.mutate(selectedTagNames)}
+        onConfirm={() => bulkDeleteMutation.mutate(selectedItems)}
       />
     </div>
   );

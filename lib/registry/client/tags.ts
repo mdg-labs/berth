@@ -4,6 +4,10 @@ import type { RegistryAuthUser } from "./auth";
 import { issueUserRegistryToken } from "./auth";
 import { getManifestDigest, resolveManifest } from "./manifest";
 import { fetchAllTagNames } from "./tag-names";
+import {
+  isRegistryStorageReadable,
+  listUntaggedDigests,
+} from "@/lib/registry/storage/untagged-digests";
 import type {
   SiblingsResponse,
   TagDetail,
@@ -16,28 +20,37 @@ export type TagsQuery = {
   sort?: "name" | "name_desc";
   page?: number;
   pageSize?: number;
+  includeUntagged?: boolean;
 };
 
 function fullImageName(repositoryName: string, imageName: string): string {
   return `${repositoryName}/${imageName}`;
 }
 
-function sortTags(tags: string[], sort: TagsQuery["sort"]): string[] {
-  const sorted = [...tags];
-  if (sort === "name_desc") {
-    sorted.sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
-  } else {
-    sorted.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }
+function sortByName(items: TagSummary[], sort: TagsQuery["sort"]): TagSummary[] {
+  const sorted = [...items];
+  const direction = sort === "name_desc" ? -1 : 1;
+  sorted.sort(
+    (a, b) =>
+      direction * a.name.localeCompare(b.name, undefined, { numeric: true }),
+  );
   return sorted;
 }
 
-function filterTags(tags: string[], search?: string): string[] {
+function filterTagSummaries(
+  items: TagSummary[],
+  search?: string,
+): TagSummary[] {
   const query = search?.trim().toLowerCase() ?? "";
   if (!query) {
-    return tags;
+    return items;
   }
-  return tags.filter((tag) => tag.toLowerCase().includes(query));
+
+  return items.filter(
+    (item) =>
+      item.name.toLowerCase().includes(query) ||
+      item.digest.toLowerCase().includes(query),
+  );
 }
 
 export function buildSiblingMapForTags(
@@ -72,25 +85,13 @@ export function buildSiblingMapForTags(
   return siblingsByTag;
 }
 
-export async function listImageTags(
-  user: RegistryAuthUser,
-  repositoryName: string,
-  imageName: string,
-  query: TagsQuery = {},
-): Promise<TagsListResponse> {
-  const token = await issueUserRegistryToken(user, repositoryName, imageName);
-  const fullName = fullImageName(repositoryName, imageName);
-
-  const allTags = await fetchAllTagNames(fullName, token);
-  const filtered = filterTags(allTags, query.search);
-  const sorted = sortTags(filtered, query.sort ?? "name");
-
-  const page = Math.max(1, query.page ?? 1);
-  const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 25));
-  const start = (page - 1) * pageSize;
-
+async function buildTaggedSummaries(
+  fullName: string,
+  token: string,
+  allTags: string[],
+): Promise<TagSummary[]> {
   const manifestEntries = await Promise.all(
-    sorted.map(async (tagName) => {
+    allTags.map(async (tagName) => {
       const manifest = await getManifestDigest(fullName, tagName, token);
       return {
         name: tagName,
@@ -101,27 +102,86 @@ export async function listImageTags(
   );
 
   const siblingsByTag = buildSiblingMapForTags(manifestEntries);
-  const manifestByTag = new Map(
-    manifestEntries.map((entry) => [entry.name, entry] as const),
-  );
-  const pageTags = sorted.slice(start, start + pageSize);
 
-  const summaries: TagSummary[] = pageTags.map((tagName) => {
-    const entry = manifestByTag.get(tagName);
-    return {
-      name: tagName,
-      digest: entry?.digest ?? "",
-      size: entry?.size ?? 0,
+  return manifestEntries.map((entry) => ({
+    name: entry.name,
+    digest: entry.digest,
+    size: entry.size,
+    pushedAt: null,
+    siblings: siblingsByTag.get(entry.name) ?? [],
+    isUntagged: false,
+  }));
+}
+
+async function buildUntaggedSummaries(
+  fullName: string,
+  token: string,
+  digests: string[],
+): Promise<TagSummary[]> {
+  const summaries: TagSummary[] = [];
+
+  for (const digest of digests) {
+    const manifest = await getManifestDigest(fullName, digest, token);
+    if (!manifest) {
+      continue;
+    }
+
+    summaries.push({
+      name: digest,
+      digest: manifest.digest,
+      size: manifest.size,
       pushedAt: null,
-      siblings: siblingsByTag.get(tagName) ?? [],
-    };
-  });
+      siblings: [],
+      isUntagged: true,
+    });
+  }
+
+  return summaries;
+}
+
+export async function listImageTags(
+  user: RegistryAuthUser,
+  repositoryName: string,
+  imageName: string,
+  query: TagsQuery = {},
+): Promise<TagsListResponse> {
+  const token = await issueUserRegistryToken(user, repositoryName, imageName);
+  const fullName = fullImageName(repositoryName, imageName);
+
+  const page = Math.max(1, query.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 25));
+
+  const allTags = await fetchAllTagNames(fullName, token);
+  const taggedSummaries = await buildTaggedSummaries(fullName, token, allTags);
+
+  let untaggedSupported: boolean | undefined;
+  let combined = [...taggedSummaries];
+
+  if (query.includeUntagged) {
+    untaggedSupported = await isRegistryStorageReadable();
+
+    if (untaggedSupported) {
+      const untaggedDigests = await listUntaggedDigests(fullName);
+      const untaggedSummaries = await buildUntaggedSummaries(
+        fullName,
+        token,
+        untaggedDigests,
+      );
+      combined = [...taggedSummaries, ...untaggedSummaries];
+    }
+  }
+
+  const filtered = filterTagSummaries(combined, query.search);
+  const sorted = sortByName(filtered, query.sort ?? "name");
+  const start = (page - 1) * pageSize;
+  const pageItems = sorted.slice(start, start + pageSize);
 
   return {
-    tags: summaries,
+    tags: pageItems,
     total: sorted.length,
     page,
     pageSize,
+    ...(query.includeUntagged ? { untaggedSupported } : {}),
   };
 }
 

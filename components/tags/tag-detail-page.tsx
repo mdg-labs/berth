@@ -39,6 +39,7 @@ import {
   formatBytes,
   formatDigest,
   imagePathSegments,
+  isDigestReference,
 } from "@/lib/catalog/format";
 import { formatApiError } from "@/lib/i18n/api-error";
 import { useRepositoryByName } from "@/lib/hooks/use-repository";
@@ -81,6 +82,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
   const repositoryQuery = useRepositoryByName(repositoryName);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [showGcInfo, setShowGcInfo] = useState(false);
+  const isDigestDetail = isDigestReference(tag);
 
   const encodedRepo = encodeRepoPath(imageName);
   const encodedTag = encodeURIComponent(tag);
@@ -119,11 +121,21 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
       setDeleteOpen(false);
       setShowGcInfo(true);
       void queryClient.invalidateQueries({ queryKey: ["tags"] });
-      toastManager.add({
-        type: "success",
-        title: t("toast.deleteSuccess.title"),
-        description: t("toast.deleteSuccess.description", { tag }),
-      });
+      if (isDigestDetail) {
+        toastManager.add({
+          type: "success",
+          title: t("toast.deleteManifestSuccess.title"),
+          description: t("toast.deleteManifestSuccess.description", {
+            digest: formatDigest(tag),
+          }),
+        });
+      } else {
+        toastManager.add({
+          type: "success",
+          title: t("toast.deleteSuccess.title"),
+          description: t("toast.deleteSuccess.description", { tag }),
+        });
+      }
       router.push(`/r/${repositoryName}/i/${imagePathSegments(imageName)}`);
     },
     onError: (error) => {
@@ -179,9 +191,23 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
         <>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">{detail.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {isDigestDetail ? (
+                  <span className="font-mono text-xl">{formatDigest(detail.name)}</span>
+                ) : (
+                  detail.name
+                )}
+              </h1>
               <p className="text-sm text-muted-foreground">
                 {repositoryName}/{imageName}
+                {isDigestDetail ? (
+                  <>
+                    {" "}
+                    <Badge variant="secondary" className="ml-2 align-middle">
+                      {t("untaggedBadge")}
+                    </Badge>
+                  </>
+                ) : null}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -195,7 +221,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
                   onClick={() => setDeleteOpen(true)}
                 >
                   <Trash2Icon />
-                  {tDetail("deleteTag")}
+                  {isDigestDetail ? tDetail("deleteManifest") : tDetail("deleteTag")}
                 </Button>
               ) : null}
             </div>
@@ -301,7 +327,9 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
             <TabsContent value="siblings" className="mt-4">
               {siblings.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {tDetail("siblings.empty")}
+                  {isDigestDetail
+                    ? tDetail("siblings.untaggedEmpty")
+                    : tDetail("siblings.empty")}
                 </p>
               ) : (
                 <ul className="divide-y rounded-lg border">
@@ -318,7 +346,7 @@ export function TagDetailPage({ repositoryName, imageName, tag }: TagDetailPageP
           <DeleteTagDialog
             open={deleteOpen}
             onOpenChange={setDeleteOpen}
-            tagName={tag}
+            tagName={isDigestDetail ? formatDigest(tag) : tag}
             siblings={siblings}
             isPending={deleteMutation.isPending}
             onConfirm={() => deleteMutation.mutate()}

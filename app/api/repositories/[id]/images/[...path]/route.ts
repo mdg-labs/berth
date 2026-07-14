@@ -9,8 +9,11 @@ import { requireDeleteAccess } from "@/lib/registry/delete/access";
 import {
   bulkDeleteTags,
   deleteImage,
+  deleteManifestDigest,
   deleteTag,
+  type BulkDeleteItem,
 } from "@/lib/registry/delete/service";
+import { isDigestReference } from "@/lib/catalog/format";
 import {
   getTagDetail,
   getTagSiblings,
@@ -114,6 +117,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             : "name";
       const page = Number.parseInt(params.get("page") ?? "1", 10);
       const pageSize = Number.parseInt(params.get("pageSize") ?? "25", 10);
+      const includeUntagged = params.get("includeUntagged") === "true";
 
       const tags = await listImageTags(
         access.user,
@@ -124,20 +128,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
           sort,
           page: Number.isFinite(page) ? page : 1,
           pageSize: Number.isFinite(pageSize) ? pageSize : 25,
+          includeUntagged,
         },
       );
 
+      const taggedNames = tags.tags
+        .filter((tag) => !tag.isUntagged)
+        .map((tag) => tag.name);
       const pullCounts = await getTagPullCounts(
         id,
         parsed.imageName,
-        tags.tags.map((tag) => tag.name),
+        taggedNames,
       );
 
       return NextResponse.json({
         ...tags,
         tags: tags.tags.map((tag) => ({
           ...tag,
-          pullCount: pullCounts.get(tag.name) ?? 0,
+          pullCount: tag.isUntagged ? 0 : (pullCounts.get(tag.name) ?? 0),
         })),
       });
     }
@@ -183,6 +191,21 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const tagParsed = parseImageApiPath(path);
   if (tagParsed?.kind === "tag-detail") {
     try {
+      if (isDigestReference(tagParsed.tag)) {
+        const result = await deleteManifestDigest(
+          access.user,
+          access.repository.name,
+          tagParsed.imageName,
+          tagParsed.tag,
+        );
+
+        return NextResponse.json({
+          deleted: true,
+          digest: result.digest,
+          gcInfo: GC_INFO_MESSAGE,
+        });
+      }
+
       const result = await deleteTag(
         access.user,
         access.repository.name,
@@ -289,8 +312,22 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 type BulkDeleteBody = {
-  tags?: string[];
+  tags?: string[] | BulkDeleteItem[];
 };
+
+function normalizeBulkDeleteItems(
+  tags: string[] | BulkDeleteItem[],
+): BulkDeleteItem[] {
+  if (tags.length === 0) {
+    return [];
+  }
+
+  if (typeof tags[0] === "string") {
+    return (tags as string[]).map((name) => ({ name }));
+  }
+
+  return tags as BulkDeleteItem[];
+}
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id, path } = await context.params;
@@ -316,11 +353,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   try {
+    const items = normalizeBulkDeleteItems(body.tags);
     const result = await bulkDeleteTags(
       access.user,
       access.repository.name,
       parsed.imageName,
-      body.tags,
+      items,
     );
 
     return NextResponse.json({

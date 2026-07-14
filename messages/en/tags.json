@@ -6,6 +6,13 @@
   "searchPlaceholder": "Search tags…",
   "sort": "Sort",
   "settings": "Settings",
+  "showUntagged": "Show untagged",
+  "showUntaggedDescription": "Include manifest digests that no longer have a tag.",
+  "untaggedBadge": "Untagged",
+  "untaggedUnsupported": {
+    "title": "Untagged digests unavailable",
+    "description": "Registry storage is not mounted in this environment. Run Berth with the registry-data volume to list untagged digests."
+  },
   "columns": {
     "tag": "Tag",
     "digest": "Digest",
@@ -15,6 +22,7 @@
   },
   "selectAll": "Select all tags on page",
   "selectTag": "Select {name}",
+  "selectUntagged": "Select untagged digest {digest}",
   "selected": "{count, plural, one {# selected} other {# selected}}",
   "deleteSelected": "Delete selected",
   "loadError": "Failed to load tags",
@@ -38,6 +46,10 @@
       "title": "Tag deleted",
       "description": "{tag} was removed from the image."
     },
+    "deleteManifestSuccess": {
+      "title": "Manifest deleted",
+      "description": "Untagged digest {digest} was removed from the image."
+    },
     "deleteError": {
       "title": "Delete failed"
     },
@@ -49,6 +61,7 @@
     "loadError": "Failed to load tag",
     "copyPullCommand": "Copy pull command",
     "deleteTag": "Delete tag",
+    "deleteManifest": "Delete manifest",
     "manifest": "Manifest",
     "created": "Created {date}",
     "tabs": {
@@ -73,7 +86,8 @@
       "emptyLayer": "(empty layer)"
     },
     "siblings": {
-      "empty": "No other tags share this digest."
+      "empty": "No other tags share this digest.",
+      "untaggedEmpty": "This digest is not referenced by any tag."
     }
   }
 }
