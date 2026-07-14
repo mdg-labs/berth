@@ -39,6 +39,7 @@
     "empty": "No personal access tokens yet.",
     "allRepositories": "All accessible repositories",
     "revoke": "Revoke token",
+    "rotate": "Rotate token",
     "columns": {
       "name": "Name",
       "prefix": "Prefix",
@@ -76,14 +77,26 @@
       "token": "Token",
       "copied": "Token copied",
       "dockerTitle": "Docker login",
-      "dockerInstructions": "docker login <registry-host>\nUsername: {email}\nPassword: <paste token>",
+      "dockerInstructions": "docker login {registryHost}\nUsername: {email}\nPassword: {passwordHint}",
+      "passwordHint": "paste token above",
       "done": "Done"
+    },
+    "rotateDialog": {
+      "title": "Rotate personal access token",
+      "description": "This generates a new secret for {name}. The current token stops working immediately.",
+      "resetExpiry": "Reset expiration",
+      "resetExpiryHint": "Keeps the same validity period as when the token was originally created.",
+      "resetExpiryRequired": "This token is expired. Expiration must be reset to rotate.",
+      "newExpiryPreview": "New expiration: {date}",
+      "cancel": "Cancel",
+      "submit": "Rotate token"
     },
     "toast": {
       "createErrorTitle": "Failed to create token",
       "revokeSuccessTitle": "Token revoked",
       "revokeSuccessDescription": "The token can no longer be used.",
-      "revokeErrorTitle": "Revoke failed"
+      "revokeErrorTitle": "Revoke failed",
+      "rotateErrorTitle": "Failed to rotate token"
     }
   },
   "mfa": {

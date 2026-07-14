@@ -3,7 +3,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CopyIcon, KeyRoundIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, KeyRoundIcon, PlusIcon, RotateCwIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
@@ -30,6 +30,11 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Form } from "@/components/ui/form";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
@@ -86,6 +91,22 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleString();
 }
 
+function isTokenExpired(token: TokenSummary): boolean {
+  if (!token.expiresAt) {
+    return false;
+  }
+  return new Date(token.expiresAt).getTime() <= Date.now();
+}
+
+function computeRotatedExpiryPreview(token: TokenSummary): string | null {
+  if (!token.expiresAt) {
+    return null;
+  }
+  const ttlMs =
+    new Date(token.expiresAt).getTime() - new Date(token.createdAt).getTime();
+  return new Date(Date.now() + Math.max(ttlMs, 0)).toLocaleString();
+}
+
 export function AccountTokensSection() {
   const { data: authData } = useAuthUser();
   const user = authData?.user;
@@ -95,6 +116,9 @@ export function AccountTokensSection() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [rotateOpen, setRotateOpen] = useState(false);
+  const [rotatingToken, setRotatingToken] = useState<TokenSummary | null>(null);
+  const [resetExpiry, setResetExpiry] = useState(false);
   const [name, setName] = useState("");
   const [allowPull, setAllowPull] = useState(true);
   const [allowPush, setAllowPush] = useState(false);
@@ -188,6 +212,46 @@ export function AccountTokensSection() {
     },
   });
 
+  const rotateMutation = useMutation({
+    mutationFn: ({
+      tokenId,
+      resetExpiry: shouldResetExpiry,
+    }: {
+      tokenId: string;
+      resetExpiry: boolean;
+    }) =>
+      apiFetch<CreateTokenResponse>(`/api/account/tokens/${tokenId}/rotate`, {
+        method: "POST",
+        body: { resetExpiry: shouldResetExpiry },
+      }),
+    onSuccess: (data) => {
+      setCreatedToken(data.token);
+      setRotateOpen(false);
+      setRotatingToken(null);
+      setResetExpiry(false);
+      void queryClient.invalidateQueries({ queryKey: ["account-tokens"] });
+    },
+    onError: (error) => {
+      toastManager.add({
+        type: "error",
+        title: t("toast.rotateErrorTitle"),
+        description: formatApiError(tErrors, error, "request_failed"),
+      });
+    },
+  });
+
+  function openRotateDialog(token: TokenSummary) {
+    setRotatingToken(token);
+    setResetExpiry(isTokenExpired(token));
+    setRotateOpen(true);
+  }
+
+  function closeRotateDialog() {
+    setRotateOpen(false);
+    setRotatingToken(null);
+    setResetExpiry(false);
+  }
+
   function toggleRepository(repositoryId: string, checked: boolean) {
     setSelectedRepositoryIds((current) =>
       checked
@@ -206,6 +270,14 @@ export function AccountTokensSection() {
     tokensQuery.data?.policy.patAllowNeverExpire ?? true;
   const tokens = tokensQuery.data?.tokens ?? [];
   const repositories = tokensQuery.data?.repositories ?? [];
+  const registryHost =
+    typeof window !== "undefined" ? window.location.host : "";
+  const rotatingTokenExpired = rotatingToken
+    ? isTokenExpired(rotatingToken)
+    : false;
+  const rotatedExpiryPreview = rotatingToken
+    ? computeRotatedExpiryPreview(rotatingToken)
+    : null;
 
   return (
     <>
@@ -275,16 +347,28 @@ export function AccountTokensSection() {
                     <TableCell>{formatDate(token.lastUsedAt)}</TableCell>
                     <TableCell>
                       {!token.revokedAt ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={t("revoke")}
-                          disabled={revokeMutation.isPending}
-                          onClick={() => revokeMutation.mutate(token.id)}
-                        >
-                          <Trash2Icon />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={t("rotate")}
+                            disabled={rotateMutation.isPending}
+                            onClick={() => openRotateDialog(token)}
+                          >
+                            <RotateCwIcon />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={t("revoke")}
+                            disabled={revokeMutation.isPending}
+                            onClick={() => revokeMutation.mutate(token.id)}
+                          >
+                            <Trash2Icon />
+                          </Button>
+                        </div>
                       ) : null}
                     </TableCell>
                   </TableRow>
@@ -447,6 +531,79 @@ export function AccountTokensSection() {
       </Dialog>
 
       <Dialog
+        open={rotateOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeRotateDialog();
+          }
+        }}
+      >
+        <DialogPopup className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("rotateDialog.title")}</DialogTitle>
+            <DialogDescription>
+              {rotatingToken
+                ? t("rotateDialog.description", { name: rotatingToken.name })
+                : null}
+            </DialogDescription>
+          </DialogHeader>
+          <Form
+            className="contents"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!rotatingToken) {
+                return;
+              }
+              rotateMutation.mutate({
+                tokenId: rotatingToken.id,
+                resetExpiry,
+              });
+            }}
+          >
+            <DialogPanel className="space-y-4">
+              <Field>
+                <Label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={resetExpiry}
+                    disabled={rotatingTokenExpired}
+                    onCheckedChange={(checked) =>
+                      setResetExpiry(checked === true)
+                    }
+                  />
+                  {t("rotateDialog.resetExpiry")}
+                </Label>
+                <FieldDescription>
+                  {rotatingTokenExpired
+                    ? t("rotateDialog.resetExpiryRequired")
+                    : t("rotateDialog.resetExpiryHint")}
+                </FieldDescription>
+                {resetExpiry && rotatedExpiryPreview ? (
+                  <FieldDescription>
+                    {t("rotateDialog.newExpiryPreview", {
+                      date: rotatedExpiryPreview,
+                    })}
+                  </FieldDescription>
+                ) : null}
+              </Field>
+            </DialogPanel>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeRotateDialog}>
+                {t("rotateDialog.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                disabled={rotateMutation.isPending || !rotatingToken}
+                data-loading={rotateMutation.isPending ? "" : undefined}
+              >
+                {rotateMutation.isPending ? <Spinner /> : null}
+                {t("rotateDialog.submit")}
+              </Button>
+            </DialogFooter>
+          </Form>
+        </DialogPopup>
+      </Dialog>
+
+      <Dialog
         open={createdToken !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -460,33 +617,44 @@ export function AccountTokensSection() {
             <DialogDescription>{t("createdDialog.description")}</DialogDescription>
           </DialogHeader>
           <DialogPanel className="space-y-4">
-            <Field>
+            <Field className="w-full">
               <FieldLabel>{t("createdDialog.token")}</FieldLabel>
-              <div className="flex gap-2">
-                <Input readOnly value={createdToken ?? ""} />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    if (createdToken) {
-                      void navigator.clipboard.writeText(createdToken);
-                      toastManager.add({
-                        type: "success",
-                        title: t("createdDialog.copied"),
-                      });
-                    }
-                  }}
-                >
-                  <CopyIcon />
-                </Button>
-              </div>
+              <InputGroup>
+                <InputGroupInput
+                  readOnly
+                  value={createdToken ?? ""}
+                  className="font-mono text-xs"
+                />
+                <InputGroupAddon align="inline-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("createdDialog.copied")}
+                    onClick={() => {
+                      if (createdToken) {
+                        void navigator.clipboard.writeText(createdToken);
+                        toastManager.add({
+                          type: "success",
+                          title: t("createdDialog.copied"),
+                        });
+                      }
+                    }}
+                  >
+                    <CopyIcon />
+                  </Button>
+                </InputGroupAddon>
+              </InputGroup>
             </Field>
             {user ? (
               <div className="rounded-md bg-muted p-3 text-sm">
                 <p className="font-medium">{t("createdDialog.dockerTitle")}</p>
                 <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs">
-                  {t("createdDialog.dockerInstructions", { email: user.email })}
+                  {t("createdDialog.dockerInstructions", {
+                    registryHost,
+                    email: user.email,
+                    passwordHint: t("createdDialog.passwordHint"),
+                  })}
                 </pre>
               </div>
             ) : null}

@@ -92,6 +92,84 @@ describe("personal access token integration", () => {
     expect(pushTokenResponse.status).toBe(403);
   });
 
+  it("rotates a PAT and invalidates the previous secret", async () => {
+    if (!credentialsReady || !sessionId) {
+      return;
+    }
+
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const create = await fetch(`${INTEGRATION_BASE_URL}/api/account/tokens`, {
+      method: "POST",
+      headers: {
+        ...csrfHeaders(CLIENT_IP),
+        ...cookieHeader(SESSION_COOKIE, sessionId),
+      },
+      body: JSON.stringify({
+        name: `rotate-${Date.now()}`,
+        allowPull: true,
+        allowPush: false,
+        expiresAt,
+        repositoryIds: null,
+      }),
+    });
+
+    expect(create.status).toBe(200);
+    const created = (await create.json()) as {
+      token: string;
+      summary: { id: string; expiresAt: string };
+    };
+
+    const rotate = await fetch(
+      `${INTEGRATION_BASE_URL}/api/account/tokens/${created.summary.id}/rotate`,
+      {
+        method: "POST",
+        headers: {
+          ...csrfHeaders(CLIENT_IP),
+          ...cookieHeader(SESSION_COOKIE, sessionId),
+        },
+        body: JSON.stringify({ resetExpiry: false }),
+      },
+    );
+
+    expect(rotate.status).toBe(200);
+    const rotated = (await rotate.json()) as {
+      token: string;
+      summary: { expiresAt: string };
+    };
+    expect(rotated.summary.expiresAt).toBe(created.summary.expiresAt);
+
+    const oldTokenResponse = await fetch(
+      `${INTEGRATION_BASE_URL}/api/auth/token?service=registry&scope=${encodeURIComponent("repository:any-repo/image:pull")}`,
+      { headers: basicAuthHeader(INTEGRATION_ADMIN_EMAIL, created.token) },
+    );
+    expect(oldTokenResponse.status).toBe(401);
+
+    const newTokenResponse = await fetch(
+      `${INTEGRATION_BASE_URL}/api/auth/token?service=registry&scope=${encodeURIComponent("repository:any-repo/image:pull")}`,
+      { headers: basicAuthHeader(INTEGRATION_ADMIN_EMAIL, rotated.token) },
+    );
+    expect(newTokenResponse.status).toBe(200);
+
+    const rotateWithReset = await fetch(
+      `${INTEGRATION_BASE_URL}/api/account/tokens/${created.summary.id}/rotate`,
+      {
+        method: "POST",
+        headers: {
+          ...csrfHeaders(CLIENT_IP),
+          ...cookieHeader(SESSION_COOKIE, sessionId),
+        },
+        body: JSON.stringify({ resetExpiry: true }),
+      },
+    );
+    expect(rotateWithReset.status).toBe(200);
+    const resetRotated = (await rotateWithReset.json()) as {
+      summary: { expiresAt: string };
+    };
+    expect(new Date(resetRotated.summary.expiresAt).getTime()).toBeGreaterThan(
+      Date.now(),
+    );
+  });
+
   it("updates admin PAT policy settings", async () => {
     if (!credentialsReady || !sessionId) {
       return;

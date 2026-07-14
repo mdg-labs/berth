@@ -12,6 +12,7 @@ export const AUDIT_ACTIONS = [
   "auth.password_change",
   "auth.pat_created",
   "auth.pat_revoked",
+  "auth.pat_rotated",
   "auth.pat_used",
   "auth.password_reset",
   "image.settings.update",

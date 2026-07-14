@@ -8,8 +8,11 @@ import type {
   CreatePersonalAccessTokenInput,
   PatContext,
   PersonalAccessTokenSummary,
+  RotatePersonalAccessTokenInput,
+  RotatePatResult,
 } from "@/lib/pat/types";
 import {
+  computeRotatedPatExpiry,
   repositoryMeetsPatRequirements,
   validatePatCreateInput,
   type PatValidationError,
@@ -241,6 +244,86 @@ export async function revokePersonalAccessToken(
   });
 
   return true;
+}
+
+export async function rotatePersonalAccessToken(
+  userId: string,
+  tokenId: string,
+  input: RotatePersonalAccessTokenInput,
+  clientIp?: string | null,
+): Promise<RotatePatResult> {
+  const resetExpiry = input.resetExpiry ?? false;
+  const db = getDb();
+  const [existing] = await db
+    .select()
+    .from(personalAccessTokens)
+    .where(
+      and(
+        eq(personalAccessTokens.id, tokenId),
+        eq(personalAccessTokens.userId, userId),
+        isNull(personalAccessTokens.revokedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) {
+    return { ok: false, error: "not_found" };
+  }
+
+  const policy = await getPatPolicy();
+  const expiryResult = computeRotatedPatExpiry(
+    existing.createdAt,
+    existing.expiresAt,
+    resetExpiry,
+    policy,
+  );
+  if (!expiryResult.ok) {
+    return { ok: false, error: expiryResult.error };
+  }
+
+  const rawSecret = generateToken();
+  const fullToken = `${PAT_PREFIX}${rawSecret}`;
+  const tokenPrefix = fullToken.slice(0, 12);
+  const tokenHash = hashToken(fullToken);
+
+  const [updated] = await db
+    .update(personalAccessTokens)
+    .set({
+      tokenPrefix,
+      tokenHash,
+      expiresAt: expiryResult.expiresAt,
+      lastUsedAt: null,
+    })
+    .where(eq(personalAccessTokens.id, existing.id))
+    .returning();
+
+  if (!updated) {
+    throw new Error("Failed to rotate personal access token");
+  }
+
+  const summaries = await listPersonalAccessTokens(userId);
+  const summary = summaries.find((entry) => entry.id === updated.id);
+  if (!summary) {
+    throw new Error("Failed to load rotated personal access token");
+  }
+
+  await writeAuditLog({
+    userId,
+    action: "auth.pat_rotated",
+    resource: `pat:${updated.id}`,
+    metadata: {
+      name: updated.name,
+      resetExpiry,
+      expiresAt: updated.expiresAt?.toISOString() ?? null,
+    },
+    clientIp: clientIp ?? null,
+  });
+
+  return {
+    ok: true,
+    token: fullToken,
+    summary,
+  };
 }
 
 export async function revokeAllPersonalAccessTokensForUser(
