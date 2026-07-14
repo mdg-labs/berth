@@ -24,6 +24,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogPanel,
   DialogPopup,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -309,12 +310,13 @@ export function AccountTokensSection() {
             <DialogDescription>{t("createDialog.description")}</DialogDescription>
           </DialogHeader>
           <Form
-            className="space-y-4"
+            className="contents"
             onSubmit={(event) => {
               event.preventDefault();
               createMutation.mutate();
             }}
           >
+            <DialogPanel className="space-y-4">
             <Field>
               <FieldLabel htmlFor="token-name">{t("createDialog.name")}</FieldLabel>
               <Input
@@ -417,6 +419,7 @@ export function AccountTokensSection() {
                 </FieldDescription>
               ) : null}
             </Field>
+            </DialogPanel>
             <DialogFooter>
               <Button
                 type="button"
@@ -456,7 +459,7 @@ export function AccountTokensSection() {
             <DialogTitle>{t("createdDialog.title")}</DialogTitle>
             <DialogDescription>{t("createdDialog.description")}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <DialogPanel className="space-y-4">
             <Field>
               <FieldLabel>{t("createdDialog.token")}</FieldLabel>
               <div className="flex gap-2">
@@ -487,7 +490,7 @@ export function AccountTokensSection() {
                 </pre>
               </div>
             ) : null}
-          </div>
+          </DialogPanel>
           <DialogFooter>
             <Button type="button" onClick={() => setCreatedToken(null)}>
               {t("createdDialog.done")}
