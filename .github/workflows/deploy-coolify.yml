@@ -11,10 +11,24 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+      COOLIFY_API_KEY: ${{ secrets.COOLIFY_API_KEY }}
     steps:
+      - name: Validate deploy configuration
+        run: |
+          if [ -z "$COOLIFY_DEPLOY_WEBHOOK" ]; then
+            echo "::error::COOLIFY_DEPLOY_WEBHOOK secret is empty or not passed to this workflow."
+            exit 1
+          fi
+          if [ -z "$COOLIFY_API_KEY" ]; then
+            echo "::error::COOLIFY_API_KEY secret is empty or not passed to this workflow."
+            exit 1
+          fi
+
       - name: Trigger Coolify deployment
         run: |
           curl --fail --silent --show-error \
             --request GET \
-            "${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}" \
-            --header "Authorization: Bearer ${{ secrets.COOLIFY_API_KEY }}"
+            "$COOLIFY_DEPLOY_WEBHOOK" \
+            --header "Authorization: Bearer $COOLIFY_API_KEY"
