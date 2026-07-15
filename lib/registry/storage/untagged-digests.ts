@@ -42,36 +42,24 @@ async function collectRevisionDigests(manifestsPath: string): Promise<Set<string
   const digests = new Set<string>();
   const revisionsPath = path.join(manifestsPath, REVISIONS_DIR, SHA256_DIR);
 
-  let algoEntries;
+  let digestEntries;
   try {
-    algoEntries = await readdir(revisionsPath, { withFileTypes: true });
+    digestEntries = await readdir(revisionsPath, { withFileTypes: true });
   } catch {
     return digests;
   }
 
-  for (const prefixEntry of algoEntries) {
-    if (!prefixEntry.isDirectory()) {
+  for (const digestEntry of digestEntries) {
+    if (!digestEntry.isDirectory()) {
       continue;
     }
 
-    const prefixPath = path.join(revisionsPath, prefixEntry.name);
-    let digestEntries;
-    try {
-      digestEntries = await readdir(prefixPath, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-
-    for (const digestEntry of digestEntries) {
-      if (!digestEntry.isDirectory()) {
-        continue;
-      }
-
-      const linkPath = path.join(prefixPath, digestEntry.name, LINK_FILE);
-      const digest = await readDigestFromLink(linkPath);
-      if (digest) {
-        digests.add(digest);
-      }
+    // Distribution stores manifest revisions as revisions/sha256/<full-hex>/link
+    // (multilevel=false), not the two-level blob store layout.
+    const linkPath = path.join(revisionsPath, digestEntry.name, LINK_FILE);
+    const digest = await readDigestFromLink(linkPath);
+    if (digest) {
+      digests.add(digest);
     }
   }
 

@@ -7,8 +7,12 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const DIGEST_TAGGED = "sha256:aaaabbbbccccddddeeeeffff00001111222233334444555566667777";
-const DIGEST_UNTAGGED = "sha256:1111222233334444555566667777888899990000aaaabbbbccccddddeeee";
+const DIGEST_TAGGED =
+  "sha256:d32663906812f27568205677a5b60295dccd8ec785300eba185c39ba1713513c";
+const DIGEST_UNTAGGED_A =
+  "sha256:7db3c472dd47661798ddd1259dcfba5c7ddd8d69556e637443963f5c8acf491b";
+const DIGEST_UNTAGGED_B =
+  "sha256:bcd36deddafdbb5d026fb398fde373204ac85ef15a3da1c21e67c0e67a02677b";
 
 async function writeManifestLink(
   root: string,
@@ -26,8 +30,7 @@ async function writeManifestLink(
     "_manifests",
     "revisions",
     "sha256",
-    hex.slice(0, 2),
-    hex.slice(2),
+    hex,
     "link",
   );
   await mkdir(path.dirname(linkPath), { recursive: true });
@@ -78,14 +81,18 @@ describe("untagged digest storage inventory", () => {
   it("returns digests with no current tag reference", async () => {
     const fullImageName = "demo-app/hello";
     await writeManifestLink(tempRoot, fullImageName, DIGEST_TAGGED);
-    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED);
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_A);
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_B);
     await writeTagLink(tempRoot, fullImageName, "dev", DIGEST_TAGGED);
 
     const { listUntaggedDigests } = await import(
       "@/lib/registry/storage/untagged-digests"
     );
 
-    expect(await listUntaggedDigests(fullImageName)).toEqual([DIGEST_UNTAGGED]);
+    expect(await listUntaggedDigests(fullImageName)).toEqual([
+      DIGEST_UNTAGGED_B,
+      DIGEST_UNTAGGED_A,
+    ]);
   });
 
   it("returns empty list when all revisions are tagged", async () => {
