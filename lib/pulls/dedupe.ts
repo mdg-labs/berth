@@ -15,10 +15,11 @@ export type PullCounterIncrements = {
 
 export function computePullCounterIncrements(
   tagReference: string | null,
+  isDigestReference: boolean,
   dedupe: PullDedupeInput,
 ): PullCounterIncrements {
   return {
-    tag: tagReference !== null,
+    tag: tagReference !== null || isDigestReference,
     image: !dedupe.hasRecentImageDigestPull,
     repository: !dedupe.hasRecentRepositoryDigestPull,
   };

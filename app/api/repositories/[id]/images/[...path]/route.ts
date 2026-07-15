@@ -29,7 +29,11 @@ import {
   parseImageDeletePath,
 } from "@/lib/registry/catalog/parse-path";
 import { GC_INFO_MESSAGE } from "@/lib/registry/delete/constants";
-import { getTagPullCounts } from "@/lib/pulls/stats";
+import {
+  getTagPullCounts,
+  pullCountKeysForTags,
+  resolveTagPullCount,
+} from "@/lib/pulls/stats";
 import {
   getImageSettings,
   upsertImageSettings,
@@ -132,20 +136,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
         },
       );
 
-      const taggedNames = tags.tags
-        .filter((tag) => !tag.isUntagged)
-        .map((tag) => tag.name);
       const pullCounts = await getTagPullCounts(
-        id,
+        access.repository.id,
         parsed.imageName,
-        taggedNames,
+        pullCountKeysForTags(tags.tags),
       );
 
       return NextResponse.json({
         ...tags,
         tags: tags.tags.map((tag) => ({
           ...tag,
-          pullCount: tag.isUntagged ? 0 : (pullCounts.get(tag.name) ?? 0),
+          pullCount: resolveTagPullCount(tag, pullCounts),
         })),
       });
     }

@@ -59,10 +59,17 @@ export async function recordPullEvent(input: RecordPullEventInput): Promise<void
   ]);
 
   const tagReference = input.isDigestReference ? null : input.reference;
-  const increments = computePullCounterIncrements(tagReference, {
-    hasRecentImageDigestPull,
-    hasRecentRepositoryDigestPull,
-  });
+  const tagCounterReference = input.isDigestReference
+    ? input.reference
+    : tagReference;
+  const increments = computePullCounterIncrements(
+    tagReference,
+    input.isDigestReference,
+    {
+      hasRecentImageDigestPull,
+      hasRecentRepositoryDigestPull,
+    },
+  );
 
   let userId: string | null = null;
   const anonymous =
@@ -85,14 +92,14 @@ export async function recordPullEvent(input: RecordPullEventInput): Promise<void
       anonymous,
     });
 
-    if (increments.tag && tagReference) {
+    if (increments.tag && tagCounterReference) {
       await tx
         .insert(pullCounters)
         .values({
           repositoryId: repository.id,
           scope: "tag",
           imageName: input.imageName,
-          tagReference,
+          tagReference: tagCounterReference,
           count: 1,
         })
         .onConflictDoUpdate({

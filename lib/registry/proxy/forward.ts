@@ -111,7 +111,10 @@ function maybeRecordManifestPull(
   upstream: Response,
   tokenSubject: string | null,
 ): void {
-  if (request.method !== "GET" || upstream.status !== 200) {
+  if (
+    (request.method !== "GET" && request.method !== "HEAD") ||
+    upstream.status !== 200
+  ) {
     return;
   }
 
