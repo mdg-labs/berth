@@ -1,0 +1,69 @@
+name: Bug report
+description: Something in Berth isn't working as expected.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The more of this you can
+        fill in, the faster it can be triaged and reproduced.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect instead?
+      placeholder: |
+        What happened:
+        What I expected:
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: The exact steps, in order, that trigger this.
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: e.g. v0.3.1 or commit 4bdc7e6
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Where it runs — OS, deployment, anything relevant to the bug.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or diagnostics
+      description: Relevant output. Remove secrets and tokens before pasting.
+      render: text
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Best guess is fine — triage will confirm or correct it.
+      options:
+        - area:api (HTTP API routes and server logic (app/api, lib))
+        - area:auth (Login, sessions, OIDC, MFA, PATs, registry token issuer)
+        - area:registry (/v2 proxy, catalog, tags, pulls, GC)
+        - area:web (Portal UI, components, i18n messages)
+        - area:db (Drizzle schema and migrations)
+        - area:docker (Compose stack, Dockerfile, registry and token config)
+        - area:ci (GitHub Actions workflows and release scripts)
+        - area:docs (README, docs/, spec, decisions)
+        - not sure
+    validations:
+      required: false

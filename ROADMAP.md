@@ -6,33 +6,22 @@
 
 ---
 
-## How to use this with Cursor
+## Working on Berth
 
-### Autonomous development (recommended)
-
-Use the **orchestrator skill** for phased greenfield work or GitHub issues:
+The MVP phases below (P0–P11) are complete. New work is tracked as GitHub
+issues on `mdg-labs/berth` and implemented with the agent workflow in
+`.claude/` (see the `## Agent workflow` section of [`CLAUDE.md`](CLAUDE.md)):
 
 ```text
-@orchestrator orchestrate P0          # roadmap greenfield
-@orchestrator implement #1            # GitHub issue (Kaneo sync)
+/triage <#n | problem or feature>    # enrich an issue, or plan one / an epic
+/orchestrate <#n>                    # implement ready issues on dev
 ```
 
-See [`docs/ORCHESTRATOR-GUIDE.md`](docs/ORCHESTRATOR-GUIDE.md), [`.cursor/skills/orchestrator/kaneo-issues.md`](.cursor/skills/orchestrator/kaneo-issues.md).
-
-| Command | Behavior |
-|---------|----------|
-| `orchestrate P0` | Run Phase 0 until Done or blocked |
-| `implement P6` | Single phase |
-| `implement P0-T05` | Single checkbox task within Phase 0 |
-| `orchestrate through P3` | Sequential P0→P3 |
-
-### Manual single-phase prompt (without orchestrator)
-
-1. **One phase per session** (or per PR). Do not scope-creep into later phases.
-2. **Read `docs/spec.md` §0** — no Harbor/docker-registry-ui forks, no bulk `@coss/ui` install.
-3. **Record assumptions** in `DECISIONS.md` (§Appendix C).
-4. **Verify exit criteria** with real commands (compose up, curl, docker login/push).
-5. **Commits:** `feat(scope)[P6]: …` with `Task: P6` in body — see `.cursor/rules/02-git-workflow.mdc`.
+Without the agent workflow: read `docs/spec.md` §0 first (no Harbor or
+docker-registry-ui forks, no bulk `@coss/ui` install), record assumptions in
+`DECISIONS.md`, verify with real commands (compose up, curl, docker
+login/push), and write commits as `type(scope): summary` with a `Fixes #n`
+trailer.
 
 ---
 
