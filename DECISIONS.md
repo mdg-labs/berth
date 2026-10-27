@@ -108,7 +108,10 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Single tag delete | `DELETE` manifest by **tag reference** (not digest) | Sibling tags remain; sibling AlertDialog warns before confirm (spec §6.3) |
-| Bulk / repository delete | Resolve unique digests, `DELETE` by digest | Removes manifest data; dedupes shared digests (spec §7.4) |
+| Bulk tag delete | Named tags `DELETE` by **tag reference**; untagged items `DELETE` by digest; the result and `tag.bulk_delete` audit entry list a digest only when it was deleted by digest | Sibling tags sharing a digest stay intact; the reported count matches what was removed |
+| Repository delete | Resolve unique digests, `DELETE` by digest | Removes manifest data; dedupes shared digests (spec §7.4) |
+| Untagged digest listing | Revisions not referenced by a tag, nor transitively by a tagged index / manifest list; any unreadable or unparsable referenced manifest body lists nothing untagged for the repository | Child manifests of a tagged multi-arch image must never be offered for digest delete; fails closed |
+| Tag manifest lookups | Tag and untagged summaries resolve manifests with at most 8 concurrent HEAD requests | Every tag is resolved for sibling detection; bounds load on the registry on each 30 s refetch |
 | Bulk delete confirmation | Typed phrase `delete tags` when N > 5 | Spec §6.3 / exit criteria |
 | Repository delete confirmation | Typed phrase `delete <repoName>` | Same confirmation pattern as bulk delete |
 | Sibling warning UX | `p-alert-dialog-1` pattern + checkbox ack when siblings exist | Spec Appendix B; microcopy in DECISIONS not spec-fixed |
