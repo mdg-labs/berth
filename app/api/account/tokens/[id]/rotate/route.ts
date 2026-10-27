@@ -51,13 +51,32 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return apiError("not_authenticated", "Not authenticated", 401);
   }
 
-  let body: RotatePersonalAccessTokenInput = {};
+  let rawBody: string;
   try {
-    const parsed = (await request.json()) as RotatePersonalAccessTokenInput;
-    body = parsed ?? {};
+    rawBody = await request.text();
   } catch {
     return apiError("bad_request", "Invalid JSON body", 400);
   }
+
+  let parsed: unknown = {};
+  if (rawBody.trim() !== "") {
+    try {
+      parsed = JSON.parse(rawBody);
+    } catch {
+      return apiError("bad_request", "Invalid JSON body", 400);
+    }
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return apiError("bad_request", "Request body must be a JSON object", 400);
+  }
+
+  const { resetExpiry } = parsed as { resetExpiry?: unknown };
+  if (resetExpiry !== undefined && typeof resetExpiry !== "boolean") {
+    return apiError("bad_request", "resetExpiry must be a boolean", 400);
+  }
+
+  const body: RotatePersonalAccessTokenInput = { resetExpiry };
 
   const { id } = await context.params;
   const result = await rotatePersonalAccessToken(
