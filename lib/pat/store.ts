@@ -294,11 +294,18 @@ export async function rotatePersonalAccessToken(
       expiresAt: expiryResult.expiresAt,
       lastUsedAt: null,
     })
-    .where(eq(personalAccessTokens.id, existing.id))
+    .where(
+      and(
+        eq(personalAccessTokens.id, existing.id),
+        eq(personalAccessTokens.userId, userId),
+        isNull(personalAccessTokens.revokedAt),
+        eq(personalAccessTokens.tokenHash, existing.tokenHash),
+      ),
+    )
     .returning();
 
   if (!updated) {
-    throw new Error("Failed to rotate personal access token");
+    return { ok: false, error: "not_found" };
   }
 
   const summaries = await listPersonalAccessTokens(userId);
