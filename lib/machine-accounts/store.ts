@@ -1,0 +1,210 @@
+// Copyright (c) 2026 Michael David Guggenbichler (MDG Labs), licensed under Apache-2.0 — see LICENSE
+
+import { and, asc, eq } from "drizzle-orm";
+
+import { getDb } from "@/lib/db";
+import { auditLog, machineAccounts, repositories, users } from "@/lib/db/schema";
+import { generateToken, hashToken } from "@/lib/email/tokens";
+import {
+  MACHINE_ACCOUNT_PREFIX,
+  MACHINE_ACCOUNT_TOKEN_PREFIX_LENGTH,
+} from "@/lib/machine-accounts/config";
+import type {
+  CreateMachineAccountInput,
+  MachineAccountSummary,
+} from "@/lib/machine-accounts/types";
+import { isUuid } from "@/lib/machine-accounts/validation";
+
+const OWNER_NAME_CONSTRAINT = "machine_accounts_owner_repository_name_idx";
+
+type MachineAccountActor = { id: string; name: string };
+
+export type CreateMachineAccountResult =
+  | { ok: true; secret: string; summary: MachineAccountSummary }
+  | { ok: false; error: "duplicate_name" | "repository_not_found" };
+
+export function machineAccountUsername(
+  repositoryName: string,
+  accountName: string,
+): string {
+  return `${repositoryName}+${accountName}`;
+}
+
+function pgErrorCode(error: unknown): { code?: string; constraint?: string } {
+  const candidates = [error, (error as { cause?: unknown } | null)?.cause];
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === "object" && "code" in candidate) {
+      const { code, constraint_name: constraint } = candidate as {
+        code?: unknown;
+        constraint_name?: unknown;
+      };
+      return {
+        code: typeof code === "string" ? code : undefined,
+        constraint: typeof constraint === "string" ? constraint : undefined,
+      };
+    }
+  }
+  return {};
+}
+
+export async function listMachineAccounts(
+  repositoryId: string,
+): Promise<MachineAccountSummary[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: machineAccounts.id,
+      name: machineAccounts.name,
+      description: machineAccounts.description,
+      tokenPrefix: machineAccounts.tokenPrefix,
+      allowPull: machineAccounts.allowPull,
+      allowPush: machineAccounts.allowPush,
+      createdAt: machineAccounts.createdAt,
+      createdById: users.id,
+      createdByName: users.name,
+      repositoryName: repositories.name,
+    })
+    .from(machineAccounts)
+    .innerJoin(
+      repositories,
+      eq(machineAccounts.ownerRepositoryId, repositories.id),
+    )
+    .leftJoin(users, eq(machineAccounts.createdBy, users.id))
+    .where(eq(machineAccounts.ownerRepositoryId, repositoryId))
+    .orderBy(asc(machineAccounts.name));
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    username: machineAccountUsername(row.repositoryName, row.name),
+    tokenPrefix: row.tokenPrefix,
+    allowPull: row.allowPull,
+    allowPush: row.allowPush,
+    createdBy:
+      row.createdById && row.createdByName !== null
+        ? { id: row.createdById, name: row.createdByName }
+        : null,
+    createdAt: row.createdAt.toISOString(),
+  }));
+}
+
+export async function createMachineAccount(
+  actor: MachineAccountActor,
+  repository: { id: string; name: string },
+  input: CreateMachineAccountInput,
+  clientIp?: string | null,
+): Promise<CreateMachineAccountResult> {
+  const secret = `${MACHINE_ACCOUNT_PREFIX}${generateToken()}`;
+  const db = getDb();
+
+  try {
+    const created = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(machineAccounts)
+        .values({
+          ownerRepositoryId: repository.id,
+          name: input.name,
+          description: input.description,
+          tokenPrefix: secret.slice(0, MACHINE_ACCOUNT_TOKEN_PREFIX_LENGTH),
+          tokenHash: hashToken(secret),
+          allowPull: input.allowPull,
+          allowPush: input.allowPush,
+          createdBy: actor.id,
+        })
+        .returning();
+
+      if (!row) {
+        throw new Error("Failed to create machine account");
+      }
+
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        repositoryId: repository.id,
+        action: "machine_account.create",
+        resource: `machine_account:${row.id}`,
+        metadata: {
+          name: row.name,
+          allowPull: row.allowPull,
+          allowPush: row.allowPush,
+        },
+        clientIp: clientIp ?? null,
+      });
+
+      return row;
+    });
+
+    return {
+      ok: true,
+      secret,
+      summary: {
+        id: created.id,
+        name: created.name,
+        description: created.description,
+        username: machineAccountUsername(repository.name, created.name),
+        tokenPrefix: created.tokenPrefix,
+        allowPull: created.allowPull,
+        allowPush: created.allowPush,
+        createdBy: { id: actor.id, name: actor.name },
+        createdAt: created.createdAt.toISOString(),
+      },
+    };
+  } catch (error) {
+    const { code, constraint } = pgErrorCode(error);
+    if (code === "23505" && constraint === OWNER_NAME_CONSTRAINT) {
+      return { ok: false, error: "duplicate_name" };
+    }
+    if (code === "23503") {
+      return { ok: false, error: "repository_not_found" };
+    }
+    throw error;
+  }
+}
+
+export async function deleteMachineAccount(
+  actor: { id: string },
+  repositoryId: string,
+  accountId: string,
+  clientIp?: string | null,
+): Promise<boolean> {
+  if (!isUuid(accountId)) {
+    return false;
+  }
+
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const [deleted] = await tx
+      .delete(machineAccounts)
+      .where(
+        and(
+          eq(machineAccounts.id, accountId),
+          eq(machineAccounts.ownerRepositoryId, repositoryId),
+        ),
+      )
+      .returning({
+        id: machineAccounts.id,
+        name: machineAccounts.name,
+        allowPull: machineAccounts.allowPull,
+        allowPush: machineAccounts.allowPush,
+      });
+
+    if (!deleted) {
+      return false;
+    }
+
+    await tx.insert(auditLog).values({
+      userId: actor.id,
+      repositoryId,
+      action: "machine_account.delete",
+      resource: `machine_account:${deleted.id}`,
+      metadata: {
+        name: deleted.name,
+        allowPull: deleted.allowPull,
+        allowPush: deleted.allowPush,
+      },
+      clientIp: clientIp ?? null,
+    });
+
+    return true;
+  });
+}

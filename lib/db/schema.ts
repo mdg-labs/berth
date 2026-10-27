@@ -11,6 +11,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -287,6 +288,40 @@ export const personalAccessTokenRepositories = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.tokenId, table.repositoryId] }),
+  }),
+);
+
+export const machineAccounts = pgTable(
+  "machine_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerRepositoryId: uuid("owner_repository_id").references(
+      () => repositories.id,
+      { onDelete: "cascade" },
+    ),
+    name: varchar("name", { length: 63 }).notNull(),
+    description: varchar("description", { length: 255 }),
+    tokenPrefix: varchar("token_prefix", { length: 12 }).notNull(),
+    tokenHash: text("token_hash").notNull(),
+    allowPull: boolean("allow_pull").notNull(),
+    allowPush: boolean("allow_push").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    tokenHashIdx: uniqueIndex("machine_accounts_token_hash_idx").on(
+      table.tokenHash,
+    ),
+    ownerRepositoryNameIdx: uniqueIndex(
+      "machine_accounts_owner_repository_name_idx",
+    ).on(table.ownerRepositoryId, table.name),
   }),
 );
 

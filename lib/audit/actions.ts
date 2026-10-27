@@ -21,6 +21,8 @@ export const AUDIT_ACTIONS = [
   "member.invite_remove",
   "member.remove",
   "member.role_change",
+  "machine_account.create",
+  "machine_account.delete",
   "manifest.delete",
   "registry.manifest.push",
   "repository.create",

@@ -185,6 +185,23 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Failure handling | The "Detect version bump" step fails on exit 1 and writes no `skip` output | A failed lookup never falls through to drafting a release |
 | Test | `.github/scripts/release-exists.test.sh` drives the script with a fake `gh` first on `PATH` and runs as a step of `maybe-draft-release` before detection | Covers exists, not found and other-error cases without the GitHub API |
 
+## Machine account choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Kinds | Two kinds share the `machine_accounts` table: repository accounts (owned by one repository) and host accounts (multi-repository, added later) | One secret and lookup path for both; the owner column tells them apart |
+| Owner column | `owner_repository_id` is nullable, with `ON DELETE CASCADE`; null is reserved for host accounts and every repository account sets it | Deleting a repository deletes its accounts; host accounts survive any single repository |
+| Secret | `bm_` + 32 random bytes (base64url); only the SHA-256 hex hash is stored, in a unique index, plus the first 12 characters as `token_prefix` | Same shape as personal access tokens (`bt_`); a distinct prefix lets the token endpoint tell the two apart |
+| Secret disclosure | Returned only in the create response (`Cache-Control: no-store`); list responses and audit metadata never carry it | A lost secret is replaced by creating a new account |
+| Name | The repository-name slug (`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`, 2-63 characters, lowercased on input); unique per owner repository | Reuses the Phase 4 rule; the slug cannot contain `+`, so the display username is unambiguous |
+| Display username | `<repository name>+<account name>`, computed from the current repository name on every read | Follows a repository rename; informational only, the secret alone identifies the account |
+| Permissions | `allow_pull` and `allow_push` booleans, at least one true | Same model as personal access tokens |
+| Management | Repository `admin` (`manage_members` in the role matrix) and system admins, through `/api/repositories/[id]/machine-accounts`; role checked from the database on every request | Accounts grant registry access to the repository, the same trust level as membership changes |
+| Creator | `created_by` references the user with `ON DELETE SET NULL` | Hard-deleting the creator must not delete or disable a CI account |
+| Atomicity | Create and delete write the account row and its audit row in one transaction | A failed audit write leaves no account whose secret was never returned |
+| Audit | `machine_account.create` and `machine_account.delete`, resource `machine_account:<id>`, `repositoryId` set, metadata name and permissions | Spec §8 security-relevant actions |
+| Registry login | Not accepted yet: a `bm_` secret at `/api/auth/token` is treated as a wrong password and gets 401 | `docker login` support is a separate item |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist
