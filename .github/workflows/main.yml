@@ -20,9 +20,17 @@ jobs:
 
       - name: Detect version bump
         id: version
+        env:
+          BEFORE: ${{ github.event.before }}
         run: |
+          BASE="HEAD^"
+          if [[ "$BEFORE" =~ ^[0-9a-f]{40}$ ]] && [[ ! "$BEFORE" =~ ^0+$ ]] \
+            && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            BASE="$BEFORE"
+          fi
+
           CURRENT="$(jq -r .version package.json)"
-          PREVIOUS="$(git show HEAD^:package.json 2>/dev/null | jq -r .version || echo "")"
+          PREVIOUS="$(git show "${BASE}:package.json" 2>/dev/null | jq -r .version || echo "")"
 
           if [ -z "$CURRENT" ] || [ "$CURRENT" = "null" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
