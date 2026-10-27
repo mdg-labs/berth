@@ -8,7 +8,10 @@
 
 ## Working on Berth
 
-The MVP phases below (P0–P11) are complete. New work is tracked as GitHub
+The MVP phases below (P0–P11) are complete. Their task lists and exit
+criteria are the historical MVP execution plan: the checkboxes were not
+maintained as the work landed, so unchecked boxes there do not mean open
+work. New work is tracked as GitHub
 issues on `mdg-labs/berth` and implemented with the agent workflow in
 `.claude/` (see the `## Agent workflow` section of [`CLAUDE.md`](CLAUDE.md)):
 
