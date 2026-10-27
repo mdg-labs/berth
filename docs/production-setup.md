@@ -237,23 +237,42 @@ Configure TLS on the **host**, not inside the Berth containers.
 
 ### Option A — nginx (recommended walkthrough)
 
-Install nginx and certbot, then copy the example config:
+Install nginx and certbot. The certificate is issued **before** the TLS server block is enabled: that block references certificate files that do not exist yet, and `nginx -t` (and certbot's nginx plugin) fails on a missing `ssl_certificate` file.
+
+First enable an HTTP-only server block that serves the ACME challenge from a webroot (replace `registry.example.com`):
+
+```bash
+sudo mkdir -p /var/www/certbot
+sudo tee /etc/nginx/sites-available/berth >/dev/null <<'EOF'
+server {
+    listen 80;
+    listen [::]:80;
+    server_name registry.example.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 404;
+    }
+}
+EOF
+sudo ln -s /etc/nginx/sites-available/berth /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Obtain a Let's Encrypt certificate through that webroot:
+
+```bash
+sudo certbot certonly --webroot -w /var/www/certbot -d registry.example.com
+```
+
+Then replace the bootstrap block with the full example config (HTTP redirect plus TLS):
 
 ```bash
 sudo cp docker/nginx.example.conf /etc/nginx/sites-available/berth
 # Edit server_name and certificate paths
-sudo ln -s /etc/nginx/sites-available/berth /etc/nginx/sites-enabled/
-```
-
-Obtain a Let's Encrypt certificate:
-
-```bash
-sudo certbot certonly --nginx -d registry.example.com
-```
-
-Test and reload:
-
-```bash
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
