@@ -84,7 +84,12 @@ server {
 }
 ```
 
-Berth reads `X-Forwarded-For` and `X-Real-IP` for rate limiting and audit client IPs. The edge proxy must set `X-Forwarded-For` to the connecting client's address (`$remote_addr`) and must not append to a value the client sent, because the first entry is taken as the client IP. Caddy's `reverse_proxy` does this by default for clients that are not listed in `trusted_proxies`.
+Berth derives the client IP for rate limiting and audit entries from `X-Forwarded-For`, counting `TRUSTED_PROXY_HOPS` entries from the right (default `1`, one edge proxy in front of the app). The rightmost entry is the one your edge proxy wrote, so a leading entry supplied by the client never changes the result, whether the proxy overwrites the header (nginx `$remote_addr`, Caddy's `reverse_proxy` default) or appends to it (`$proxy_add_x_forwarded_for`).
+
+- Set `TRUSTED_PROXY_HOPS` to the number of proxies you run in front of the app. If the header has fewer entries than that, the leftmost entry is used.
+- With more than one proxy in a chain (for example a CDN in front of nginx and hops set to `2`), only the outermost proxy may overwrite `X-Forwarded-For`. Every proxy behind it must append (nginx: `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`), so the header the app receives is `<client>, <outer proxy>` and the entry two from the right is the client. The nginx example above overwrites and is therefore only correct as the outermost proxy; behind a CDN, replace its `X-Forwarded-For` line with the appending form and keep `TRUSTED_PROXY_HOPS` at `2`.
+- Set it to `0` when the app is reached without a proxy: forwarded headers are then ignored and every client shares the address `unknown`, so per-IP rate limits become a single global bucket.
+- Set `TRUSTED_PROXY_HEADER=x-real-ip` to read a single-address `X-Real-IP` header instead of `X-Forwarded-For`. `X-Real-IP` is ignored otherwise. Use it only when the proxy that clients connect to directly overwrites `X-Real-IP` with the connecting address and no client can reach the app directly. That holds for the nginx example above (`proxy_set_header X-Real-IP $remote_addr;`) when it is the single edge proxy. It does not hold for the Caddy example, which leaves `X-Real-IP` untouched, so a client-sent value would reach the app and could be rotated to bypass per-IP rate limits, unless you add `header_up X-Real-IP {remote_host}` to its `reverse_proxy` block. It also does not hold for nginx behind a CDN, where `$remote_addr` is the CDN address and every client behind that node shares one rate-limit bucket; use `X-Forwarded-For` with `TRUSTED_PROXY_HOPS` there.
 
 ### Docker clients
 

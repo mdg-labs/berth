@@ -166,6 +166,16 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Backup codes | 10 single-use codes, SHA-256 hashed | Account recovery without weakening disable flow (disable requires TOTP, not backup code) |
 | Pending login state | HMAC-signed `berth_mfa_pending` cookie, 5 min TTL, `Path=/` | Short-lived bridge between password verify and MFA challenge without DB challenge table |
 
+## Client IP choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Trust model | Forwarded headers are trusted only through `TRUSTED_PROXY_HOPS` (default `1`): the client IP is the `X-Forwarded-For` entry that many positions from the right | A proxy writes the rightmost entry, so client-supplied leading entries cannot change the result, with an overwriting or an appending edge proxy; the first entry was attacker-controlled |
+| Short chain | If the header has fewer entries than the hop count, the leftmost entry is used | Never indexes past the chain; a shared `unknown` bucket would let one client exhaust everyone's rate limit |
+| No proxy | `TRUSTED_PROXY_HOPS=0` ignores forwarded headers and yields `unknown` | The request object carries no socket address; operators without a proxy must not honour spoofable headers |
+| `X-Real-IP` | Read only when `TRUSTED_PROXY_HEADER=x-real-ip`, instead of `X-Forwarded-For` | Previously a silent fallback; opt-in keeps a single trusted source |
+| Invalid value | A non-numeric `TRUSTED_PROXY_HOPS` falls back to `1` | Same lenient parsing as the other numeric settings; the default is the documented single edge proxy |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist

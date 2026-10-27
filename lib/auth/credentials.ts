@@ -52,14 +52,34 @@ export async function hashPassword(password: string): Promise<string> {
   return hash(password, BCRYPT_ROUNDS);
 }
 
-export function getClientIp(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const first = forwardedFor.split(",")[0]?.trim();
-    if (first) {
-      return first;
-    }
+const DEFAULT_TRUSTED_PROXY_HOPS = 1;
+
+function getTrustedProxyHops(): number {
+  const raw = process.env.TRUSTED_PROXY_HOPS?.trim() ?? "";
+  if (!/^\d+$/.test(raw)) {
+    return DEFAULT_TRUSTED_PROXY_HOPS;
   }
 
-  return request.headers.get("x-real-ip") ?? "unknown";
+  return Number.parseInt(raw, 10);
+}
+
+export function getClientIp(request: Request): string {
+  const hops = getTrustedProxyHops();
+  if (hops === 0) {
+    return "unknown";
+  }
+
+  if (process.env.TRUSTED_PROXY_HEADER?.trim().toLowerCase() === "x-real-ip") {
+    return request.headers.get("x-real-ip")?.trim() || "unknown";
+  }
+
+  const entries = (request.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  if (entries.length === 0) {
+    return "unknown";
+  }
+
+  return entries[Math.max(entries.length - hops, 0)] ?? "unknown";
 }
