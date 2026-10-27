@@ -1,6 +1,19 @@
 // Copyright (c) 2026 Michael David Guggenbichler (MDG Labs), licensed under Apache-2.0 — see LICENSE
 
-import { and, asc, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  exists,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  type SQL,
+} from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import {
@@ -406,9 +419,88 @@ export async function listMachineAccounts(
   ];
 }
 
-export async function listAllMachineAccounts(): Promise<
-  MachineAccountSummary[]
-> {
+export type MachineAccountStatus = "active" | "disabled" | "expired";
+
+export type AdminMachineAccountSummary = MachineAccountSummary & {
+  status: MachineAccountStatus;
+};
+
+export type MachineAccountFilters = {
+  kind?: MachineAccountKind;
+  repositoryId?: string;
+  status?: MachineAccountStatus;
+};
+
+function machineAccountStatus(
+  summary: MachineAccountSummary,
+  now: number,
+): MachineAccountStatus {
+  if (summary.disabledAt !== null) {
+    return "disabled";
+  }
+  if (summary.expiresAt !== null && new Date(summary.expiresAt).getTime() <= now) {
+    return "expired";
+  }
+  return "active";
+}
+
+function machineAccountFilterConditions(
+  filters: MachineAccountFilters,
+  now: Date,
+): SQL[] {
+  const conditions: SQL[] = [];
+
+  if (filters.kind === "repository") {
+    conditions.push(isNotNull(machineAccounts.ownerRepositoryId));
+  } else if (filters.kind === "host") {
+    conditions.push(isNull(machineAccounts.ownerRepositoryId));
+  }
+
+  if (filters.repositoryId) {
+    const owned = eq(machineAccounts.ownerRepositoryId, filters.repositoryId);
+    const listed = exists(
+      getDb()
+        .select({ one: machineAccountRepositories.machineAccountId })
+        .from(machineAccountRepositories)
+        .where(
+          and(
+            eq(machineAccountRepositories.machineAccountId, machineAccounts.id),
+            eq(machineAccountRepositories.repositoryId, filters.repositoryId),
+          ),
+        ),
+    );
+    const either = or(owned, listed);
+    if (either) {
+      conditions.push(either);
+    }
+  }
+
+  if (filters.status === "disabled") {
+    conditions.push(isNotNull(machineAccounts.disabledAt));
+  } else if (filters.status === "expired") {
+    conditions.push(
+      isNull(machineAccounts.disabledAt),
+      isNotNull(machineAccounts.expiresAt),
+      lte(machineAccounts.expiresAt, now),
+    );
+  } else if (filters.status === "active") {
+    const notExpired = or(
+      isNull(machineAccounts.expiresAt),
+      gt(machineAccounts.expiresAt, now),
+    );
+    conditions.push(isNull(machineAccounts.disabledAt));
+    if (notExpired) {
+      conditions.push(notExpired);
+    }
+  }
+
+  return conditions;
+}
+
+export async function listAllMachineAccounts(
+  filters: MachineAccountFilters = {},
+): Promise<AdminMachineAccountSummary[]> {
+  const now = new Date();
   const rows = await getDb()
     .select({
       ...summaryColumns,
@@ -421,22 +513,25 @@ export async function listAllMachineAccounts(): Promise<
       eq(machineAccounts.ownerRepositoryId, repositories.id),
     )
     .leftJoin(users, eq(machineAccounts.createdBy, users.id))
+    .where(and(...machineAccountFilterConditions(filters, now)))
     .orderBy(asc(machineAccounts.name), asc(machineAccounts.createdAt));
 
   const hostRepositories = await listHostRepositories(
     rows.filter((row) => row.ownerRepositoryId === null).map((row) => row.id),
   );
 
-  return rows.map((row) =>
-    row.ownerRepositoryId && row.ownerRepositoryName
-      ? toSummary(
-          row,
-          "repository",
-          [{ id: row.ownerRepositoryId, name: row.ownerRepositoryName }],
-          row.ownerRepositoryName,
-        )
-      : toSummary(row, "host", hostRepositories.get(row.id) ?? [], null),
-  );
+  return rows.map((row) => {
+    const summary =
+      row.ownerRepositoryId && row.ownerRepositoryName
+        ? toSummary(
+            row,
+            "repository",
+            [{ id: row.ownerRepositoryId, name: row.ownerRepositoryName }],
+            row.ownerRepositoryName,
+          )
+        : toSummary(row, "host", hostRepositories.get(row.id) ?? [], null);
+    return { ...summary, status: machineAccountStatus(summary, now.getTime()) };
+  });
 }
 
 export async function createMachineAccount(

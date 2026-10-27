@@ -186,5 +186,80 @@
     "toast": {
       "copied": "Copied GC command"
     }
+  },
+  "machineAccounts": {
+    "title": "Machine accounts",
+    "description": "Every machine account on this instance, for repositories and for deploy hosts. Disable or delete an account when its secret leaks.",
+    "loadError": "Failed to load machine accounts",
+    "filters": {
+      "kind": "Kind",
+      "repository": "Repository",
+      "status": "Status",
+      "allKinds": "All kinds",
+      "allRepositories": "All repositories",
+      "allStatuses": "All statuses",
+      "clear": "Clear filters",
+      "repositoriesError": "Failed to load the repository list"
+    },
+    "kind": {
+      "repository": "Repository",
+      "host": "Host"
+    },
+    "status": {
+      "active": "Active",
+      "disabled": "Disabled",
+      "expired": "Expired",
+      "never": "Never",
+      "neverUsed": "Never used"
+    },
+    "permission": {
+      "pull": "Pull",
+      "push": "Push"
+    },
+    "empty": {
+      "title": "No machine accounts",
+      "description": "No machine account exists yet. Repository accounts are created in the repository settings.",
+      "filteredDescription": "No machine account matches these filters."
+    },
+    "table": {
+      "name": "Name",
+      "username": "Username",
+      "kind": "Kind",
+      "repositories": "Repositories",
+      "permissions": "Permissions",
+      "status": "Status",
+      "expires": "Expires",
+      "lastUsed": "Last used",
+      "createdBy": "Created by",
+      "createdAt": "Created",
+      "actions": "Actions"
+    },
+    "deletedUser": "Deleted user",
+    "disableAccount": "Disable machine account {name}",
+    "enableAccount": "Enable machine account {name}",
+    "deleteAccount": "Delete machine account {name}",
+    "disableDialog": {
+      "title": "Disable machine account {name}?",
+      "description": "Logins as {username} fail until you enable it again. Registry tokens already issued stay valid until they expire.",
+      "confirm": "Disable"
+    },
+    "enableDialog": {
+      "title": "Enable machine account {name}?",
+      "description": "The secret of {username} works again.",
+      "confirm": "Enable"
+    },
+    "deleteDialog": {
+      "title": "Delete machine account {name}?",
+      "description": "Anything logging in as {username} stops working immediately. This cannot be undone.",
+      "confirm": "Delete"
+    },
+    "toast": {
+      "disabled": "Machine account disabled",
+      "enabled": "Machine account enabled",
+      "deleted": "Machine account deleted",
+      "disableError": "Failed to disable machine account",
+      "enableError": "Failed to enable machine account",
+      "deleteError": "Failed to delete machine account"
+    }
   }
 }

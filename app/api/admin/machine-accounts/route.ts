@@ -9,10 +9,55 @@ import { getClientIp } from "@/lib/auth/credentials";
 import {
   createHostMachineAccount,
   listAllMachineAccounts,
+  type MachineAccountFilters,
 } from "@/lib/machine-accounts/store";
 import { machineAccountExpiryResponse } from "@/lib/machine-accounts/responses";
-import { parseHostMachineAccountInput } from "@/lib/machine-accounts/validation";
+import {
+  isUuid,
+  parseHostMachineAccountInput,
+} from "@/lib/machine-accounts/validation";
 import { getSessionUserFromRequest } from "@/lib/session/request";
+
+const KINDS = ["repository", "host"] as const satisfies readonly NonNullable<
+  MachineAccountFilters["kind"]
+>[];
+const STATUSES = ["active", "disabled", "expired"] as const satisfies readonly NonNullable<
+  MachineAccountFilters["status"]
+>[];
+
+function parseFilters(
+  params: URLSearchParams,
+): { ok: true; filters: MachineAccountFilters } | { ok: false; error: string } {
+  const filters: MachineAccountFilters = {};
+
+  const kind = params.get("kind");
+  if (kind !== null) {
+    const match = KINDS.find((value) => value === kind);
+    if (!match) {
+      return { ok: false, error: "invalid_kind" };
+    }
+    filters.kind = match;
+  }
+
+  const status = params.get("status");
+  if (status !== null) {
+    const match = STATUSES.find((value) => value === status);
+    if (!match) {
+      return { ok: false, error: "invalid_status" };
+    }
+    filters.status = match;
+  }
+
+  const repositoryId = params.get("repositoryId");
+  if (repositoryId !== null) {
+    if (!isUuid(repositoryId)) {
+      return { ok: false, error: "invalid_repository_id" };
+    }
+    filters.repositoryId = repositoryId.toLowerCase();
+  }
+
+  return { ok: true, filters };
+}
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUserFromRequest(request);
@@ -24,7 +69,12 @@ export async function GET(request: NextRequest) {
     return apiError("forbidden", "System admin required", 403);
   }
 
-  const machineAccounts = await listAllMachineAccounts();
+  const parsed = parseFilters(request.nextUrl.searchParams);
+  if (!parsed.ok) {
+    return apiError("bad_request", `Invalid filter: ${parsed.error}`, 400);
+  }
+
+  const machineAccounts = await listAllMachineAccounts(parsed.filters);
   return NextResponse.json({ machineAccounts });
 }
 
