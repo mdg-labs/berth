@@ -12,6 +12,11 @@
   },
   "landing": "dev-cherry-pick",
   "promotionBudget": 150,
+  "review": {
+    "reviewers": [
+      "coderabbit"
+    ]
+  },
   "gate": "pnpm lint && pnpm typecheck && pnpm check:i18n && pnpm test",
   "checks": [
     {
@@ -131,5 +136,19 @@
     "docker/token/**",
     "lib/registry/delete/**",
     "lib/registry/proxy/**"
-  ]
+  ],
+  "act": {
+    "platforms": {
+      "ubuntu-latest": "catthehacker/ubuntu:act-24.04"
+    },
+    "neverRun": [
+      "deploy*",
+      "build-push*",
+      "release*",
+      "resolve-tags",
+      "maybe-draft-release",
+      "set-status"
+    ],
+    "timeout": 1800
+  }
 }

@@ -11,7 +11,7 @@ details.
 
 ## Agent workflow
 
-<!-- Read by the vendored skills (orchestrate, triage, cr-review, security-audit).
+<!-- Read by the vendored skills (orchestrate, triage, pr-review, security-audit).
      Keep these headings exactly; a subsection a repo doesn't need can be removed,
      and orchestrate then omits it from dispatches. Machine-read settings live in
      .claude/workflow.json, not here. -->

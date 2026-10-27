@@ -8,6 +8,8 @@
       "Bash(.claude/scripts/epic-status.sh:*)",
       "Bash(.claude/scripts/issue-readiness.sh:*)",
       "Bash(.claude/scripts/security-history.sh:*)",
+      "Bash(.claude/scripts/security-route.sh:*)",
+      "Bash(.claude/scripts/act-run.sh:*)",
       "Bash(.claude/skills/dev-diff/dev-diff.sh:*)",
       "Bash(pnpm lint)",
       "Bash(pnpm typecheck)",
