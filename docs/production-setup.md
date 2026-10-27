@@ -321,7 +321,7 @@ Pushing to a project that does not exist returns **403** — create the project 
 | HTTPS works but `docker login` fails | Align `APP_URL`, `REGISTRY_AUTH_TOKEN_REALM`, and `config.yml` realm |
 | Token / 401 errors on push | Signing key must match `rootcert.pem` — see [Key rotation](key-rotation.md) |
 | Push returns 403 | Create the project in the portal; check RBAC |
-| Wrong client IP in audit log | Ensure proxy sets `X-Forwarded-For` and `X-Real-IP` |
+| Wrong client IP in audit log | Ensure the edge proxy overwrites `X-Forwarded-For` (nginx: `$remote_addr`) and sets `X-Real-IP` |
 
 ## Optional configuration
 

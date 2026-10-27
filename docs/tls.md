@@ -76,7 +76,7 @@ server {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 600s;
         proxy_request_buffering off;
@@ -84,7 +84,7 @@ server {
 }
 ```
 
-Berth reads `X-Forwarded-For` and `X-Real-IP` for rate limiting and audit client IPs.
+Berth reads `X-Forwarded-For` and `X-Real-IP` for rate limiting and audit client IPs. The edge proxy must set `X-Forwarded-For` to the connecting client's address (`$remote_addr`) and must not append to a value the client sent, because the first entry is taken as the client IP. Caddy's `reverse_proxy` does this by default for clients that are not listed in `trusted_proxies`.
 
 ### Docker clients
 
