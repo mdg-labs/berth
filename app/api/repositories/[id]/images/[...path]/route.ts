@@ -313,21 +313,34 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 type BulkDeleteBody = {
-  tags?: string[] | BulkDeleteItem[];
+  tags?: unknown;
 };
 
-function normalizeBulkDeleteItems(
-  tags: string[] | BulkDeleteItem[],
-): BulkDeleteItem[] {
-  if (tags.length === 0) {
-    return [];
+function normalizeBulkDeleteItems(tags: unknown[]): BulkDeleteItem[] | null {
+  const items: BulkDeleteItem[] = [];
+
+  for (const entry of tags) {
+    if (typeof entry === "string") {
+      items.push({ name: entry });
+      continue;
+    }
+
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      return null;
+    }
+
+    const { name, isUntagged } = entry as Record<string, unknown>;
+    if (typeof name !== "string") {
+      return null;
+    }
+    if (isUntagged !== undefined && typeof isUntagged !== "boolean") {
+      return null;
+    }
+
+    items.push(isUntagged === undefined ? { name } : { name, isUntagged });
   }
 
-  if (typeof tags[0] === "string") {
-    return (tags as string[]).map((name) => ({ name }));
-  }
-
-  return tags as BulkDeleteItem[];
+  return items;
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -353,8 +366,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return apiError("bad_request", "At least one tag is required", 400);
   }
 
+  const items = normalizeBulkDeleteItems(body.tags);
+  if (!items) {
+    return apiError("bad_request", "Invalid tag entry", 400);
+  }
+
   try {
-    const items = normalizeBulkDeleteItems(body.tags);
     const result = await bulkDeleteTags(
       access.user,
       access.repository.name,
