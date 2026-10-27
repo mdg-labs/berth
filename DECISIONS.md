@@ -176,6 +176,15 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | `X-Real-IP` | Read only when `TRUSTED_PROXY_HEADER=x-real-ip`, instead of `X-Forwarded-For` | Previously a silent fallback; opt-in keeps a single trusted source |
 | Invalid value | A non-numeric `TRUSTED_PROXY_HOPS` falls back to `1` | Same lenient parsing as the other numeric settings; the default is the documented single edge proxy |
 
+## CI release detection choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Release-existence check | `.github/scripts/release-exists.sh <tag>` runs `gh release view` and reads its stderr: exit 0 = no release, exit 10 = a release exists, exit 1 = the lookup failed | `gh release view` has no dedicated exit code for "not found"; only the `release not found` message separates it from a network, API or rate-limit error |
+| Not-found match | Only the `release not found` message counts as absent; `HTTP 404` is not matched | A 404 can also mean a wrong repository or a token without access, which must stop the job rather than draft a release |
+| Failure handling | The "Detect version bump" step fails on exit 1 and writes no `skip` output | A failed lookup never falls through to drafting a release |
+| Test | `.github/scripts/release-exists.test.sh` drives the script with a fake `gh` first on `PATH` and runs as a step of `maybe-draft-release` before detection | Covers exists, not found and other-error cases without the GitHub API |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist
