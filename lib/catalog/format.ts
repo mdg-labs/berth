@@ -24,9 +24,22 @@ export function formatDigest(digest: string): string {
   return `${digest.slice(0, 12)}…${digest.slice(-7)}`;
 }
 
-export function buildPullCommand(host: string, project: string, repo: string, tag: string): string {
+export function isDigestReference(reference: string): boolean {
+  return reference.startsWith("sha256:");
+}
+
+export function buildPullCommand(
+  host: string,
+  project: string,
+  repo: string,
+  tagOrDigest: string,
+): string {
   const registryHost = host.replace(/^https?:\/\//, "");
-  return `docker pull ${registryHost}/${project}/${repo}:${tag}`;
+  const imageRef = `${registryHost}/${project}/${repo}`;
+  if (isDigestReference(tagOrDigest)) {
+    return `docker pull ${imageRef}@${tagOrDigest}`;
+  }
+  return `docker pull ${imageRef}:${tagOrDigest}`;
 }
 
 export function repoPathSegments(repoPath: string): string {

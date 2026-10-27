@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  computeRotatedPatExpiry,
   repositoryMeetsPatRequirements,
   validatePatCreateInput,
   validatePatExpiry,
@@ -66,5 +67,57 @@ describe("PAT validation", () => {
     expect(repositoryMeetsPatRequirements("guest", true, false)).toBe(true);
     expect(repositoryMeetsPatRequirements("guest", false, true)).toBe(false);
     expect(repositoryMeetsPatRequirements("developer", false, true)).toBe(true);
+  });
+});
+
+describe("computeRotatedPatExpiry", () => {
+  const policy = {
+    patMaxValidityDays: 90,
+    patAllowNeverExpire: true,
+  };
+
+  it("keeps expiry when resetExpiry is false", () => {
+    const createdAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const result = computeRotatedPatExpiry(createdAt, expiresAt, false, policy);
+    expect(result).toEqual({ ok: true, expiresAt });
+  });
+
+  it("rejects expired tokens when resetExpiry is false", () => {
+    const createdAt = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const result = computeRotatedPatExpiry(createdAt, expiresAt, false, policy);
+    expect(result).toEqual({ ok: false, error: "token_expired" });
+  });
+
+  it("preserves original ttl when resetExpiry is true", () => {
+    const createdAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const before = Date.now();
+    const result = computeRotatedPatExpiry(createdAt, expiresAt, true, policy);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const ttlMs = expiresAt.getTime() - createdAt.getTime();
+      const expectedMin = before + ttlMs;
+      const expectedMax = Date.now() + ttlMs;
+      expect(result.expiresAt?.getTime()).toBeGreaterThanOrEqual(expectedMin - 1000);
+      expect(result.expiresAt?.getTime()).toBeLessThanOrEqual(expectedMax + 1000);
+    }
+  });
+
+  it("keeps never-expiring tokens when resetExpiry is true", () => {
+    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+    const result = computeRotatedPatExpiry(createdAt, null, true, policy);
+    expect(result).toEqual({ ok: true, expiresAt: null });
+  });
+
+  it("rejects ttl that exceeds policy max validity", () => {
+    const createdAt = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000);
+    const result = computeRotatedPatExpiry(createdAt, expiresAt, true, {
+      ...policy,
+      patMaxValidityDays: 30,
+    });
+    expect(result).toEqual({ ok: false, error: "expiry_exceeds_max" });
   });
 });

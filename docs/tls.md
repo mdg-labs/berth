@@ -1,5 +1,7 @@
 # TLS and HTTPS
 
+For a full production walkthrough (secrets, compose override, first push), see [Production setup](production-setup.md). This document covers TLS options in depth.
+
 Berth’s **app** serves plain HTTP on port **3000** inside the container. Compose maps it to **8080** on the host for local development. Production deployments should terminate TLS at the edge and set `APP_URL` to your `https://` URL.
 
 The self-signed material in `docker/registry/certs/rootcert.pem` and `docker/token/dev-signing-key.pem` is for **registry JWT signing trust**, not HTTPS. Do not confuse token-signing certs with TLS certificates.
@@ -74,7 +76,7 @@ server {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 600s;
         proxy_request_buffering off;
@@ -82,7 +84,7 @@ server {
 }
 ```
 
-Berth reads `X-Forwarded-For` and `X-Real-IP` for rate limiting and audit client IPs.
+Berth reads `X-Forwarded-For` and `X-Real-IP` for rate limiting and audit client IPs. The edge proxy must set `X-Forwarded-For` to the connecting client's address (`$remote_addr`) and must not append to a value the client sent, because the first entry is taken as the client IP. Caddy's `reverse_proxy` does this by default for clients that are not listed in `trusted_proxies`.
 
 ### Docker clients
 

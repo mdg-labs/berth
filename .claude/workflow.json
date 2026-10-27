@@ -1,0 +1,154 @@
+{
+  "$schema": "./workflow.schema.json",
+  "repo": "mdg-labs/berth",
+  "maintainer": "mdguggenbichler",
+  "githubRunner": "ubuntu-latest",
+  "tracker": {
+    "type": "github"
+  },
+  "branches": {
+    "integration": "dev",
+    "production": "main"
+  },
+  "landing": "dev-cherry-pick",
+  "promotionBudget": 150,
+  "review": {
+    "reviewers": [
+      "coderabbit"
+    ]
+  },
+  "gate": "pnpm lint && pnpm typecheck && pnpm check:i18n && pnpm test",
+  "checks": [
+    {
+      "paths": [
+        "lib/db/schema.ts",
+        "drizzle/**",
+        "drizzle.config.ts"
+      ],
+      "run": "pnpm db:generate && git diff --exit-code -- drizzle/ && test -z \"$(git ls-files --others --exclude-standard drizzle/)\"",
+      "requires": [
+        "pnpm"
+      ]
+    },
+    {
+      "paths": [
+        "docker/**",
+        "e2e/**",
+        "app/v2/**",
+        "middleware.ts",
+        "playwright.config.ts"
+      ],
+      "run": "docker compose -f docker/compose.ci.yml up -d --build --wait && PLAYWRIGHT_BASE_URL=http://localhost:8080 E2E_ADMIN_EMAIL=admin@localhost E2E_ADMIN_PASSWORD=test-admin-password pnpm test:e2e; status=$?; docker compose -f docker/compose.ci.yml down -v; exit $status",
+      "requires": [
+        "docker",
+        "pnpm"
+      ]
+    },
+    {
+      "paths": [
+        "**/*.sh"
+      ],
+      "run": "shellcheck <changed .sh files>",
+      "requires": [
+        "shellcheck"
+      ]
+    },
+    {
+      "paths": [
+        ".github/workflows/**"
+      ],
+      "run": "actionlint",
+      "requires": [
+        "actionlint"
+      ]
+    }
+  ],
+  "bootstrap": "pnpm install --frozen-lockfile",
+  "signoff": {
+    "mode": "none"
+  },
+  "threatModel": null,
+  "labels": {
+    "areas": [
+      {
+        "name": "area:api",
+        "color": "006b75",
+        "description": "HTTP API routes and server logic (app/api, lib)"
+      },
+      {
+        "name": "area:auth",
+        "color": "d93f0b",
+        "description": "Login, sessions, OIDC, MFA, PATs, registry token issuer"
+      },
+      {
+        "name": "area:registry",
+        "color": "0e8a16",
+        "description": "/v2 proxy, catalog, tags, pulls, GC"
+      },
+      {
+        "name": "area:web",
+        "color": "5319e7",
+        "description": "Portal UI, components, i18n messages"
+      },
+      {
+        "name": "area:db",
+        "color": "1d76db",
+        "description": "Drizzle schema and migrations"
+      },
+      {
+        "name": "area:docker",
+        "color": "0052cc",
+        "description": "Compose stack, Dockerfile, registry and token config"
+      },
+      {
+        "name": "area:ci",
+        "color": "bfdadc",
+        "description": "GitHub Actions workflows and release scripts"
+      },
+      {
+        "name": "area:docs",
+        "color": "c5def5",
+        "description": "README, docs/, spec, decisions"
+      }
+    ],
+    "risk": {
+      "name": "security-critical",
+      "color": "b60205",
+      "description": "Touches auth, tokens, RBAC, deletion or migrations — human reads the diff before push"
+    }
+  },
+  "riskPaths": [
+    "lib/auth/**",
+    "lib/session/**",
+    "lib/oidc/**",
+    "lib/mfa/**",
+    "lib/pat/**",
+    "lib/token/**",
+    "lib/rbac/**",
+    "lib/csrf/**",
+    "lib/rate-limit/**",
+    "app/api/auth/**",
+    "app/v2/**",
+    "middleware.ts",
+    "lib/db/schema.ts",
+    "drizzle/**",
+    "lib/gc/**",
+    "docker/token/**",
+    "lib/registry/delete/**",
+    "lib/registry/proxy/**"
+  ],
+  "act": {
+    "platforms": {
+      "ubuntu-latest": "catthehacker/ubuntu:act-24.04"
+    },
+    "neverRun": [
+      "deploy*",
+      "build-push*",
+      "release*",
+      "resolve-tags",
+      "maybe-draft-release",
+      "set-status"
+    ],
+    "timeout": 1800
+  }
+}

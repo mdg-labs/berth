@@ -20,6 +20,7 @@ export type TagSummary = {
   pushedAt: string | null;
   siblings: string[];
   pullCount?: number;
+  isUntagged?: boolean;
 };
 
 export type TagsListResponse = {
@@ -27,6 +28,7 @@ export type TagsListResponse = {
   total: number;
   page: number;
   pageSize: number;
+  untaggedSupported?: boolean;
 };
 
 export type PlatformInfo = {

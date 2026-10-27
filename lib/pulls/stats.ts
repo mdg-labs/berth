@@ -4,6 +4,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { pullCounters } from "@/lib/db/schema";
+import type { TagSummary } from "@/lib/registry/client/types";
 
 export async function getRepositoryPullCount(repositoryId: string): Promise<number> {
   const db = getDb();
@@ -85,4 +86,44 @@ export async function getTagPullCounts(
   }
 
   return counts;
+}
+
+/** Counter keys needed to resolve pull counts for a page of tag summaries. */
+export function pullCountKeysForTags(tags: TagSummary[]): string[] {
+  const keys = new Set<string>();
+
+  for (const tag of tags) {
+    if (tag.isUntagged) {
+      keys.add(tag.digest);
+      continue;
+    }
+
+    keys.add(tag.name);
+    if (tag.siblings.length === 0) {
+      keys.add(tag.digest);
+    }
+  }
+
+  return [...keys];
+}
+
+/** Resolve the pull count shown for a tag row (tag name, digest-only, or untagged). */
+export function resolveTagPullCount(
+  tag: TagSummary,
+  pullCounts: Map<string, number>,
+): number {
+  if (tag.isUntagged) {
+    return pullCounts.get(tag.digest) ?? 0;
+  }
+
+  const tagPulls = pullCounts.get(tag.name) ?? 0;
+  if (tagPulls > 0) {
+    return tagPulls;
+  }
+
+  if (tag.siblings.length === 0) {
+    return pullCounts.get(tag.digest) ?? 0;
+  }
+
+  return 0;
 }

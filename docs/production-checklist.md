@@ -1,6 +1,6 @@
 # Production checklist
 
-Use this list before exposing Berth beyond localhost. Each item links to detailed runbooks.
+Complete [Production setup](production-setup.md) first, then verify this checklist before exposing Berth beyond localhost. Each item links to detailed runbooks.
 
 ## Secrets and bootstrap
 
@@ -25,7 +25,7 @@ See [Key rotation](key-rotation.md) for signing key delivery and [Install](insta
 
 - [ ] Only **app** (or TLS proxy) published to the host — registry and Postgres stay internal
 - [ ] Firewall restricts access to admin paths if needed
-- [ ] Reverse proxy sets `X-Forwarded-For` / `X-Forwarded-Proto` correctly
+- [ ] Reverse proxy sets `X-Forwarded-For` / `X-Forwarded-Proto` correctly — the edge proxy overwrites `X-Forwarded-For` with the client address (nginx: `$remote_addr`) instead of appending to a client-supplied value
 
 ## Rate limiting
 

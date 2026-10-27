@@ -13,7 +13,12 @@ export type PatValidationError =
   | "expiry_in_past"
   | "expiry_exceeds_max"
   | "invalid_repository"
-  | "insufficient_repository_access";
+  | "insufficient_repository_access"
+  | "token_expired";
+
+export type ComputeRotatedPatExpiryResult =
+  | { ok: true; expiresAt: Date | null }
+  | { ok: false; error: PatValidationError };
 
 export function validatePatExpiry(
   expiresAt: string | null,
@@ -45,6 +50,36 @@ export function validatePatExpiry(
   }
 
   return null;
+}
+
+export function computeRotatedPatExpiry(
+  createdAt: Date,
+  expiresAt: Date | null,
+  resetExpiry: boolean,
+  policy: PatPolicy,
+): ComputeRotatedPatExpiryResult {
+  if (!resetExpiry) {
+    if (expiresAt && expiresAt.getTime() <= Date.now()) {
+      return { ok: false, error: "token_expired" };
+    }
+    return { ok: true, expiresAt };
+  }
+
+  if (expiresAt === null) {
+    if (!policy.patAllowNeverExpire) {
+      return { ok: false, error: "never_expire_not_allowed" };
+    }
+    return { ok: true, expiresAt: null };
+  }
+
+  const ttlMs = expiresAt.getTime() - createdAt.getTime();
+  const newExpiresAt = new Date(Date.now() + Math.max(ttlMs, 0));
+  const validationError = validatePatExpiry(newExpiresAt.toISOString(), policy);
+  if (validationError) {
+    return { ok: false, error: validationError };
+  }
+
+  return { ok: true, expiresAt: newExpiresAt };
 }
 
 export function validatePatCreateInput(

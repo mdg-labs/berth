@@ -9,8 +9,11 @@ import { requireDeleteAccess } from "@/lib/registry/delete/access";
 import {
   bulkDeleteTags,
   deleteImage,
+  deleteManifestDigest,
   deleteTag,
+  type BulkDeleteItem,
 } from "@/lib/registry/delete/service";
+import { isDigestReference } from "@/lib/catalog/format";
 import {
   getTagDetail,
   getTagSiblings,
@@ -26,7 +29,11 @@ import {
   parseImageDeletePath,
 } from "@/lib/registry/catalog/parse-path";
 import { GC_INFO_MESSAGE } from "@/lib/registry/delete/constants";
-import { getTagPullCounts } from "@/lib/pulls/stats";
+import {
+  getTagPullCounts,
+  pullCountKeysForTags,
+  resolveTagPullCount,
+} from "@/lib/pulls/stats";
 import {
   getImageSettings,
   upsertImageSettings,
@@ -114,6 +121,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
             : "name";
       const page = Number.parseInt(params.get("page") ?? "1", 10);
       const pageSize = Number.parseInt(params.get("pageSize") ?? "25", 10);
+      const includeUntagged = params.get("includeUntagged") === "true";
 
       const tags = await listImageTags(
         access.user,
@@ -124,20 +132,21 @@ export async function GET(request: NextRequest, context: RouteContext) {
           sort,
           page: Number.isFinite(page) ? page : 1,
           pageSize: Number.isFinite(pageSize) ? pageSize : 25,
+          includeUntagged,
         },
       );
 
       const pullCounts = await getTagPullCounts(
-        id,
+        access.repository.id,
         parsed.imageName,
-        tags.tags.map((tag) => tag.name),
+        pullCountKeysForTags(tags.tags),
       );
 
       return NextResponse.json({
         ...tags,
         tags: tags.tags.map((tag) => ({
           ...tag,
-          pullCount: pullCounts.get(tag.name) ?? 0,
+          pullCount: resolveTagPullCount(tag, pullCounts),
         })),
       });
     }
@@ -183,6 +192,21 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const tagParsed = parseImageApiPath(path);
   if (tagParsed?.kind === "tag-detail") {
     try {
+      if (isDigestReference(tagParsed.tag)) {
+        const result = await deleteManifestDigest(
+          access.user,
+          access.repository.name,
+          tagParsed.imageName,
+          tagParsed.tag,
+        );
+
+        return NextResponse.json({
+          deleted: true,
+          digest: result.digest,
+          gcInfo: GC_INFO_MESSAGE,
+        });
+      }
+
       const result = await deleteTag(
         access.user,
         access.repository.name,
@@ -289,8 +313,35 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 type BulkDeleteBody = {
-  tags?: string[];
+  tags?: unknown;
 };
+
+function normalizeBulkDeleteItems(tags: unknown[]): BulkDeleteItem[] | null {
+  const items: BulkDeleteItem[] = [];
+
+  for (const entry of tags) {
+    if (typeof entry === "string") {
+      items.push({ name: entry });
+      continue;
+    }
+
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      return null;
+    }
+
+    const { name, isUntagged } = entry as Record<string, unknown>;
+    if (typeof name !== "string") {
+      return null;
+    }
+    if (isUntagged !== undefined && typeof isUntagged !== "boolean") {
+      return null;
+    }
+
+    items.push(isUntagged === undefined ? { name } : { name, isUntagged });
+  }
+
+  return items;
+}
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id, path } = await context.params;
@@ -315,12 +366,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return apiError("bad_request", "At least one tag is required", 400);
   }
 
+  const items = normalizeBulkDeleteItems(body.tags);
+  if (!items) {
+    return apiError("bad_request", "Invalid tag entry", 400);
+  }
+
   try {
     const result = await bulkDeleteTags(
       access.user,
       access.repository.name,
       parsed.imageName,
-      body.tags,
+      items,
     );
 
     return NextResponse.json({

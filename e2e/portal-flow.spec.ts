@@ -7,6 +7,21 @@ import { pushHelloTag } from "./helpers/registry-push";
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@localhost";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "test-admin-password";
 
+function repositoryCatalogLink(
+  page: import("@playwright/test").Page,
+  repositoryName: string,
+) {
+  return page.locator(`a[href="/r/${repositoryName}"]`);
+}
+
+function imageCatalogLink(
+  page: import("@playwright/test").Page,
+  repositoryName: string,
+  imageName: string,
+) {
+  return page.locator(`a[href="/r/${repositoryName}/i/${imageName}"]`);
+}
+
 test.describe("portal happy path", () => {
   test("login → create repository → push → browse → delete tag", async ({
     page,
@@ -31,22 +46,20 @@ test.describe("portal happy path", () => {
     await page.locator("#repository-name").fill(repositoryName);
     await page.getByRole("button", { name: "Create" }).click();
 
-    await expect(page.getByRole("link", { name: repositoryName })).toBeVisible();
+    await expect(repositoryCatalogLink(page, repositoryName)).toBeVisible();
 
     await pushHelloTag(repositoryName, imageName, tagName, {
       email: ADMIN_EMAIL,
       password: ADMIN_PASSWORD,
     });
 
-    const imageTitle = `${repositoryName}/${imageName}`;
-
-    await page.getByRole("link", { name: repositoryName }).click();
+    await repositoryCatalogLink(page, repositoryName).click();
     await expect(page.getByRole("heading", { name: repositoryName })).toBeVisible();
 
-    await expect(page.getByRole("link", { name: imageTitle })).toBeVisible({
+    await expect(imageCatalogLink(page, repositoryName, imageName)).toBeVisible({
       timeout: 45_000,
     });
-    await page.getByRole("link", { name: imageTitle }).click();
+    await imageCatalogLink(page, repositoryName, imageName).click();
 
     await expect(page.getByRole("link", { name: tagName })).toBeVisible({
       timeout: 45_000,

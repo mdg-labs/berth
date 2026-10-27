@@ -1,5 +1,7 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
+import type { PatValidationError } from "@/lib/pat/validation";
+
 export type PersonalAccessTokenSummary = {
   id: string;
   name: string;
@@ -21,6 +23,21 @@ export type CreatePersonalAccessTokenInput = {
   expiresAt: string | null;
   repositoryIds: string[] | null;
 };
+
+export type RotatePersonalAccessTokenInput = {
+  resetExpiry?: boolean;
+};
+
+export type RotatePatResult =
+  | {
+      ok: true;
+      token: string;
+      summary: PersonalAccessTokenSummary;
+    }
+  | {
+      ok: false;
+      error: PatValidationError | "not_found" | "token_expired";
+    };
 
 export type PatContext = {
   id: string;

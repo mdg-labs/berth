@@ -108,7 +108,10 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Single tag delete | `DELETE` manifest by **tag reference** (not digest) | Sibling tags remain; sibling AlertDialog warns before confirm (spec §6.3) |
-| Bulk / repository delete | Resolve unique digests, `DELETE` by digest | Removes manifest data; dedupes shared digests (spec §7.4) |
+| Bulk tag delete | Named tags `DELETE` by **tag reference**; untagged items `DELETE` by digest; the result and `tag.bulk_delete` audit entry list a digest only when it was deleted by digest | Sibling tags sharing a digest stay intact; the reported count matches what was removed |
+| Repository delete | Resolve unique digests, `DELETE` by digest | Removes manifest data; dedupes shared digests (spec §7.4) |
+| Untagged digest listing | Revisions not referenced by a tag, nor transitively by a tagged index / manifest list; any unreadable or unparsable referenced manifest body lists nothing untagged for the repository | Child manifests of a tagged multi-arch image must never be offered for digest delete; fails closed |
+| Tag manifest lookups | Tag and untagged summaries resolve manifests with at most 8 concurrent HEAD requests | Every tag is resolved for sibling detection; bounds load on the registry on each 30 s refetch |
 | Bulk delete confirmation | Typed phrase `delete tags` when N > 5 | Spec §6.3 / exit criteria |
 | Repository delete confirmation | Typed phrase `delete <repoName>` | Same confirmation pattern as bulk delete |
 | Sibling warning UX | `p-alert-dialog-1` pattern + checkbox ack when siblings exist | Spec Appendix B; microcopy in DECISIONS not spec-fixed |
@@ -149,6 +152,7 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Production checklist | Standalone `docs/production-checklist.md` linked from README | Keeps README scannable; checklist cross-links TLS, backup, GC, key rotation |
 | TLS guidance | Reverse proxy primary; compose edge TLS documented as pattern | App serves HTTP internally; no in-app ACME in MVP (spec §3.5) |
 | Dev signing certs | Documented as JWT trust material, distinct from HTTPS TLS | `rootcert.pem` / dev keypair ship in compose; upgrade path in key-rotation + tls docs |
+| Production app image | Built from source by default; a pinned release version tag (`X.Y.Z`, no leading `v`; never `latest`) with `build: !reset null` is the documented alternative, started with `pull` and `up -d` | The base compose file defines `app.build`, so the release-image mode must clear it and skip `--build`; a floating tag could change on a later pull |
 
 ## MFA choices
 
