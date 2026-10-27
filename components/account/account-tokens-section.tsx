@@ -630,7 +630,7 @@ export function AccountTokensSection() {
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={t("createdDialog.copied")}
+                    aria-label={t("createdDialog.copy")}
                     onClick={() => {
                       if (createdToken) {
                         void navigator.clipboard.writeText(createdToken);

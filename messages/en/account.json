@@ -75,6 +75,7 @@
       "title": "Token created",
       "description": "Copy this token now. You will not be able to see it again.",
       "token": "Token",
+      "copy": "Copy token",
       "copied": "Token copied",
       "dockerTitle": "Docker login",
       "dockerInstructions": "docker login {registryHost}\nUsername: {email}\nPassword: {passwordHint}",
