@@ -13,8 +13,13 @@ jobs:
     steps:
       - name: Resolve build ref and image tags
         id: meta
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          TAG_NAME="${{ github.event.release.tag_name }}"
+          if ! [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Release tag is not a version tag (expected vMAJOR.MINOR.PATCH[-prerelease])"
+            exit 1
+          fi
           SEMVER="${TAG_NAME#v}"
           echo "ref=${TAG_NAME}" >> "$GITHUB_OUTPUT"
           echo "image-tags=latest,${SEMVER}" >> "$GITHUB_OUTPUT"
