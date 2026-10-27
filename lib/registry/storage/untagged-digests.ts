@@ -92,6 +92,74 @@ async function collectTaggedDigests(manifestsPath: string): Promise<Set<string>>
   return digests;
 }
 
+function blobDataPath(digest: string): string | null {
+  const match = /^sha256:([0-9a-f]{64})$/.exec(digest);
+  if (!match) {
+    return null;
+  }
+  const hex = match[1];
+  return path.join(
+    getRegistryDataPath(),
+    "docker",
+    "registry",
+    "v2",
+    "blobs",
+    SHA256_DIR,
+    hex.slice(0, 2),
+    hex,
+    "data",
+  );
+}
+
+/**
+ * Expands tagged digests with every child manifest of a referenced index or
+ * manifest list, transitively. Returns null when a referenced manifest body
+ * cannot be read or parsed, since its children cannot then be ruled out.
+ */
+async function collectReferencedDigests(
+  taggedDigests: Set<string>,
+): Promise<Set<string> | null> {
+  const referenced = new Set<string>();
+  const queue = [...taggedDigests];
+
+  while (queue.length > 0) {
+    const digest = queue.pop() as string;
+    if (referenced.has(digest)) {
+      continue;
+    }
+    referenced.add(digest);
+
+    const dataPath = blobDataPath(digest);
+    if (!dataPath) {
+      return null;
+    }
+
+    let body: unknown;
+    try {
+      body = JSON.parse(await readFile(dataPath, "utf8"));
+    } catch {
+      return null;
+    }
+
+    const children = (body as { manifests?: unknown } | null)?.manifests;
+    if (children === undefined) {
+      continue;
+    }
+    if (!Array.isArray(children)) {
+      return null;
+    }
+    for (const child of children) {
+      const childDigest = (child as { digest?: unknown } | null)?.digest;
+      if (typeof childDigest !== "string") {
+        return null;
+      }
+      queue.push(childDigest);
+    }
+  }
+
+  return referenced;
+}
+
 export async function isRegistryStorageReadable(): Promise<boolean> {
   const root = getRegistryDataPath();
 
@@ -120,9 +188,14 @@ export async function listUntaggedDigests(fullImageName: string): Promise<string
     collectTaggedDigests(manifestsPath),
   ]);
 
+  const referencedDigests = await collectReferencedDigests(taggedDigests);
+  if (!referencedDigests) {
+    return [];
+  }
+
   const untagged: string[] = [];
   for (const digest of allDigests) {
-    if (!taggedDigests.has(digest)) {
+    if (!referencedDigests.has(digest)) {
       untagged.push(digest);
     }
   }

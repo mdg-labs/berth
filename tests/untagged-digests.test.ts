@@ -60,6 +60,53 @@ async function writeTagLink(
   await writeFile(linkPath, digest);
 }
 
+const DIGEST_CHILD_A =
+  "sha256:1111111111111111111111111111111111111111111111111111111111111111";
+const DIGEST_CHILD_B =
+  "sha256:2222222222222222222222222222222222222222222222222222222222222222";
+const DIGEST_NESTED_INDEX =
+  "sha256:3333333333333333333333333333333333333333333333333333333333333333";
+const DIGEST_NESTED_CHILD =
+  "sha256:4444444444444444444444444444444444444444444444444444444444444444";
+
+async function writeBlob(
+  root: string,
+  digest: string,
+  body: unknown,
+): Promise<void> {
+  const hex = digest.replace("sha256:", "");
+  const dataPath = path.join(
+    root,
+    "docker",
+    "registry",
+    "v2",
+    "blobs",
+    "sha256",
+    hex.slice(0, 2),
+    hex,
+    "data",
+  );
+  await mkdir(path.dirname(dataPath), { recursive: true });
+  await writeFile(
+    dataPath,
+    typeof body === "string" ? body : JSON.stringify(body),
+  );
+}
+
+const IMAGE_MANIFEST = {
+  schemaVersion: 2,
+  mediaType: "application/vnd.oci.image.manifest.v1+json",
+  layers: [],
+};
+
+function indexOf(...digests: string[]) {
+  return {
+    schemaVersion: 2,
+    mediaType: "application/vnd.oci.image.index.v1+json",
+    manifests: digests.map((digest) => ({ digest })),
+  };
+}
+
 describe("untagged digest storage inventory", () => {
   let tempRoot = "";
   const previousPath = process.env.REGISTRY_DATA_PATH;
@@ -84,6 +131,7 @@ describe("untagged digest storage inventory", () => {
     await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_A);
     await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_B);
     await writeTagLink(tempRoot, fullImageName, "dev", DIGEST_TAGGED);
+    await writeBlob(tempRoot, DIGEST_TAGGED, IMAGE_MANIFEST);
 
     const { listUntaggedDigests } = await import(
       "@/lib/registry/storage/untagged-digests"
@@ -99,6 +147,81 @@ describe("untagged digest storage inventory", () => {
     const fullImageName = "demo-app/hello";
     await writeManifestLink(tempRoot, fullImageName, DIGEST_TAGGED);
     await writeTagLink(tempRoot, fullImageName, "dev", DIGEST_TAGGED);
+    await writeBlob(tempRoot, DIGEST_TAGGED, IMAGE_MANIFEST);
+
+    const { listUntaggedDigests } = await import(
+      "@/lib/registry/storage/untagged-digests"
+    );
+
+    expect(await listUntaggedDigests(fullImageName)).toEqual([]);
+  });
+
+  it("does not list children of a tagged index, including nested indexes", async () => {
+    const fullImageName = "demo-app/multi";
+    for (const digest of [
+      DIGEST_TAGGED,
+      DIGEST_CHILD_A,
+      DIGEST_CHILD_B,
+      DIGEST_NESTED_INDEX,
+      DIGEST_NESTED_CHILD,
+      DIGEST_UNTAGGED_A,
+    ]) {
+      await writeManifestLink(tempRoot, fullImageName, digest);
+    }
+    await writeTagLink(tempRoot, fullImageName, "latest", DIGEST_TAGGED);
+    await writeBlob(
+      tempRoot,
+      DIGEST_TAGGED,
+      indexOf(DIGEST_CHILD_A, DIGEST_CHILD_B, DIGEST_NESTED_INDEX),
+    );
+    await writeBlob(tempRoot, DIGEST_CHILD_A, IMAGE_MANIFEST);
+    await writeBlob(tempRoot, DIGEST_CHILD_B, IMAGE_MANIFEST);
+    await writeBlob(tempRoot, DIGEST_NESTED_INDEX, indexOf(DIGEST_NESTED_CHILD));
+    await writeBlob(tempRoot, DIGEST_NESTED_CHILD, IMAGE_MANIFEST);
+    await writeBlob(tempRoot, DIGEST_UNTAGGED_A, IMAGE_MANIFEST);
+
+    const { listUntaggedDigests } = await import(
+      "@/lib/registry/storage/untagged-digests"
+    );
+
+    expect(await listUntaggedDigests(fullImageName)).toEqual([DIGEST_UNTAGGED_A]);
+  });
+
+  it("terminates on an index that references itself", async () => {
+    const fullImageName = "demo-app/cycle";
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_TAGGED);
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_A);
+    await writeTagLink(tempRoot, fullImageName, "latest", DIGEST_TAGGED);
+    await writeBlob(tempRoot, DIGEST_TAGGED, indexOf(DIGEST_TAGGED));
+    await writeBlob(tempRoot, DIGEST_UNTAGGED_A, IMAGE_MANIFEST);
+
+    const { listUntaggedDigests } = await import(
+      "@/lib/registry/storage/untagged-digests"
+    );
+
+    expect(await listUntaggedDigests(fullImageName)).toEqual([DIGEST_UNTAGGED_A]);
+  });
+
+  it("lists nothing when a tagged manifest body cannot be read", async () => {
+    const fullImageName = "demo-app/multi";
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_TAGGED);
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_CHILD_A);
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_A);
+    await writeTagLink(tempRoot, fullImageName, "latest", DIGEST_TAGGED);
+
+    const { listUntaggedDigests } = await import(
+      "@/lib/registry/storage/untagged-digests"
+    );
+
+    expect(await listUntaggedDigests(fullImageName)).toEqual([]);
+  });
+
+  it("lists nothing when a referenced index body is not valid JSON", async () => {
+    const fullImageName = "demo-app/multi";
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_TAGGED);
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_A);
+    await writeTagLink(tempRoot, fullImageName, "latest", DIGEST_TAGGED);
+    await writeBlob(tempRoot, DIGEST_TAGGED, "{not json");
 
     const { listUntaggedDigests } = await import(
       "@/lib/registry/storage/untagged-digests"
