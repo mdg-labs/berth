@@ -16,7 +16,7 @@ jobs:
     needs: ci
     uses: ./.github/workflows/build-push.yml
     with:
-      ref: dev
+      ref: ${{ github.sha }}
       image-tags: dev
     permissions:
       contents: read
