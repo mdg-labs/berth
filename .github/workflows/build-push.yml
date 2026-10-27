@@ -26,12 +26,18 @@ jobs:
 
       - name: Resolve image tags
         id: tags
+        env:
+          IMAGE_TAGS: ${{ inputs.image-tags }}
         run: |
           TAGS=""
-          IFS=',' read -ra PARTS <<< "${{ inputs.image-tags }}"
+          IFS=',' read -ra PARTS <<< "$IMAGE_TAGS"
           for tag in "${PARTS[@]}"; do
             tag="$(echo "$tag" | xargs)"
             if [ -n "$tag" ]; then
+              if ! [[ "$tag" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+                echo "::error::Invalid Docker image tag in the image-tags input"
+                exit 1
+              fi
               if [ -n "$TAGS" ]; then
                 TAGS="${TAGS},"
               fi
