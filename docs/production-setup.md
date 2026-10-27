@@ -92,8 +92,10 @@ chmod 600 /opt/berth/secrets/session.secret
 
 ### Postgres password
 
+The password is embedded in `DATABASE_URL`, so generate a URL-safe value (hex has no `/`, `+` or `=`):
+
 ```bash
-openssl rand -base64 24 | tee /opt/berth/secrets/postgres.password
+openssl rand -hex 24 | tee /opt/berth/secrets/postgres.password
 chmod 600 /opt/berth/secrets/postgres.password
 ```
 

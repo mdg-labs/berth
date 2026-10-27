@@ -49,6 +49,8 @@ services:
       - ${BERTH_SECRETS_DIR}/token-signing-key.pem:/etc/berth/token/signing-key.pem:ro
       - ${BERTH_SECRETS_DIR}/token-signing-cert.pem:/etc/berth/token/signing-cert.pem:ro
     environment:
+      # POSTGRES_PASSWORD is embedded in this URL: it must be URL-safe (for
+      # example `openssl rand -hex 24`) or percent-encoded here.
       DATABASE_URL: postgresql://berth:${POSTGRES_PASSWORD}@postgres:5432/berth
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
       APP_URL: https://registry.example.com
