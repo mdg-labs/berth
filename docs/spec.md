@@ -64,7 +64,7 @@ Defer to post-MVP phases (§12); do not slip into MVP:
 - Vulnerability scanning (Trivy/Clair integration)
 - Helm ChartMuseum / generic OCI artifact types beyond container images
 - Notary / cosign content trust
-- Robot accounts (API tokens for CI) — high priority in Phase 2, not MVP
+- Robot accounts (API tokens for CI) — not in the MVP; delivered afterwards as machine accounts (§5.1)
 - Multi-registry federation (this product **is** the registry)
 - Electron / desktop packaging
 - Feature parity with every Harbor admin screen
@@ -199,6 +199,8 @@ Same protocol as Harbor/Docker Hub ([Distribution token spec](https://distributi
 4. Client retries registry operation with `Authorization: Bearer <jwt>`.
 5. Registry validates signature and claim set.
 
+**Machine accounts:** a Basic password starting with `bm_` is resolved by the secret alone (SHA-256 hash lookup; the username is ignored; unknown, disabled or expired secrets get `401`), never tried as a user password or personal access token, and a `bt_` token or user password never resolves a machine account. The issued token has subject `machine:<id>` and the private claim `berth_machine_account: <id>`; consumers read the claim, never the subject, because a user's email can be any string. Scopes are the intersection of the request and the account's permissions: `pull` on its repositories if the account may pull, `push` only on its owner repository if the account may push, `delete` never, non-`repository` scopes dropped, any other repository pull-only where anonymous pull is allowed for that image. A request left empty is `403`; a missing repository is `403` (`repository_not_found`, §5.2). Token requests are rate limited per account in their own namespace.
+
 **Portal browsing:** session cookie authenticates API routes; server-side registry client obtains a token for the logged-in user (never reuse one global service password).
 
 **Token TTL (resolved, was previously unspecified):** issued registry JWTs expire after `TOKEN_TTL_SECONDS` (§9.1, default **300 seconds**). This is short deliberately: Distribution has no token-revocation callback, so a removed project member's already-issued token stays valid until it expires — a short TTL bounds that exposure window. This does not break long pushes: the Docker client automatically re-requests a token on the next `401` if the current one has expired mid-operation, so a multi-GB push just triggers 1–2 extra token round-trips rather than failing.
@@ -225,7 +227,7 @@ Same protocol as Harbor/Docker Hub ([Distribution token spec](https://distributi
 | Local (email + password) | ✅ | Bootstrap admin; bcrypt in Postgres |
 | OIDC — **one** provider configured at a time (MVP) | ✅ | Primary recommended path for teams. "Generic" means any standards-compliant OIDC issuer (Google, GitHub, Okta, Keycloak, Authentik, …) can be pointed at via `OIDC_ISSUER`/`OIDC_CLIENT_ID`/`OIDC_CLIENT_SECRET` (§9.1), but MVP config has exactly one such triple — there is no multi-provider picker on the login screen. (Earlier drafts listed "Google, GitHub, generic" in a way that read as simultaneous options; that was a documentation error, not a feature — resolved here.) |
 | LDAP / AD | Post-MVP | |
-| Robot / CI accounts | Post-MVP | Phase 2 |
+| Robot / CI accounts (machine accounts) | ✅ (post-MVP) | Repository machine accounts (owned by one repository) and host machine accounts (several repositories). Authenticate `docker login` with a `bm_` secret; the registry token subject is `machine:<id>` and carries the private claim `berth_machine_account` (§4.3). Registry access only — never the JSON API. |
 
 User record: `id`, `email`, `name`, `password_hash?`, `oidc_sub?`, `role` (system-level), `created_at`.
 
@@ -536,7 +538,7 @@ Spec-first; detailed execution checklist can be split into `ROADMAP.md` later. *
 
 ### Post-MVP
 
-- Robot accounts + CI tokens
+- ~~Robot accounts + CI tokens~~ — implemented as machine accounts (§5.1, §4.3)
 - Webhooks
 - Async job worker (Redis) — replication, scheduled GC, scan
 - Vulnerability scanning (Trivy)

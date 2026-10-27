@@ -18,3 +18,12 @@ export type CreateMachineAccountInput = {
   allowPull: boolean;
   allowPush: boolean;
 };
+
+export type ResolvedMachineAccount = {
+  id: string;
+  ownerRepositoryId: string | null;
+  allowPull: boolean;
+  allowPush: boolean;
+  repositoryIds: string[];
+  lastUsedAt: Date | null;
+};

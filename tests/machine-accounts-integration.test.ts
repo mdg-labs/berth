@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 
 import { eq, inArray, or } from "drizzle-orm";
+import { decodeJwt } from "jose";
 import { NextRequest } from "next/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -368,7 +369,7 @@ describe.skipIf(!databaseUrl)("machine accounts against Postgres", () => {
     expect(listed.createdBy).toBeNull();
   });
 
-  it("does not accept the secret at the token endpoint as a password or PAT", async () => {
+  it("accepts the secret at the token endpoint only as a machine secret", async () => {
     const created = await (
       await create(repoAdmin, repoA.id, { name: "docker", allowPull: true })
     ).json();
@@ -381,7 +382,10 @@ describe.skipIf(!databaseUrl)("machine accounts against Postgres", () => {
         headers: { authorization: `Basic ${basic}` },
       }),
     );
-    expect(login.status).toBe(401);
+    expect(login.status).toBe(200);
+    expect(decodeJwt((await login.json()).token).sub).toBe(
+      `machine:${created.machineAccount.id}`,
+    );
 
     const scoped = await tokenGET(
       new NextRequest(
@@ -389,7 +393,14 @@ describe.skipIf(!databaseUrl)("machine accounts against Postgres", () => {
         { headers: { authorization: `Basic ${basic}` } },
       ),
     );
-    expect(scoped.status).toBe(403);
-    expect(await scoped.json()).not.toHaveProperty("token");
+    expect(scoped.status).toBe(200);
+
+    const otherRepository = await tokenGET(
+      new NextRequest(
+        `http://localhost/api/auth/token?service=registry&scope=repository:${repoB.name}/app:pull`,
+        { headers: { authorization: `Basic ${basic}` } },
+      ),
+    );
+    expect(otherRepository.status).toBe(403);
   });
 });

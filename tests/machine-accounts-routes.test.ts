@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   listMachineAccounts: vi.fn(),
   createMachineAccount: vi.fn(),
   deleteMachineAccount: vi.fn(),
+  resolveMachineAccount: vi.fn(),
   findUserByEmail: vi.fn(),
 }));
 
@@ -37,6 +38,7 @@ vi.mock("@/lib/machine-accounts/store", () => ({
   listMachineAccounts: mocks.listMachineAccounts,
   createMachineAccount: mocks.createMachineAccount,
   deleteMachineAccount: mocks.deleteMachineAccount,
+  resolveMachineAccount: mocks.resolveMachineAccount,
 }));
 
 vi.mock("@/lib/auth/credentials", async (importOriginal) => {
@@ -309,9 +311,10 @@ describe("GET /api/auth/token with a machine account secret", () => {
   beforeEach(() => {
     resetRateLimits();
     mocks.findUserByEmail.mockResolvedValue(null);
+    mocks.resolveMachineAccount.mockResolvedValue(null);
   });
 
-  it("is not accepted as a user password or a PAT before registry login support exists", async () => {
+  it("resolves an unknown secret as a machine account only and answers 401", async () => {
     const basic = Buffer.from("acme+ci:bm_secret").toString("base64");
 
     const response = await tokenGET(
@@ -321,6 +324,7 @@ describe("GET /api/auth/token with a machine account secret", () => {
     );
 
     expect(response.status).toBe(401);
-    expect(mocks.findUserByEmail).toHaveBeenCalledWith("acme+ci");
+    expect(mocks.resolveMachineAccount).toHaveBeenCalledWith("bm_secret");
+    expect(mocks.findUserByEmail).not.toHaveBeenCalled();
   });
 });

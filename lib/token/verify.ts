@@ -2,11 +2,12 @@
 
 import { jwtVerify } from "jose";
 
+import { MACHINE_ACCOUNT_CLAIM } from "./claims";
 import { getTokenIssuer, getTokenService } from "./config";
 import { getVerificationPublicKey } from "./keys";
 
 export type RegistryTokenVerifyResult =
-  | { ok: true; subject: string }
+  | { ok: true; subject: string; machineAccountId?: string }
   | { ok: false; reason: "missing" | "invalid" };
 
 export function extractBearerToken(
@@ -34,6 +35,11 @@ export async function verifyRegistryBearerToken(
       typeof payload.sub === "string" && payload.sub.length > 0
         ? payload.sub
         : "unknown";
+
+    const machineClaim = payload[MACHINE_ACCOUNT_CLAIM];
+    if (typeof machineClaim === "string" && machineClaim.length > 0) {
+      return { ok: true, subject, machineAccountId: machineClaim };
+    }
 
     return { ok: true, subject };
   } catch {

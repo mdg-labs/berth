@@ -4,7 +4,7 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { auditLog, machineAccounts, repositories, users } from "@/lib/db/schema";
-import { generateToken, hashToken } from "@/lib/email/tokens";
+import { generateToken, hashToken, isTokenExpired } from "@/lib/email/tokens";
 import {
   MACHINE_ACCOUNT_PREFIX,
   MACHINE_ACCOUNT_TOKEN_PREFIX_LENGTH,
@@ -12,6 +12,7 @@ import {
 import type {
   CreateMachineAccountInput,
   MachineAccountSummary,
+  ResolvedMachineAccount,
 } from "@/lib/machine-accounts/types";
 import { isUuid } from "@/lib/machine-accounts/validation";
 
@@ -45,6 +46,46 @@ function pgErrorCode(error: unknown): { code?: string; constraint?: string } {
     }
   }
   return {};
+}
+
+export async function resolveMachineAccount(
+  secret: string,
+): Promise<ResolvedMachineAccount | null> {
+  if (!secret.startsWith(MACHINE_ACCOUNT_PREFIX)) {
+    return null;
+  }
+
+  const db = getDb();
+  const [row] = await db
+    .select({
+      id: machineAccounts.id,
+      ownerRepositoryId: machineAccounts.ownerRepositoryId,
+      allowPull: machineAccounts.allowPull,
+      allowPush: machineAccounts.allowPush,
+      expiresAt: machineAccounts.expiresAt,
+      disabledAt: machineAccounts.disabledAt,
+      lastUsedAt: machineAccounts.lastUsedAt,
+    })
+    .from(machineAccounts)
+    .where(eq(machineAccounts.tokenHash, hashToken(secret)))
+    .limit(1);
+
+  if (!row || row.disabledAt) {
+    return null;
+  }
+
+  if (row.expiresAt && isTokenExpired(row.expiresAt)) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    ownerRepositoryId: row.ownerRepositoryId,
+    allowPull: row.allowPull,
+    allowPush: row.allowPush,
+    repositoryIds: row.ownerRepositoryId ? [row.ownerRepositoryId] : [],
+    lastUsedAt: row.lastUsedAt,
+  };
 }
 
 export async function listMachineAccounts(

@@ -17,18 +17,25 @@ function getTokenLimits() {
   };
 }
 
+function consumeTokenBuckets(ip: string, identityKey: string): boolean {
+  const { maxAttempts, windowSeconds } = getTokenLimits();
+  return (
+    consumeRateLimit(`token:ip:${ip}`, maxAttempts, windowSeconds) &&
+    consumeRateLimit(identityKey, maxAttempts, windowSeconds)
+  );
+}
+
 export function checkTokenRateLimit(
   ip: string,
   identifier: string,
 ): boolean {
-  const { maxAttempts, windowSeconds } = getTokenLimits();
   const normalizedIdentifier = identifier.trim().toLowerCase() || "anonymous";
-  return (
-    consumeRateLimit(`token:ip:${ip}`, maxAttempts, windowSeconds) &&
-    consumeRateLimit(
-      `token:id:${normalizedIdentifier}`,
-      maxAttempts,
-      windowSeconds,
-    )
-  );
+  return consumeTokenBuckets(ip, `token:id:${normalizedIdentifier}`);
+}
+
+export function checkMachineTokenRateLimit(
+  ip: string,
+  machineAccountId: string,
+): boolean {
+  return consumeTokenBuckets(ip, `token:machine:${machineAccountId}`);
 }
