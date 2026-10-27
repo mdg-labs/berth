@@ -1,10 +1,16 @@
 // Copyright (c) 2026 Michael David Guggenbichler (MDG Labs), licensed under Apache-2.0 — see LICENSE
 
+export type MachineAccountKind = "repository" | "host";
+
+export type MachineAccountRepositoryRef = { id: string; name: string };
+
 export type MachineAccountSummary = {
   id: string;
+  kind: MachineAccountKind;
   name: string;
   description: string | null;
   username: string;
+  repositories: MachineAccountRepositoryRef[];
   tokenPrefix: string;
   allowPull: boolean;
   allowPush: boolean;
@@ -19,7 +25,16 @@ export type CreateMachineAccountInput = {
   allowPush: boolean;
 };
 
-export type MachineAccountKind = "repository" | "host";
+export type CreateHostMachineAccountInput = {
+  name: string;
+  description: string | null;
+  repositoryIds: string[];
+};
+
+export type UpdateHostMachineAccountInput = {
+  description?: string | null;
+  repositoryIds?: string[];
+};
 
 export type MachineAccountSnapshot = {
   id: string;

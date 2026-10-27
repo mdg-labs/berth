@@ -94,6 +94,7 @@
       "push": "Push"
     },
     "deletedUser": "Deleted user",
+    "managedBySystem": "Managed by system admins",
     "deleteAccount": "Delete machine account {name}",
     "createDialog": {
       "title": "Create machine account",

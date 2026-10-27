@@ -164,7 +164,14 @@ export function RepositoryMachineAccountsSection({
               <TableBody>
                 {accounts.map((account) => (
                   <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {account.name}
+                        {account.kind === "host" ? (
+                          <Badge variant="outline">{t("managedBySystem")}</Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <code className="text-xs">{account.username}</code>
                     </TableCell>
@@ -192,18 +199,20 @@ export function RepositoryMachineAccountsSection({
                       {new Date(account.createdAt).toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t("deleteAccount", { name: account.name })}
-                        onClick={() => {
-                          setDeleteTarget(account);
-                          setDeleteOpen(true);
-                        }}
-                      >
-                        <Trash2Icon className="size-4" />
-                      </Button>
+                      {account.kind === "host" ? null : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t("deleteAccount", { name: account.name })}
+                          onClick={() => {
+                            setDeleteTarget(account);
+                            setDeleteOpen(true);
+                          }}
+                        >
+                          <Trash2Icon className="size-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

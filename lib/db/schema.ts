@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -330,6 +331,26 @@ export const machineAccounts = pgTable(
     ownerRepositoryNameIdx: uniqueIndex(
       "machine_accounts_owner_repository_name_idx",
     ).on(table.ownerRepositoryId, table.name),
+    hostNameIdx: uniqueIndex("machine_accounts_host_name_idx")
+      .on(table.name)
+      .where(sql`${table.ownerRepositoryId} is null`),
+  }),
+);
+
+export const machineAccountRepositories = pgTable(
+  "machine_account_repositories",
+  {
+    machineAccountId: uuid("machine_account_id")
+      .notNull()
+      .references(() => machineAccounts.id, { onDelete: "cascade" }),
+    repositoryId: uuid("repository_id")
+      .notNull()
+      .references(() => repositories.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.machineAccountId, table.repositoryId],
+    }),
   }),
 );
 
