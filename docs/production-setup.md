@@ -117,9 +117,15 @@ openssl req -new -x509 \
 # Registry trust bundle — single cert until you rotate keys
 cp token-signing-cert.pem rootcert.pem
 
+# The app container runs as uid/gid 1001 and reads the bind-mounted key,
+# so it must own the key; mode 600 keeps everyone else out. Set the mode
+# first: after the chown, a non-root account can no longer chmod the file.
 chmod 600 token-signing-key.pem
+sudo chown 1001:1001 token-signing-key.pem
 chmod 644 token-signing-cert.pem rootcert.pem
 ```
+
+The certificate and trust bundle are public material and stay world-readable. The session secret and Postgres password are passed to the containers as environment variables, so those two files are read only by your own account.
 
 **Do not** reuse the dev keys in `docker/token/dev-signing-key.pem` or `docker/registry/certs/rootcert.pem`.
 
