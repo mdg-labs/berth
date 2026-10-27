@@ -15,6 +15,7 @@ jobs:
         id: meta
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
         run: |
           if ! [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "::error::Release tag is not a version tag (expected vMAJOR.MINOR.PATCH[-prerelease])"
@@ -22,7 +23,11 @@ jobs:
           fi
           SEMVER="${TAG_NAME#v}"
           echo "ref=${TAG_NAME}" >> "$GITHUB_OUTPUT"
-          echo "image-tags=latest,${SEMVER}" >> "$GITHUB_OUTPUT"
+          if [ "$PRERELEASE" = "true" ]; then
+            echo "image-tags=${SEMVER}" >> "$GITHUB_OUTPUT"
+          else
+            echo "image-tags=latest,${SEMVER}" >> "$GITHUB_OUTPUT"
+          fi
 
   build-push:
     needs: resolve-tags
