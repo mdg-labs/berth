@@ -85,8 +85,10 @@ Token signing material is **not** your HTTPS certificate. See [TLS guide](tls.md
 
 ### Session secret
 
+The secrets below are written straight to their files with owner-only permissions and are never printed, so they do not end up in terminal transcripts or log collectors.
+
 ```bash
-openssl rand -base64 32 | tee /opt/berth/secrets/session.secret
+(umask 077; openssl rand -base64 32 > /opt/berth/secrets/session.secret)
 chmod 600 /opt/berth/secrets/session.secret
 ```
 
@@ -95,7 +97,7 @@ chmod 600 /opt/berth/secrets/session.secret
 The password is embedded in `DATABASE_URL`, so generate a URL-safe value (hex has no `/`, `+` or `=`):
 
 ```bash
-openssl rand -hex 24 | tee /opt/berth/secrets/postgres.password
+(umask 077; openssl rand -hex 24 > /opt/berth/secrets/postgres.password)
 chmod 600 /opt/berth/secrets/postgres.password
 ```
 
