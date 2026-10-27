@@ -3,12 +3,19 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CopyIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 
 import { ErrorAlert } from "@/components/catalog/error-alert";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  type ExpiryChoice,
+  expiryChoiceToTimestamp,
+  initialExpiryChoice,
+  isExpiryChoiceValid,
+  MachineAccountExpiryField,
+  type MachineAccountExpiryPolicy,
+} from "@/components/settings/machine-account-expiry";
+import { MachineAccountSecretPanel } from "@/components/settings/machine-account-secret-panel";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -29,15 +36,9 @@ import {
 import { Fieldset, FieldsetLegend } from "@/components/ui/fieldset";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { toastManager } from "@/components/ui/toast";
 import { ApiError, apiFetch } from "@/lib/api/client";
 import { MACHINE_ACCOUNT_DESCRIPTION_MAX_LENGTH } from "@/lib/machine-accounts/config";
 import type { MachineAccountSummary } from "@/lib/machine-accounts/types";
@@ -53,12 +54,14 @@ type CreateMachineAccountResponse = {
 
 type MachineAccountCreateDialogProps = {
   repositoryId: string;
+  policy: MachineAccountExpiryPolicy | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 export function MachineAccountCreateDialog({
   repositoryId,
+  policy,
   open,
   onOpenChange,
 }: MachineAccountCreateDialogProps) {
@@ -66,12 +69,13 @@ export function MachineAccountCreateDialog({
   const queryClient = useQueryClient();
   const nameId = useId();
   const descriptionId = useId();
-  const secretId = useId();
-  const commandId = useId();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [allowPull, setAllowPull] = useState(true);
   const [allowPush, setAllowPush] = useState(false);
+  const [expiry, setExpiry] = useState<ExpiryChoice>(() =>
+    initialExpiryChoice(policy),
+  );
   const [submitted, setSubmitted] = useState(false);
 
   // gcTime 0 drops the response, which carries the secret, from the mutation
@@ -83,6 +87,7 @@ export function MachineAccountCreateDialog({
       description: string;
       allowPull: boolean;
       allowPush: boolean;
+      expiresAt: string | null;
     }) =>
       apiFetch<CreateMachineAccountResponse>(
         `/api/repositories/${repositoryId}/machine-accounts`,
@@ -109,6 +114,7 @@ export function MachineAccountCreateDialog({
     setDescription("");
     setAllowPull(true);
     setAllowPush(false);
+    setExpiry(initialExpiryChoice(policy));
     setSubmitted(false);
   }
 
@@ -119,23 +125,7 @@ export function MachineAccountCreateDialog({
     onOpenChange(next);
   }
 
-  async function copyToClipboard(value: string, successTitle: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      toastManager.add({ type: "success", title: successTitle });
-    } catch {
-      toastManager.add({
-        type: "error",
-        title: t("createdDialog.copyFailed"),
-        description: t("createdDialog.copyFailedDescription"),
-      });
-    }
-  }
-
   function renderCreated(result: CreateMachineAccountResponse) {
-    const registryHost = window.location.host;
-    const loginCommand = `echo '${result.secret}' | docker login ${registryHost} -u '${result.machineAccount.username}' --password-stdin`;
-
     return (
       <>
         <DialogHeader>
@@ -147,75 +137,10 @@ export function MachineAccountCreateDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-4">
-          <Alert variant="warning">
-            <AlertTitle>{t("createdDialog.warningTitle")}</AlertTitle>
-            <AlertDescription>
-              {t("createdDialog.warningDescription")}
-            </AlertDescription>
-          </Alert>
-          <Field className="w-full">
-            <FieldLabel htmlFor={secretId}>
-              {t("createdDialog.secret")}
-            </FieldLabel>
-            <InputGroup>
-              <InputGroupInput
-                id={secretId}
-                readOnly
-                value={result.secret}
-                className="font-mono text-xs"
-              />
-              <InputGroupAddon align="inline-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("createdDialog.copySecret")}
-                  onClick={() =>
-                    void copyToClipboard(
-                      result.secret,
-                      t("createdDialog.secretCopied"),
-                    )
-                  }
-                >
-                  <CopyIcon />
-                </Button>
-              </InputGroupAddon>
-            </InputGroup>
-          </Field>
-          <Field className="w-full">
-            <FieldLabel htmlFor={commandId}>
-              {t("createdDialog.command")}
-            </FieldLabel>
-            <InputGroup>
-              <InputGroupInput
-                id={commandId}
-                readOnly
-                value={loginCommand}
-                className="font-mono text-xs"
-              />
-              <InputGroupAddon align="inline-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("createdDialog.copyCommand")}
-                  onClick={() =>
-                    void copyToClipboard(
-                      loginCommand,
-                      t("createdDialog.commandCopied"),
-                    )
-                  }
-                >
-                  <CopyIcon />
-                </Button>
-              </InputGroupAddon>
-            </InputGroup>
-            <FieldDescription>
-              {t("createdDialog.commandHint", {
-                username: result.machineAccount.username,
-              })}
-            </FieldDescription>
-          </Field>
+          <MachineAccountSecretPanel
+            secret={result.secret}
+            username={result.machineAccount.username}
+          />
         </DialogPanel>
         <DialogFooter>
           <Button type="button" onClick={() => onOpenChange(false)}>
@@ -256,7 +181,8 @@ export function MachineAccountCreateDialog({
                 setSubmitted(true);
                 if (
                   !isValidRepositoryName(normalizedName) ||
-                  (!allowPull && !allowPush)
+                  (!allowPull && !allowPush) ||
+                  !isExpiryChoiceValid(expiry, policy)
                 ) {
                   return;
                 }
@@ -265,6 +191,7 @@ export function MachineAccountCreateDialog({
                   description,
                   allowPull,
                   allowPush,
+                  expiresAt: expiryChoiceToTimestamp(expiry, policy),
                 });
               }}
             >
@@ -344,6 +271,12 @@ export function MachineAccountCreateDialog({
                     </p>
                   ) : null}
                 </Fieldset>
+                <MachineAccountExpiryField
+                  choice={expiry}
+                  onChange={setExpiry}
+                  policy={policy}
+                  showError={submitted}
+                />
               </DialogPanel>
               <DialogFooter>
                 <Button

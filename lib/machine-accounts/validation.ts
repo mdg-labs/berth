@@ -7,7 +7,9 @@ import {
 import type {
   CreateHostMachineAccountInput,
   CreateMachineAccountInput,
+  RotateMachineAccountInput,
   UpdateHostMachineAccountInput,
+  UpdateMachineAccountInput,
 } from "@/lib/machine-accounts/types";
 import {
   isValidRepositoryName,
@@ -19,11 +21,26 @@ export type MachineAccountValidationError =
   | "invalid_name"
   | "invalid_description"
   | "invalid_permissions"
-  | "permission_required";
+  | "permission_required"
+  | "invalid_expiry"
+  | "invalid_disabled"
+  | "empty_update";
 
 export type ParseMachineAccountInputResult =
   | { ok: true; input: CreateMachineAccountInput }
   | { ok: false; error: MachineAccountValidationError };
+
+function parseExpiresAt(
+  value: unknown,
+): { ok: true; expiresAt: string | null } | { ok: false } {
+  if (value === undefined || value === null) {
+    return { ok: true, expiresAt: null };
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    return { ok: false };
+  }
+  return { ok: true, expiresAt: value };
+}
 
 export function parseMachineAccountInput(
   body: unknown,
@@ -63,14 +80,21 @@ export function parseMachineAccountInput(
     return { ok: false, error: "permission_required" };
   }
 
-  return { ok: true, input: { name, description, allowPull, allowPush } };
+  const expiry = parseExpiresAt(record.expiresAt);
+  if (!expiry.ok) {
+    return { ok: false, error: "invalid_expiry" };
+  }
+
+  return {
+    ok: true,
+    input: { name, description, allowPull, allowPush, expiresAt: expiry.expiresAt },
+  };
 }
 
 export type HostMachineAccountValidationError =
   | MachineAccountValidationError
   | "invalid_repository_ids"
-  | "push_not_allowed"
-  | "empty_update";
+  | "push_not_allowed";
 
 export type ParseHostMachineAccountInputResult =
   | { ok: true; input: CreateHostMachineAccountInput }
@@ -153,10 +177,66 @@ export function parseHostMachineAccountInput(
     return { ok: false, error: "invalid_repository_ids" };
   }
 
+  const expiry = parseExpiresAt(record.expiresAt);
+  if (!expiry.ok) {
+    return { ok: false, error: "invalid_expiry" };
+  }
+
   return {
     ok: true,
-    input: { name, description: description.description, repositoryIds },
+    input: {
+      name,
+      description: description.description,
+      repositoryIds,
+      expiresAt: expiry.expiresAt,
+    },
   };
+}
+
+export type ParseMachineAccountUpdateResult =
+  | { ok: true; input: UpdateMachineAccountInput }
+  | { ok: false; error: MachineAccountValidationError };
+
+function parseLifecycleFields(
+  record: Record<string, unknown>,
+  input: UpdateMachineAccountInput,
+): MachineAccountValidationError | null {
+  if (record.description !== undefined) {
+    const description = parseDescription(record.description);
+    if (!description.ok) {
+      return "invalid_description";
+    }
+    input.description = description.description;
+  }
+
+  if (record.disabled !== undefined) {
+    if (typeof record.disabled !== "boolean") {
+      return "invalid_disabled";
+    }
+    input.disabled = record.disabled;
+  }
+
+  return null;
+}
+
+export function parseMachineAccountUpdate(
+  body: unknown,
+): ParseMachineAccountUpdateResult {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return { ok: false, error: "invalid_body" };
+  }
+
+  const input: UpdateMachineAccountInput = {};
+  const error = parseLifecycleFields(body as Record<string, unknown>, input);
+  if (error) {
+    return { ok: false, error };
+  }
+
+  if (input.description === undefined && input.disabled === undefined) {
+    return { ok: false, error: "empty_update" };
+  }
+
+  return { ok: true, input };
 }
 
 export function parseHostMachineAccountUpdate(
@@ -169,12 +249,9 @@ export function parseHostMachineAccountUpdate(
   const record = body as Record<string, unknown>;
   const input: UpdateHostMachineAccountInput = {};
 
-  if (record.description !== undefined) {
-    const description = parseDescription(record.description);
-    if (!description.ok) {
-      return { ok: false, error: "invalid_description" };
-    }
-    input.description = description.description;
+  const error = parseLifecycleFields(record, input);
+  if (error) {
+    return { ok: false, error };
   }
 
   if (record.repositoryIds !== undefined) {
@@ -185,8 +262,68 @@ export function parseHostMachineAccountUpdate(
     input.repositoryIds = repositoryIds;
   }
 
-  if (input.description === undefined && input.repositoryIds === undefined) {
+  if (
+    input.description === undefined &&
+    input.disabled === undefined &&
+    input.repositoryIds === undefined
+  ) {
     return { ok: false, error: "empty_update" };
+  }
+
+  return { ok: true, input };
+}
+
+export type RotateMachineAccountBodyError =
+  | "invalid_json"
+  | "invalid_body"
+  | "invalid_reset_expiry"
+  | "invalid_expiry"
+  | "conflicting_expiry";
+
+export type ParseRotateMachineAccountBodyResult =
+  | { ok: true; input: RotateMachineAccountInput }
+  | { ok: false; error: RotateMachineAccountBodyError };
+
+export function parseRotateMachineAccountBody(
+  raw: string,
+): ParseRotateMachineAccountBodyResult {
+  let parsed: unknown = {};
+  if (raw.trim() !== "") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { ok: false, error: "invalid_json" };
+    }
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { ok: false, error: "invalid_body" };
+  }
+
+  const record = parsed as Record<string, unknown>;
+  const input: RotateMachineAccountInput = {};
+
+  if (record.resetExpiry !== undefined) {
+    if (typeof record.resetExpiry !== "boolean") {
+      return { ok: false, error: "invalid_reset_expiry" };
+    }
+    input.resetExpiry = record.resetExpiry;
+  }
+
+  if (record.expiresAt !== undefined) {
+    if (record.expiresAt === null) {
+      input.expiresAt = null;
+    } else {
+      const expiry = parseExpiresAt(record.expiresAt);
+      if (!expiry.ok) {
+        return { ok: false, error: "invalid_expiry" };
+      }
+      input.expiresAt = expiry.expiresAt;
+    }
+  }
+
+  if (input.resetExpiry && input.expiresAt !== undefined) {
+    return { ok: false, error: "conflicting_expiry" };
   }
 
   return { ok: true, input };

@@ -155,13 +155,13 @@
     "backToUsers": "Back to users",
     "saveChanges": "Save changes",
     "pat": {
-      "title": "Personal access tokens",
-      "description": "Control how users can create registry tokens for docker login and CI.",
+      "title": "Access token policy",
+      "description": "Control how long personal access tokens and machine account secrets can be valid. The limits apply to both.",
       "maxValidityDays": "Max validity (days)",
       "maxValidityDaysPlaceholder": "No limit",
-      "maxValidityDaysHint": "Leave empty for no cap. Users cannot set an expiry beyond this limit.",
-      "allowNeverExpire": "Allow never-expiring tokens",
-      "allowNeverExpireHint": "When disabled, every token must have an expiration date within the max validity."
+      "maxValidityDaysHint": "Leave empty for no cap. Users and administrators cannot set an expiry beyond this limit.",
+      "allowNeverExpire": "Allow never-expiring tokens and machine accounts",
+      "allowNeverExpireHint": "When disabled, every token and machine account must have an expiration date within the max validity."
     },
     "toast": {
       "successTitle": "Settings saved",

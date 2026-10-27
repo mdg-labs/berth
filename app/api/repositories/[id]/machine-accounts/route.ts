@@ -6,11 +6,13 @@ import type { NextRequest } from "next/server";
 import { apiError } from "@/lib/api/errors";
 import { getClientIp } from "@/lib/auth/credentials";
 import { requireMachineAccountAdmin } from "@/lib/machine-accounts/access";
+import { machineAccountExpiryResponse } from "@/lib/machine-accounts/responses";
 import {
   createMachineAccount,
   listMachineAccounts,
 } from "@/lib/machine-accounts/store";
 import { parseMachineAccountInput } from "@/lib/machine-accounts/validation";
+import { getPatPolicy } from "@/lib/pat/config";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 
 type RouteContext = {
@@ -31,8 +33,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       : apiError("forbidden", "Insufficient permissions", 403);
   }
 
-  const machineAccounts = await listMachineAccounts(access.repository.id);
-  return NextResponse.json({ machineAccounts });
+  const [machineAccounts, policy] = await Promise.all([
+    listMachineAccounts(access.repository.id),
+    getPatPolicy(),
+  ]);
+  return NextResponse.json({ machineAccounts, policy });
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -76,7 +81,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         409,
       );
     }
-    return apiError("not_found", "Repository not found", 404);
+    if (result.error === "repository_not_found") {
+      return apiError("not_found", "Repository not found", 404);
+    }
+    return machineAccountExpiryResponse(result.error);
   }
 
   return NextResponse.json(

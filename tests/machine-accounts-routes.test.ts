@@ -29,6 +29,17 @@ vi.mock("@/lib/session/request", () => ({
   getSessionUserFromRequest: mocks.getSessionUserFromRequest,
 }));
 
+vi.mock("@/lib/pat/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/pat/config")>();
+  return {
+    ...actual,
+    getPatPolicy: async () => ({
+      patMaxValidityDays: 30,
+      patAllowNeverExpire: false,
+    }),
+  };
+});
+
 vi.mock("@/lib/rbac/roles", () => ({
   getRepositoryById: mocks.getRepositoryById,
   getRepositoryMemberRole: mocks.getRepositoryMemberRole,
@@ -203,7 +214,13 @@ describe("POST machine-accounts", () => {
     expect(mocks.createMachineAccount).toHaveBeenCalledWith(
       { id: "user-1", name: "Ada" },
       repository,
-      { name: "ci", description: "nightly", allowPull: true, allowPush: false },
+      {
+        name: "ci",
+        description: "nightly",
+        allowPull: true,
+        allowPush: false,
+        expiresAt: null,
+      },
       expect.anything(),
     );
   });
@@ -270,6 +287,15 @@ describe("GET and DELETE machine-accounts", () => {
     expect(text).not.toContain("secret");
     expect(text).not.toContain("tokenHash");
     expect(mocks.listMachineAccounts).toHaveBeenCalledWith(REPOSITORY_ID);
+  });
+
+  it("returns the token policy that the expiry picker follows", async () => {
+    const response = await GET(new NextRequest(BASE), listContext);
+
+    expect((await response.json()).policy).toEqual({
+      patMaxValidityDays: 30,
+      patAllowNeverExpire: false,
+    });
   });
 
   it("returns 404 when the account is not in this repository", async () => {

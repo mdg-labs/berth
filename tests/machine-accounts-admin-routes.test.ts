@@ -157,7 +157,12 @@ describe("POST /api/admin/machine-accounts", () => {
     });
     expect(mocks.createHostMachineAccount).toHaveBeenCalledWith(
       { id: "user-1", name: "Ada" },
-      { name: "deploy", description: "hosts", repositoryIds: [REPO_A, REPO_B] },
+      {
+        name: "deploy",
+        description: "hosts",
+        repositoryIds: [REPO_A, REPO_B],
+        expiresAt: null,
+      },
       expect.anything(),
     );
   });

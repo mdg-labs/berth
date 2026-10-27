@@ -23,23 +23,58 @@ import type {
   MachineAccountSnapshot,
   MachineAccountSummary,
   ResolvedMachineAccount,
+  RotateMachineAccountInput,
   UpdateHostMachineAccountInput,
+  UpdateMachineAccountInput,
 } from "@/lib/machine-accounts/types";
 import { isUuid } from "@/lib/machine-accounts/validation";
-import { PAT_LAST_USED_THROTTLE_MS } from "@/lib/pat/config";
+import { getPatPolicy, PAT_LAST_USED_THROTTLE_MS } from "@/lib/pat/config";
+import {
+  computeRotatedPatExpiry,
+  validatePatExpiry,
+  type PatValidationError,
+} from "@/lib/pat/validation";
 
 const OWNER_NAME_CONSTRAINT = "machine_accounts_owner_repository_name_idx";
 const HOST_NAME_CONSTRAINT = "machine_accounts_host_name_idx";
 
 type MachineAccountActor = { id: string; name: string };
 
+export type MachineAccountExpiryError = Extract<
+  PatValidationError,
+  "never_expire_not_allowed" | "expiry_in_past" | "expiry_exceeds_max"
+>;
+
 export type CreateMachineAccountResult =
   | { ok: true; secret: string; summary: MachineAccountSummary }
-  | { ok: false; error: "duplicate_name" | "repository_not_found" };
+  | {
+      ok: false;
+      error:
+        | "duplicate_name"
+        | "repository_not_found"
+        | MachineAccountExpiryError;
+    };
 
 export type CreateHostMachineAccountResult =
   | { ok: true; secret: string; summary: MachineAccountSummary }
-  | { ok: false; error: "duplicate_name" | "repository_not_found" };
+  | {
+      ok: false;
+      error:
+        | "duplicate_name"
+        | "repository_not_found"
+        | MachineAccountExpiryError;
+    };
+
+export type RotateMachineAccountResult =
+  | { ok: true; secret: string; summary: MachineAccountSummary }
+  | {
+      ok: false;
+      error: "not_found" | "token_expired" | MachineAccountExpiryError;
+    };
+
+export type UpdateMachineAccountResult =
+  | { ok: true; summary: MachineAccountSummary }
+  | { ok: false; error: "not_found" };
 
 export type UpdateHostMachineAccountResult =
   | { ok: true; summary: MachineAccountSummary }
@@ -67,6 +102,9 @@ type SummaryRow = {
   allowPull: boolean;
   allowPush: boolean;
   createdAt: Date;
+  expiresAt: Date | null;
+  disabledAt: Date | null;
+  lastUsedAt: Date | null;
   createdById: string | null;
   createdByName: string | null;
 };
@@ -95,7 +133,24 @@ function toSummary(
         ? { id: row.createdById, name: row.createdByName }
         : null,
     createdAt: row.createdAt.toISOString(),
+    expiresAt: row.expiresAt?.toISOString() ?? null,
+    disabledAt: row.disabledAt?.toISOString() ?? null,
+    lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
   };
+}
+
+type ExpiryResult =
+  | { ok: true; expiresAt: Date | null }
+  | { ok: false; error: MachineAccountExpiryError };
+
+async function resolveCreateExpiry(
+  expiresAt: string | null,
+): Promise<ExpiryResult> {
+  const error = validatePatExpiry(expiresAt, await getPatPolicy());
+  if (error) {
+    return { ok: false, error: error as MachineAccountExpiryError };
+  }
+  return { ok: true, expiresAt: expiresAt === null ? null : new Date(expiresAt) };
 }
 
 function byName(
@@ -105,15 +160,20 @@ function byName(
   return left.name.localeCompare(right.name);
 }
 
+type Database = ReturnType<typeof getDb>;
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+type Executor = Database | Transaction;
+
 async function listHostRepositories(
   accountIds: string[],
+  executor: Executor = getDb(),
 ): Promise<Map<string, MachineAccountRepositoryRef[]>> {
   const result = new Map<string, MachineAccountRepositoryRef[]>();
   if (accountIds.length === 0) {
     return result;
   }
 
-  const rows = await getDb()
+  const rows = await executor
     .select({
       accountId: machineAccountRepositories.machineAccountId,
       id: repositories.id,
@@ -289,6 +349,9 @@ const summaryColumns = {
   allowPull: machineAccounts.allowPull,
   allowPush: machineAccounts.allowPush,
   createdAt: machineAccounts.createdAt,
+  expiresAt: machineAccounts.expiresAt,
+  disabledAt: machineAccounts.disabledAt,
+  lastUsedAt: machineAccounts.lastUsedAt,
   createdById: users.id,
   createdByName: users.name,
 };
@@ -382,6 +445,11 @@ export async function createMachineAccount(
   input: CreateMachineAccountInput,
   clientIp?: string | null,
 ): Promise<CreateMachineAccountResult> {
+  const expiry = await resolveCreateExpiry(input.expiresAt);
+  if (!expiry.ok) {
+    return expiry;
+  }
+
   const secret = `${MACHINE_ACCOUNT_PREFIX}${generateToken()}`;
   const db = getDb();
 
@@ -397,6 +465,7 @@ export async function createMachineAccount(
           tokenHash: hashToken(secret),
           allowPull: input.allowPull,
           allowPush: input.allowPush,
+          expiresAt: expiry.expiresAt,
           createdBy: actor.id,
         })
         .returning();
@@ -414,6 +483,7 @@ export async function createMachineAccount(
           name: row.name,
           allowPull: row.allowPull,
           allowPush: row.allowPush,
+          expiresAt: row.expiresAt?.toISOString() ?? null,
         },
         clientIp: clientIp ?? null,
       });
@@ -500,6 +570,11 @@ export async function createHostMachineAccount(
   input: CreateHostMachineAccountInput,
   clientIp?: string | null,
 ): Promise<CreateHostMachineAccountResult> {
+  const expiry = await resolveCreateExpiry(input.expiresAt);
+  if (!expiry.ok) {
+    return expiry;
+  }
+
   const secret = `${MACHINE_ACCOUNT_PREFIX}${generateToken()}`;
 
   try {
@@ -522,6 +597,7 @@ export async function createHostMachineAccount(
           tokenHash: hashToken(secret),
           allowPull: true,
           allowPush: false,
+          expiresAt: expiry.expiresAt,
           createdBy: actor.id,
         })
         .returning();
@@ -547,6 +623,7 @@ export async function createHostMachineAccount(
           kind: "host",
           allowPull: row.allowPull,
           allowPush: row.allowPush,
+          expiresAt: row.expiresAt?.toISOString() ?? null,
           repositoryIds: listed.map((repository) => repository.id).sort(),
         },
         clientIp: clientIp ?? null,
@@ -581,6 +658,247 @@ export async function createHostMachineAccount(
   }
 }
 
+type LifecycleAccount = {
+  id: string;
+  name: string;
+  disabledAt: Date | null;
+  repositoryId: string | null;
+  kind: MachineAccountKind;
+};
+
+async function applyDisabled(
+  tx: Transaction,
+  actor: { id: string },
+  account: LifecycleAccount,
+  disabled: boolean | undefined,
+  clientIp?: string | null,
+): Promise<Date | null> {
+  if (disabled === undefined || (account.disabledAt !== null) === disabled) {
+    return account.disabledAt;
+  }
+
+  const disabledAt = disabled ? new Date() : null;
+  await tx
+    .update(machineAccounts)
+    .set({ disabledAt })
+    .where(eq(machineAccounts.id, account.id));
+
+  await tx.insert(auditLog).values({
+    userId: actor.id,
+    repositoryId: account.repositoryId,
+    action: disabled ? "machine_account.disable" : "machine_account.enable",
+    resource: `machine_account:${account.id}`,
+    metadata: { name: account.name, kind: account.kind },
+    clientIp: clientIp ?? null,
+  });
+
+  return disabledAt;
+}
+
+async function loadMachineAccountSummary(
+  executor: Executor,
+  accountId: string,
+): Promise<MachineAccountSummary> {
+  const [row] = await executor
+    .select({
+      ...summaryColumns,
+      ownerRepositoryId: machineAccounts.ownerRepositoryId,
+      ownerRepositoryName: repositories.name,
+    })
+    .from(machineAccounts)
+    .leftJoin(
+      repositories,
+      eq(machineAccounts.ownerRepositoryId, repositories.id),
+    )
+    .leftJoin(users, eq(machineAccounts.createdBy, users.id))
+    .where(eq(machineAccounts.id, accountId));
+
+  if (!row) {
+    throw new Error("Failed to load machine account");
+  }
+
+  if (row.ownerRepositoryId && row.ownerRepositoryName) {
+    return toSummary(
+      row,
+      "repository",
+      [{ id: row.ownerRepositoryId, name: row.ownerRepositoryName }],
+      row.ownerRepositoryName,
+    );
+  }
+
+  const refs = await listHostRepositories([row.id], executor);
+  return toSummary(row, "host", refs.get(row.id) ?? [], null);
+}
+
+export async function updateMachineAccount(
+  actor: { id: string },
+  repositoryId: string,
+  accountId: string,
+  input: UpdateMachineAccountInput,
+  clientIp?: string | null,
+): Promise<UpdateMachineAccountResult> {
+  if (!isUuid(accountId)) {
+    return { ok: false, error: "not_found" };
+  }
+
+  return getDb().transaction(
+    async (tx): Promise<UpdateMachineAccountResult> => {
+      const [account] = await tx
+        .select({
+          id: machineAccounts.id,
+          name: machineAccounts.name,
+          description: machineAccounts.description,
+          disabledAt: machineAccounts.disabledAt,
+        })
+        .from(machineAccounts)
+        .where(
+          and(
+            eq(machineAccounts.id, accountId),
+            eq(machineAccounts.ownerRepositoryId, repositoryId),
+          ),
+        )
+        .for("update");
+
+      if (!account) {
+        return { ok: false, error: "not_found" };
+      }
+
+      if (
+        input.description !== undefined &&
+        input.description !== account.description
+      ) {
+        await tx
+          .update(machineAccounts)
+          .set({ description: input.description })
+          .where(eq(machineAccounts.id, account.id));
+
+        await tx.insert(auditLog).values({
+          userId: actor.id,
+          repositoryId,
+          action: "machine_account.update",
+          resource: `machine_account:${account.id}`,
+          metadata: {
+            name: account.name,
+            kind: "repository",
+            descriptionChanged: true,
+          },
+          clientIp: clientIp ?? null,
+        });
+      }
+
+      await applyDisabled(
+        tx,
+        actor,
+        { ...account, repositoryId, kind: "repository" },
+        input.disabled,
+        clientIp,
+      );
+
+      return {
+        ok: true,
+        summary: await loadMachineAccountSummary(tx, account.id),
+      };
+    },
+  );
+}
+
+export async function rotateMachineAccount(
+  actor: { id: string },
+  scope: { repositoryId: string } | null,
+  accountId: string,
+  input: RotateMachineAccountInput,
+  clientIp?: string | null,
+): Promise<RotateMachineAccountResult> {
+  if (!isUuid(accountId)) {
+    return { ok: false, error: "not_found" };
+  }
+
+  const policy = await getPatPolicy();
+  const secret = `${MACHINE_ACCOUNT_PREFIX}${generateToken()}`;
+
+  return getDb().transaction(
+    async (tx): Promise<RotateMachineAccountResult> => {
+      const [account] = await tx
+        .select({
+          id: machineAccounts.id,
+          name: machineAccounts.name,
+          ownerRepositoryId: machineAccounts.ownerRepositoryId,
+          createdAt: machineAccounts.createdAt,
+          expiresAt: machineAccounts.expiresAt,
+        })
+        .from(machineAccounts)
+        .where(
+          and(
+            eq(machineAccounts.id, accountId),
+            scope
+              ? eq(machineAccounts.ownerRepositoryId, scope.repositoryId)
+              : undefined,
+          ),
+        )
+        .for("update");
+
+      if (!account) {
+        return { ok: false, error: "not_found" };
+      }
+
+      const resetExpiry = input.resetExpiry ?? false;
+      let nextExpiresAt: Date | null;
+      if (input.expiresAt !== undefined) {
+        const error = validatePatExpiry(input.expiresAt, policy);
+        if (error) {
+          return { ok: false, error: error as MachineAccountExpiryError };
+        }
+        nextExpiresAt =
+          input.expiresAt === null ? null : new Date(input.expiresAt);
+      } else {
+        const computed = computeRotatedPatExpiry(
+          account.createdAt,
+          account.expiresAt,
+          resetExpiry,
+          policy,
+        );
+        if (!computed.ok) {
+          return {
+            ok: false,
+            error: computed.error as MachineAccountExpiryError | "token_expired",
+          };
+        }
+        nextExpiresAt = computed.expiresAt;
+      }
+
+      await tx
+        .update(machineAccounts)
+        .set({
+          tokenPrefix: secret.slice(0, MACHINE_ACCOUNT_TOKEN_PREFIX_LENGTH),
+          tokenHash: hashToken(secret),
+          expiresAt: nextExpiresAt,
+          lastUsedAt: null,
+        })
+        .where(eq(machineAccounts.id, account.id));
+
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        repositoryId: account.ownerRepositoryId,
+        action: "machine_account.rotate",
+        resource: `machine_account:${account.id}`,
+        metadata: {
+          name: account.name,
+          kind: account.ownerRepositoryId ? "repository" : "host",
+          resetExpiry,
+          expiresAt: nextExpiresAt?.toISOString() ?? null,
+        },
+        clientIp: clientIp ?? null,
+      });
+
+      return {
+        ok: true,
+        secret,
+        summary: await loadMachineAccountSummary(tx, account.id),
+      };
+    },
+  );
+}
+
 export async function updateHostMachineAccount(
   actor: { id: string },
   accountId: string,
@@ -603,6 +921,9 @@ export async function updateHostMachineAccount(
             allowPull: machineAccounts.allowPull,
             allowPush: machineAccounts.allowPush,
             createdAt: machineAccounts.createdAt,
+            expiresAt: machineAccounts.expiresAt,
+            disabledAt: machineAccounts.disabledAt,
+            lastUsedAt: machineAccounts.lastUsedAt,
             ownerRepositoryId: machineAccounts.ownerRepositoryId,
             createdById: users.id,
             createdByName: users.name,
@@ -656,26 +977,36 @@ export async function updateHostMachineAccount(
             .where(eq(machineAccounts.id, account.id));
         }
 
+        const disabledAt = await applyDisabled(
+          tx,
+          actor,
+          { ...account, repositoryId: null, kind: "host" },
+          input.disabled,
+          clientIp,
+        );
+
         const repositoriesChanged =
           beforeIds.length !== afterIds.length ||
           beforeIds.some((id, index) => id !== afterIds[index]);
         const descriptionChanged = description !== account.description;
 
-        await tx.insert(auditLog).values({
-          userId: actor.id,
-          repositoryId: null,
-          action: "machine_account.update",
-          resource: `machine_account:${account.id}`,
-          metadata: {
-            name: account.name,
-            kind: "host",
-            ...(repositoriesChanged
-              ? { repositoryIds: { before: beforeIds, after: afterIds } }
-              : {}),
-            ...(descriptionChanged ? { descriptionChanged: true } : {}),
-          },
-          clientIp: clientIp ?? null,
-        });
+        if (input.description !== undefined || input.repositoryIds) {
+          await tx.insert(auditLog).values({
+            userId: actor.id,
+            repositoryId: null,
+            action: "machine_account.update",
+            resource: `machine_account:${account.id}`,
+            metadata: {
+              name: account.name,
+              kind: "host",
+              ...(repositoriesChanged
+                ? { repositoryIds: { before: beforeIds, after: afterIds } }
+                : {}),
+              ...(descriptionChanged ? { descriptionChanged: true } : {}),
+            },
+            clientIp: clientIp ?? null,
+          });
+        }
 
         const refs = await tx
           .select({ id: repositories.id, name: repositories.name })
@@ -685,7 +1016,7 @@ export async function updateHostMachineAccount(
         return {
           ok: true,
           summary: toSummary(
-            { ...account, description },
+            { ...account, description, disabledAt },
             "host",
             refs.sort(byName),
             null,

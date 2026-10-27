@@ -10,6 +10,7 @@ import {
   createHostMachineAccount,
   listAllMachineAccounts,
 } from "@/lib/machine-accounts/store";
+import { machineAccountExpiryResponse } from "@/lib/machine-accounts/responses";
 import { parseHostMachineAccountInput } from "@/lib/machine-accounts/validation";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 
@@ -67,11 +68,14 @@ export async function POST(request: NextRequest) {
         409,
       );
     }
-    return apiError(
-      "bad_request",
-      "Invalid machine account: invalid_repository_ids",
-      400,
-    );
+    if (result.error === "repository_not_found") {
+      return apiError(
+        "bad_request",
+        "Invalid machine account: invalid_repository_ids",
+        400,
+      );
+    }
+    return machineAccountExpiryResponse(result.error);
   }
 
   return NextResponse.json(
