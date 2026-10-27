@@ -109,7 +109,7 @@ adding keys to the same namespace collide), `middleware.ts`, `lib/rbac/`,
 - `/v2/*` always goes through the app proxy; the registry is never exposed
   directly. The proxy streams bodies and rewrites `Location` headers.
 - Every new source file starts with the repo's copyright header:
-  `// Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE`
+  `// Copyright (c) 2026 Michael David Guggenbichler (MDG Labs), licensed under Apache-2.0 — see LICENSE`
   (`#` comment form for shell).
 - Record new implementation choices in `DECISIONS.md`.
 - Commit scopes: `repo`, `ci`, `api`, `web`, `db`, `docker`, `docs`, `deps`,

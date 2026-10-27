@@ -38,7 +38,7 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| Copyright holder (source headers) | **Michael David Guggenbichler \| MDG-Labs** | Matches `LICENSE` copyright line; consistent org attribution for Apache-2.0 headers |
+| Copyright holder (source headers) | **Michael David Guggenbichler (MDG Labs)** | The holder is Michael David Guggenbichler, sole proprietor, trading as MDG Labs (not a registered company name); matches the `LICENSE` copyright notice. Headers in files created before this change keep the previous pipe-separated holder form until #22 rewrites them |
 | JWT signing algorithm | **RS256** (deferred implementation to Phase 3) | Broader library/ecosystem support vs ES256; either is valid per Distribution token spec |
 | Dev registry token cert | Self-signed RSA placeholder in `docker/registry/certs/` | Allows `registry:3` to start with `auth: token` before Phase 3 token issuer ships |
 | Registry Docker image | **`registry:3`** (official library image) | Spec references `distribution/registry:3` conceptually; Docker Hub official tag is `registry:3` |
