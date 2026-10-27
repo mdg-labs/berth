@@ -26,6 +26,7 @@ import {
 } from "@/lib/pat/store";
 import type { PatContext } from "@/lib/pat/types";
 import {
+  checkBasicCredentialRateLimit,
   checkMachineTokenRateLimit,
   checkTokenRateLimit,
 } from "@/lib/rate-limit/token";
@@ -144,10 +145,21 @@ export async function GET(request: NextRequest) {
   }
 
   const access = parseScopes(scopeParam);
+
+  const authorization = request.headers.get("authorization");
+  const basic = parseBasicAuth(authorization);
+  const basicAttempted = /^basic(\s|$)/i.test(authorization ?? "");
+  if (
+    basicAttempted &&
+    !checkBasicCredentialRateLimit(clientIp, basic ? basic.username : null)
+  ) {
+    return apiError("rate_limited", "Too many token requests", 429);
+  }
+
   const identity = await resolveIdentity(request);
 
   if (identity && "rejected" in identity) {
-    if (!checkTokenRateLimit(clientIp, "unauthenticated")) {
+    if (!checkTokenRateLimit(clientIp, "unauthenticated", basicAttempted)) {
       return apiError("rate_limited", "Too many token requests", 429);
     }
     return apiError("not_authenticated", "Authentication required", 401);
@@ -155,7 +167,7 @@ export async function GET(request: NextRequest) {
 
   if (identity && "machine" in identity) {
     const { machine } = identity;
-    if (!checkMachineTokenRateLimit(clientIp, machine.id)) {
+    if (!checkMachineTokenRateLimit(clientIp, machine.id, basicAttempted)) {
       return apiError("rate_limited", "Too many token requests", 429);
     }
 
@@ -197,7 +209,7 @@ export async function GET(request: NextRequest) {
       return apiError("not_authenticated", "Authentication required", 401);
     }
 
-    if (!checkTokenRateLimit(clientIp, "unauthenticated")) {
+    if (!checkTokenRateLimit(clientIp, "unauthenticated", basicAttempted)) {
       return apiError("rate_limited", "Too many token requests", 429);
     }
 
@@ -223,7 +235,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  if (!checkTokenRateLimit(clientIp, identity.rateLimitKey)) {
+  if (!checkTokenRateLimit(clientIp, identity.rateLimitKey, basicAttempted)) {
     return apiError("rate_limited", "Too many token requests", 429);
   }
 
