@@ -1,10 +1,14 @@
 # Production override for Berth — copy to compose.prod.yml and customize.
 #
-# Usage (from repository root):
-#   docker compose -f docker/compose.yml -f docker/compose.prod.yml up -d --build
+# Two deployment modes:
 #
-# Or with secrets outside the repo:
-#   docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d --build
+# 1. Build from source (default). Run from the repository checkout:
+#      docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d --build
+#
+# 2. Pre-built release image. Uncomment the "Release image" block under the
+#    app service, set the release version, then run without --build:
+#      docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml pull
+#      docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d
 #
 # Requires Docker Compose v2.24.4 or later: the !reset and !override tags below
 # are not supported by older releases.
@@ -28,10 +32,14 @@ services:
     ports: !reset []
 
   app:
-    image: ghcr.io/mdg-labs/berth:latest
-    # build:
-    #   context: ..
-    #   dockerfile: docker/Dockerfile
+    # Release image (optional, instead of building from source): replace X.Y.Z
+    # with the release version (the image tag has no leading "v": release v0.1.0
+    # is ghcr.io/mdg-labs/berth:0.1.0; never a floating tag such as latest) and
+    # uncomment both lines. `build: !reset null` removes the build inherited
+    # from compose.yml.
+    # image: ghcr.io/mdg-labs/berth:X.Y.Z
+    # build: !reset null
+    #
     # Replace the dev 0.0.0.0:8080 publish with a loopback-only one. !override
     # (Compose v2.24.4+) replaces the base list; !reset would drop it entirely.
     ports: !override

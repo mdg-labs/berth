@@ -172,6 +172,7 @@ Compared to the dev [`docker/compose.yml`](../docker/compose.yml):
 
 | Setting | Production |
 |---------|------------|
+| App image | Built from source (default) or a pinned release image |
 | App port | `127.0.0.1:8080:3000` only |
 | Postgres / registry ports | Unpublished (`ports: !reset []`) |
 | `SESSION_SECRET` | Strong random value |
@@ -181,23 +182,33 @@ Compared to the dev [`docker/compose.yml`](../docker/compose.yml):
 
 ### Pre-built image (optional)
 
-Instead of building from source, pin a release image in `compose.prod.yml`:
+The example builds the app from the repository checkout by default. To deploy a published release image instead, uncomment the two lines under `app` in `compose.prod.yml` (the example marks them "Release image") and set the release version. The image tag is the release version without the leading `v` (release `v0.1.0` is published as `0.1.0`):
 
 ```yaml
 app:
-  image: ghcr.io/mdg-labs/berth:v0.1.0
-  # comment out build: block
+  image: ghcr.io/mdg-labs/berth:0.1.0     # your release version, never a floating tag
+  build: !reset null                      # drop the build inherited from docker/compose.yml
 ```
+
+Without `build: !reset null` the base file's build is still used. Start this mode with `pull` and `up -d` — **without** `--build` (see [Start the stack](#4-start-the-stack)).
 
 You must still mount production token keys — the image ships with dev signing material baked in ([`docker/Dockerfile`](../docker/Dockerfile)).
 
 ## 4. Start the stack
 
-From the repository root:
+From the repository root, build from source (default):
 
 ```bash
 cd /opt/berth/repo
 docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d --build
+```
+
+Or, with the [pre-built image](#pre-built-image-optional) block enabled, pull the pinned image and start it without `--build`:
+
+```bash
+cd /opt/berth/repo
+docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml pull
+docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d
 ```
 
 Wait for health checks:
@@ -362,7 +373,11 @@ See [`.env.example`](../.env.example) for all optional variables.
 # Backup first — see backup.md
 cd /opt/berth/repo
 git pull
+# Build from source:
 docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d --build
+# Or, with a pinned release image: set the new tag in compose.prod.yml, then
+#   docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml pull
+#   docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d
 curl -sf https://registry.example.com/api/ready
 ```
 

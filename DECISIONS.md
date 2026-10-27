@@ -149,6 +149,7 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Production checklist | Standalone `docs/production-checklist.md` linked from README | Keeps README scannable; checklist cross-links TLS, backup, GC, key rotation |
 | TLS guidance | Reverse proxy primary; compose edge TLS documented as pattern | App serves HTTP internally; no in-app ACME in MVP (spec §3.5) |
 | Dev signing certs | Documented as JWT trust material, distinct from HTTPS TLS | `rootcert.pem` / dev keypair ship in compose; upgrade path in key-rotation + tls docs |
+| Production app image | Built from source by default; a pinned release version tag (`X.Y.Z`, no leading `v`; never `latest`) with `build: !reset null` is the documented alternative, started with `pull` and `up -d` | The base compose file defines `app.build`, so the release-image mode must clear it and skip `--build`; a floating tag could change on a later pull |
 
 ## MFA choices
 
