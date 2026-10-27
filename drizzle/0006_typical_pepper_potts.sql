@@ -1,0 +1,4 @@
+ALTER TABLE "audit_log" ADD COLUMN "machine_account_id" uuid;--> statement-breakpoint
+ALTER TABLE "pull_events" ADD COLUMN "machine_account_id" uuid;--> statement-breakpoint
+ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_machine_account_id_machine_accounts_id_fk" FOREIGN KEY ("machine_account_id") REFERENCES "public"."machine_accounts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "pull_events" ADD CONSTRAINT "pull_events_machine_account_id_machine_accounts_id_fk" FOREIGN KEY ("machine_account_id") REFERENCES "public"."machine_accounts"("id") ON DELETE set null ON UPDATE no action;

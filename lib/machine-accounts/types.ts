@@ -19,8 +19,17 @@ export type CreateMachineAccountInput = {
   allowPush: boolean;
 };
 
+export type MachineAccountKind = "repository" | "host";
+
+export type MachineAccountSnapshot = {
+  id: string;
+  name: string;
+  kind: MachineAccountKind;
+};
+
 export type ResolvedMachineAccount = {
   id: string;
+  name: string;
   ownerRepositoryId: string | null;
   allowPull: boolean;
   allowPush: boolean;

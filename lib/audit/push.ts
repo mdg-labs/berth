@@ -5,12 +5,14 @@ import type { NextRequest } from "next/server";
 import { writeAuditLog } from "@/lib/audit/log";
 import { findUserByEmail, getClientIp } from "@/lib/auth/credentials";
 import { parseManifestPath } from "@/lib/registry/proxy/parse-manifest-path";
+import { getMachineAccountSnapshot } from "@/lib/machine-accounts/store";
 import { getRepositoryByName } from "@/lib/rbac/roles";
 
 export type RecordManifestPushInput = {
   request: NextRequest;
   upstreamStatus: number;
   tokenSubject: string | null;
+  machineAccountId?: string | null;
   digest: string | null;
 };
 
@@ -27,7 +29,8 @@ function buildPushResource(parsed: {
 export async function recordManifestPush(
   input: RecordManifestPushInput,
 ): Promise<void> {
-  const { request, upstreamStatus, tokenSubject, digest } = input;
+  const { request, upstreamStatus, tokenSubject, machineAccountId, digest } =
+    input;
 
   if (
     (request.method !== "PUT" && request.method !== "POST") ||
@@ -47,6 +50,26 @@ export async function recordManifestPush(
     return;
   }
 
+  const metadata: Record<string, unknown> = {
+    method: request.method,
+    reference: parsed.reference,
+    digest,
+  };
+
+  if (machineAccountId) {
+    const account = await getMachineAccountSnapshot(machineAccountId);
+    await writeAuditLog({
+      userId: null,
+      machineAccountId: account?.id ?? null,
+      action: "registry.manifest.push",
+      resource: buildPushResource(parsed),
+      repositoryId: repository.id,
+      metadata: { ...metadata, machineAccount: account ?? { id: machineAccountId } },
+      clientIp: getClientIp(request),
+    });
+    return;
+  }
+
   let userId: string | null = null;
   if (tokenSubject && tokenSubject !== "anonymous") {
     const user = await findUserByEmail(tokenSubject);
@@ -58,11 +81,7 @@ export async function recordManifestPush(
     action: "registry.manifest.push",
     resource: buildPushResource(parsed),
     repositoryId: repository.id,
-    metadata: {
-      method: request.method,
-      reference: parsed.reference,
-      digest,
-    },
+    metadata,
     clientIp: getClientIp(request),
   });
 }

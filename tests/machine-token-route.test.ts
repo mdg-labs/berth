@@ -14,6 +14,7 @@ import { verifyRegistryBearerToken } from "@/lib/token/verify";
 
 const {
   resolveMachineAccountMock,
+  recordMachineAccountUsageMock,
   findUserByEmailMock,
   verifyPasswordMock,
   resolvePatMock,
@@ -23,6 +24,7 @@ const {
   overridesMock,
 } = vi.hoisted(() => ({
   resolveMachineAccountMock: vi.fn(),
+  recordMachineAccountUsageMock: vi.fn(),
   findUserByEmailMock: vi.fn(),
   verifyPasswordMock: vi.fn(),
   resolvePatMock: vi.fn(),
@@ -34,6 +36,7 @@ const {
 
 vi.mock("@/lib/machine-accounts/store", () => ({
   resolveMachineAccount: resolveMachineAccountMock,
+  recordMachineAccountUsage: recordMachineAccountUsageMock,
 }));
 
 vi.mock("@/lib/auth/credentials", async (importOriginal) => ({
@@ -79,6 +82,7 @@ const SECRET = `${MACHINE_ACCOUNT_PREFIX}example-secret-value`;
 
 const account = {
   id: ACCOUNT_ID,
+  name: "ci",
   ownerRepositoryId: "repo-own",
   allowPull: true,
   allowPush: true,
@@ -125,6 +129,7 @@ describe("token endpoint with machine accounts", () => {
     resetSigningKeyCache();
     resetRateLimits();
     findMissingRepositoriesMock.mockResolvedValue([]);
+    recordMachineAccountUsageMock.mockResolvedValue(undefined);
     overridesMock.mockResolvedValue(new Map());
     getSessionUserMock.mockResolvedValue(null);
     findUserByEmailMock.mockResolvedValue(null);
@@ -168,6 +173,50 @@ describe("token endpoint with machine accounts", () => {
       alg: "RS256",
       x5c: [getSigningCertDer()],
     });
+  });
+
+  it("records usage with the granted repository names and client IP, only for issued tokens", async () => {
+    overridesMock.mockResolvedValue(new Map([["shared", "allow"]]));
+
+    const response = await GET(
+      tokenRequest({
+        scope: "repository:own/app:pull repository:other/shared:pull",
+        password: SECRET,
+        ip: "198.51.100.77",
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(recordMachineAccountUsageMock).toHaveBeenCalledTimes(1);
+    expect(recordMachineAccountUsageMock).toHaveBeenCalledWith(
+      account,
+      ["other", "own"],
+      "198.51.100.77",
+    );
+
+    recordMachineAccountUsageMock.mockClear();
+    const denied = await GET(
+      tokenRequest({ scope: "repository:other/app:push", password: SECRET }),
+    );
+    expect(denied.status).toBe(403);
+    const rejected = await GET(
+      tokenRequest({ password: `${MACHINE_ACCOUNT_PREFIX}unknown` }),
+    );
+    expect(rejected.status).toBe(401);
+    expect(recordMachineAccountUsageMock).not.toHaveBeenCalled();
+  });
+
+  it("still issues the token when recording usage fails", async () => {
+    recordMachineAccountUsageMock.mockRejectedValue(new Error("db down"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const response = await GET(
+      tokenRequest({ scope: "repository:own/app:pull", password: SECRET }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toHaveProperty("token");
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it("resolves by secret only and never tries a bm_ password as user password or PAT", async () => {

@@ -262,6 +262,13 @@ export function AuditLogTable({
 
   const formatActor = useCallback(
     (entry: AuditLogEntry) => {
+      const machine = entry.actor.machineAccount;
+      if (machine) {
+        const name = machine.name ?? machine.id;
+        return machine.deleted
+          ? t("actor.machineAccountDeleted", { name })
+          : t("actor.machineAccount", { name });
+      }
       if (entry.actor.email) {
         return entry.actor.name
           ? `${entry.actor.name} (${entry.actor.email})`

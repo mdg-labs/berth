@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Michael David Guggenbichler (MDG Labs), licensed under Apache-2.0 — see LICENSE
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, lt, or } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { auditLog, machineAccounts, repositories, users } from "@/lib/db/schema";
@@ -11,10 +11,12 @@ import {
 } from "@/lib/machine-accounts/config";
 import type {
   CreateMachineAccountInput,
+  MachineAccountSnapshot,
   MachineAccountSummary,
   ResolvedMachineAccount,
 } from "@/lib/machine-accounts/types";
 import { isUuid } from "@/lib/machine-accounts/validation";
+import { PAT_LAST_USED_THROTTLE_MS } from "@/lib/pat/config";
 
 const OWNER_NAME_CONSTRAINT = "machine_accounts_owner_repository_name_idx";
 
@@ -59,6 +61,7 @@ export async function resolveMachineAccount(
   const [row] = await db
     .select({
       id: machineAccounts.id,
+      name: machineAccounts.name,
       ownerRepositoryId: machineAccounts.ownerRepositoryId,
       allowPull: machineAccounts.allowPull,
       allowPush: machineAccounts.allowPush,
@@ -80,12 +83,87 @@ export async function resolveMachineAccount(
 
   return {
     id: row.id,
+    name: row.name,
     ownerRepositoryId: row.ownerRepositoryId,
     allowPull: row.allowPull,
     allowPush: row.allowPush,
     repositoryIds: row.ownerRepositoryId ? [row.ownerRepositoryId] : [],
     lastUsedAt: row.lastUsedAt,
   };
+}
+
+export async function getMachineAccountSnapshot(
+  accountId: string,
+): Promise<MachineAccountSnapshot | null> {
+  if (!isUuid(accountId)) {
+    return null;
+  }
+
+  const [row] = await getDb()
+    .select({
+      id: machineAccounts.id,
+      name: machineAccounts.name,
+      ownerRepositoryId: machineAccounts.ownerRepositoryId,
+    })
+    .from(machineAccounts)
+    .where(eq(machineAccounts.id, accountId))
+    .limit(1);
+
+  return row
+    ? {
+        id: row.id,
+        name: row.name,
+        kind: row.ownerRepositoryId ? "repository" : "host",
+      }
+    : null;
+}
+
+export async function recordMachineAccountUsage(
+  account: Pick<ResolvedMachineAccount, "id" | "name" | "ownerRepositoryId" | "lastUsedAt">,
+  repositoryNames: string[],
+  clientIp?: string | null,
+): Promise<void> {
+  const threshold = new Date(Date.now() - PAT_LAST_USED_THROTTLE_MS);
+  if (account.lastUsedAt && account.lastUsedAt > threshold) {
+    return;
+  }
+
+  await getDb().transaction(async (tx) => {
+    const [touched] = await tx
+      .update(machineAccounts)
+      .set({ lastUsedAt: new Date() })
+      .where(
+        and(
+          eq(machineAccounts.id, account.id),
+          or(
+            isNull(machineAccounts.lastUsedAt),
+            lt(machineAccounts.lastUsedAt, threshold),
+          ),
+        ),
+      )
+      .returning({ id: machineAccounts.id });
+
+    if (!touched) {
+      return;
+    }
+
+    await tx.insert(auditLog).values({
+      userId: null,
+      machineAccountId: account.id,
+      repositoryId: account.ownerRepositoryId,
+      action: "machine_account.used",
+      resource: `machine_account:${account.id}`,
+      metadata: {
+        machineAccount: {
+          id: account.id,
+          name: account.name,
+          kind: account.ownerRepositoryId ? "repository" : "host",
+        },
+        repositories: repositoryNames,
+      },
+      clientIp: clientIp ?? null,
+    });
+  });
 }
 
 export async function listMachineAccounts(

@@ -20,6 +20,8 @@
   },
   "actor": {
     "system": "System",
+    "machineAccount": "Machine account {name}",
+    "machineAccountDeleted": "Machine account {name} (deleted)",
     "anonymous": "Anonymous",
     "unknown": "Unknown"
   },

@@ -12,7 +12,10 @@ import {
 } from "@/lib/auth/credentials";
 import { authorizeMachineTokenAccess } from "@/lib/machine-accounts/authorize";
 import { MACHINE_ACCOUNT_PREFIX } from "@/lib/machine-accounts/config";
-import { resolveMachineAccount } from "@/lib/machine-accounts/store";
+import {
+  recordMachineAccountUsage,
+  resolveMachineAccount,
+} from "@/lib/machine-accounts/store";
 import type { ResolvedMachineAccount } from "@/lib/machine-accounts/types";
 import { PAT_PREFIX } from "@/lib/pat/config";
 import { isPasswordAuthAllowedForUser } from "@/lib/pat/password-auth";
@@ -31,7 +34,7 @@ import { authorizeTokenAccess } from "@/lib/token/authorize";
 import { MACHINE_SUBJECT_PREFIX } from "@/lib/token/claims";
 import { getTokenService } from "@/lib/token/config";
 import { issueRegistryToken } from "@/lib/token/issue";
-import { parseScopes } from "@/lib/token/scope";
+import { extractRepositoryNames, parseScopes } from "@/lib/token/scope";
 
 type MachineIdentity = {
   machine: ResolvedMachineAccount;
@@ -162,6 +165,16 @@ export async function GET(request: NextRequest) {
         return apiError("repository_not_found", authorized.message, 403);
       }
       return apiError("forbidden", authorized.message, 403);
+    }
+
+    try {
+      await recordMachineAccountUsage(
+        machine,
+        extractRepositoryNames(authorized.access).sort(),
+        clientIp,
+      );
+    } catch (error) {
+      console.error("Failed to record machine account usage", error);
     }
 
     const issued = await issueRegistryToken(

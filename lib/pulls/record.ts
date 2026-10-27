@@ -9,6 +9,7 @@ import {
   computePullCounterIncrements,
   getPullDedupeSinceDate,
 } from "@/lib/pulls/dedupe";
+import { getMachineAccountSnapshot } from "@/lib/machine-accounts/store";
 import { getRepositoryByName } from "@/lib/rbac/roles";
 
 export type RecordPullEventInput = {
@@ -18,6 +19,7 @@ export type RecordPullEventInput = {
   isDigestReference: boolean;
   digest: string;
   tokenSubject: string | null;
+  machineAccountId?: string | null;
 };
 
 async function hasRecentDigestPull(
@@ -72,10 +74,15 @@ export async function recordPullEvent(input: RecordPullEventInput): Promise<void
   );
 
   let userId: string | null = null;
+  let machineAccountId: string | null = null;
   const anonymous =
-    !input.tokenSubject || input.tokenSubject === "anonymous";
+    !input.machineAccountId &&
+    (!input.tokenSubject || input.tokenSubject === "anonymous");
 
-  if (!anonymous && input.tokenSubject) {
+  if (input.machineAccountId) {
+    const account = await getMachineAccountSnapshot(input.machineAccountId);
+    machineAccountId = account?.id ?? null;
+  } else if (!anonymous && input.tokenSubject) {
     const user = await findUserByEmail(input.tokenSubject);
     userId = user?.id ?? null;
   }
@@ -89,6 +96,7 @@ export async function recordPullEvent(input: RecordPullEventInput): Promise<void
       tagReference,
       digest: input.digest,
       userId,
+      machineAccountId,
       anonymous,
     });
 

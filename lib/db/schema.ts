@@ -168,6 +168,10 @@ export const auditLog = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => users.id),
+    machineAccountId: uuid("machine_account_id").references(
+      () => machineAccounts.id,
+      { onDelete: "set null" },
+    ),
     repositoryId: uuid("repository_id").references(() => repositories.id, {
       onDelete: "set null",
     }),
@@ -219,6 +223,10 @@ export const pullEvents = pgTable(
     tagReference: varchar("tag_reference", { length: 255 }),
     digest: varchar("digest", { length: 255 }).notNull(),
     userId: uuid("user_id").references(() => users.id),
+    machineAccountId: uuid("machine_account_id").references(
+      () => machineAccounts.id,
+      { onDelete: "set null" },
+    ),
     anonymous: boolean("anonymous").notNull().default(false),
     pulledAt: timestamp("pulled_at", { withTimezone: true })
       .notNull()

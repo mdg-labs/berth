@@ -43,6 +43,13 @@
       "when": 1793124258899,
       "tag": "0005_windy_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793126699898,
+      "tag": "0006_typical_pepper_potts",
+      "breakpoints": true
     }
   ]
 }

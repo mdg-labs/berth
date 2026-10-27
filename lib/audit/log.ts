@@ -7,6 +7,7 @@ import type { AuditAction } from "./actions";
 
 export async function writeAuditLog(params: {
   userId: string | null;
+  machineAccountId?: string | null;
   action: AuditAction | string;
   resource: string;
   repositoryId?: string | null;
@@ -16,6 +17,7 @@ export async function writeAuditLog(params: {
   const db = getDb();
   await db.insert(auditLog).values({
     userId: params.userId,
+    machineAccountId: params.machineAccountId ?? null,
     repositoryId: params.repositoryId ?? null,
     action: params.action,
     resource: params.resource,
