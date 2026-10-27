@@ -23,6 +23,35 @@ export type TagsQuery = {
   includeUntagged?: boolean;
 };
 
+const MANIFEST_LOOKUP_CONCURRENCY = 8;
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  let failed = false;
+
+  const worker = async () => {
+    while (!failed && next < items.length) {
+      const index = next++;
+      try {
+        results[index] = await fn(items[index]);
+      } catch (error) {
+        failed = true;
+        throw error;
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+  return results;
+}
+
 function fullImageName(repositoryName: string, imageName: string): string {
   return `${repositoryName}/${imageName}`;
 }
@@ -90,15 +119,17 @@ async function buildTaggedSummaries(
   token: string,
   allTags: string[],
 ): Promise<TagSummary[]> {
-  const manifestEntries = await Promise.all(
-    allTags.map(async (tagName) => {
+  const manifestEntries = await mapWithConcurrency(
+    allTags,
+    MANIFEST_LOOKUP_CONCURRENCY,
+    async (tagName) => {
       const manifest = await getManifestDigest(fullName, tagName, token);
       return {
         name: tagName,
         digest: manifest?.digest ?? "",
         size: manifest?.size ?? 0,
       };
-    }),
+    },
   );
 
   const siblingsByTag = buildSiblingMapForTags(manifestEntries);
@@ -118,25 +149,27 @@ async function buildUntaggedSummaries(
   token: string,
   digests: string[],
 ): Promise<TagSummary[]> {
-  const summaries: TagSummary[] = [];
+  const summaries = await mapWithConcurrency(
+    digests,
+    MANIFEST_LOOKUP_CONCURRENCY,
+    async (digest): Promise<TagSummary | null> => {
+      const manifest = await getManifestDigest(fullName, digest, token);
+      if (!manifest) {
+        return null;
+      }
 
-  for (const digest of digests) {
-    const manifest = await getManifestDigest(fullName, digest, token);
-    if (!manifest) {
-      continue;
-    }
+      return {
+        name: digest,
+        digest: manifest.digest,
+        size: manifest.size,
+        pushedAt: null,
+        siblings: [],
+        isUntagged: true,
+      };
+    },
+  );
 
-    summaries.push({
-      name: digest,
-      digest: manifest.digest,
-      size: manifest.size,
-      pushedAt: null,
-      siblings: [],
-      isUntagged: true,
-    });
-  }
-
-  return summaries;
+  return summaries.filter((summary): summary is TagSummary => summary !== null);
 }
 
 export async function listImageTags(
