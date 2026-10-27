@@ -42,7 +42,7 @@ flowchart LR
 
 ## Prerequisites
 
-- Linux server with **Docker Engine** and **Compose v2** (v2.24+ recommended for `ports: !reset` in overrides)
+- Linux server with **Docker Engine** and **Compose v2.24.4 or later** (required: the production override uses the `!reset` and `!override` YAML tags; check with `docker compose version`)
 - A domain name with **DNS A/AAAA** pointing at the server (e.g. `registry.example.com`)
 - Ports **80** and **443** open for the reverse proxy
 - Firewall: block direct access to Postgres (`5432`) and registry (`5000`) if the dev compose ports are still published

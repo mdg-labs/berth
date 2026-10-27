@@ -6,13 +6,16 @@
 # Or with secrets outside the repo:
 #   docker compose -f docker/compose.yml -f /opt/berth/compose.prod.yml up -d --build
 #
+# Requires Docker Compose v2.24.4 or later: the !reset and !override tags below
+# are not supported by older releases.
+#
 # Replace every registry.example.com and path below before deploying.
 
 services:
   postgres:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
-    # Do not publish Postgres to the internet (requires Compose v2.24+ !reset).
+    # Do not publish Postgres to the internet (requires Compose v2.24.4+ for !reset).
     ports: !reset []
 
   registry:
@@ -29,8 +32,9 @@ services:
     # build:
     #   context: ..
     #   dockerfile: docker/Dockerfile
-    # Replace dev 0.0.0.0:8080 publish — loopback only (Compose v2.24+ !reset).
-    ports: !reset
+    # Replace the dev 0.0.0.0:8080 publish with a loopback-only one. !override
+    # (Compose v2.24.4+) replaces the base list; !reset would drop it entirely.
+    ports: !override
       - "127.0.0.1:8080:3000"
     volumes:
       - registry-data:/var/lib/registry:ro
