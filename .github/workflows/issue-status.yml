@@ -59,8 +59,13 @@ jobs:
             };
 
             // The status this run wants, from a fresh read of the issue, or null
-            // to leave it alone.
+            // to leave it alone. Runs for one issue are not ordered, so a
+            // delayed closed or reopened run can start after the opposite
+            // event; it then finds the issue in a state its event no longer
+            // describes, and must not write a status for it.
             const decide = (issue, statuses) => {
+              if (action === 'closed' && issue.state !== 'closed') return null;
+              if (action === 'reopened' && issue.state !== 'open') return null;
               if (action === 'closed') {
                 // GitHub sends 'completed', 'not_planned' or 'duplicate'; anything
                 // else (including null) is an ordinary close, i.e. completed.
@@ -143,13 +148,13 @@ jobs:
             // the window between that write and the read it is based on.
             //
             // Never touches an issue that already has an assignee, and skipped
-            // on close: putting a fresh assignee (and its notification) on an
+            // while the issue is closed: putting a fresh assignee (and its notification) on an
             // issue that just went away is noise, not ownership.
             //
             // Best-effort by design. addAssignees silently ignores a login
             // without push access, and any failure here must not fail the job
             // whose real purpose, the status write, already succeeded.
-            if (action !== 'closed' && (live.assignees || []).length === 0) {
+            if (live.state !== 'closed' && (live.assignees || []).length === 0) {
               try {
                 await github.rest.issues.addAssignees({
                   ...context.repo,
