@@ -7,6 +7,7 @@ import { CopyIcon, KeyRoundIcon, PlusIcon, RotateCwIcon, Trash2Icon } from "luci
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
+import { latestPatExpiryDate, resolvePatExpiry } from "@/components/account/pat-expiry";
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { Badge } from "@/components/ui/badge";
@@ -137,9 +138,7 @@ export function AccountTokensSection() {
     if (maxDays === null || maxDays === undefined) {
       return undefined;
     }
-    const date = new Date();
-    date.setDate(date.getDate() + maxDays);
-    return date.toISOString().slice(0, 10);
+    return latestPatExpiryDate(Date.now(), maxDays);
   }, [tokensQuery.data?.policy.patMaxValidityDays]);
 
   const minExpiryDate = useMemo(() => {
@@ -162,7 +161,11 @@ export function AccountTokensSection() {
     mutationFn: () => {
       let parsedExpiresAt: string | null = null;
       if (expiryMode === "custom" && expiresAt) {
-        parsedExpiresAt = new Date(`${expiresAt}T23:59:59.999Z`).toISOString();
+        parsedExpiresAt = resolvePatExpiry(
+          expiresAt,
+          Date.now(),
+          tokensQuery.data?.policy.patMaxValidityDays ?? null,
+        );
       }
 
       return apiFetch<CreateTokenResponse>("/api/account/tokens", {
