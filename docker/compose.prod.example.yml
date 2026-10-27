@@ -41,7 +41,9 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
       APP_URL: https://registry.example.com
       BOOTSTRAP_ADMIN_EMAIL: admin@example.com
-      # BOOTSTRAP_ADMIN_PASSWORD intentionally unset — password generated once in app logs
+      # Drop the dev password inherited from compose.yml; without it the first
+      # start generates a one-time admin password and logs it once.
+      BOOTSTRAP_ADMIN_PASSWORD: !reset null
       TOKEN_SIGNING_KEY_PATH: /etc/berth/token/signing-key.pem
       TOKEN_CERT_PATH: /etc/berth/token/signing-cert.pem
       RATE_LIMIT_LOGIN_MAX_ATTEMPTS: "10"
