@@ -72,6 +72,7 @@ Clients (`docker login`, `docker push`) use the **same host and port** as the po
 | [Production setup](docs/production-setup.md) | End-to-end deploy with TLS, secrets, and first push |
 | [Install](docs/install.md) | First boot, bootstrap admin, password recovery |
 | [TLS](docs/tls.md) | HTTPS with a reverse proxy or compose edge TLS |
+| [Machine accounts](docs/machine-accounts.md) | CI and deploy-host credentials for `docker login` |
 | [Backup](docs/backup.md) | Postgres dump + `registry-data` volume |
 | [Key rotation](docs/key-rotation.md) | Token signing key rollover (`ROOTCERTBUNDLE`) |
 | [Garbage collection](docs/gc.md) | Reclaim storage after deletes |
