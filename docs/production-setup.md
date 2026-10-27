@@ -66,8 +66,9 @@ Keep secrets **outside** the git clone:
 Clone the repository:
 
 ```bash
-sudo mkdir -p /opt/berth/secrets
+sudo mkdir -p /opt/berth
 sudo chown "$USER:$USER" /opt/berth
+mkdir -p /opt/berth/secrets
 git clone https://github.com/mdg-labs/berth.git /opt/berth/repo
 cd /opt/berth/repo
 ```
