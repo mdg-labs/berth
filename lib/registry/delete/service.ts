@@ -130,14 +130,8 @@ export async function bulkDeleteTags(
       continue;
     }
 
-    const manifest = await getManifestDigest(fullName, item.name, token);
     await deleteManifestReference(fullName, item.name, token);
     deletedTags.push(item.name);
-
-    if (manifest?.digest && !seenDigests.has(manifest.digest)) {
-      seenDigests.add(manifest.digest);
-      deletedDigests.push(manifest.digest);
-    }
   }
 
   if (deletedTags.length > 0 || deletedDigests.length > 0) {

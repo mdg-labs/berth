@@ -61,7 +61,14 @@ describe("bulkDeleteTags with untagged digests", () => {
       "token",
     );
     expect(result.deletedTags).toEqual(["dev"]);
-    expect(result.deletedDigests).toEqual(["sha256:taggeddigest"]);
+    expect(result.deletedDigests).toEqual([]);
+    expect(mocks.getManifestDigest).not.toHaveBeenCalled();
+    expect(mocks.writeAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "tag.bulk_delete",
+        resource: "repository:demo/hello:tag:dev",
+      }),
+    );
   });
 
   it("deletes untagged manifests by digest", async () => {
