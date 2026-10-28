@@ -15,6 +15,7 @@ existing line by adding its PR number.
 - **Read-then-write race** — an `UPDATE` after a `SELECT` filters on the id only and does not repeat the conditions (owner, not revoked, expected version or hash) the read relied on, so a concurrent change between them is overwritten — PR 15
 - **Untruthful result** — an operation's result or audit entry reports an effect it did not perform (e.g. a digest listed as deleted when only a tag reference was removed) — PR 15
 - **Direct references only** — "unreferenced" is computed from direct links alone, ignoring transitive references (children of an index or manifest list), so referenced data is offered for deletion — PR 15
+- **Catch-all reads as empty** — a `catch` that turns every read error (not just `ENOENT`) into an empty result makes a fail-closed check fail open, so referenced data is offered for deletion — PR 37
 
 ## Input and API
 
@@ -31,3 +32,11 @@ existing line by adding its PR number.
 - **Compose override assumed, not rendered** — a comment, or `!reset` with values, is assumed to unset or replace an inherited compose value; the merged `docker compose config` output was never checked — PR 15
 - **Documented command not run as written** — an operator snippet fails when followed in order (permissions changed after ownership moves away, TLS block enabled before its certificate exists, image tag format differing from what the publisher pushes) — PR 15
 - **Edge proxy appends forwarded headers** — the edge proxy appends to a client-supplied `X-Forwarded-For` while the app trusts the first entry — PR 15
+
+## Tests
+
+- **Cleanup state captured inside one test** — a shared `afterEach`/`afterAll` restores state recorded inside a single test, so a failed or filtered (`-t`) run takes the default branch and deletes real rows in the target database — PR 37
+
+## Repo conventions
+
+- **Stale copyright header** — a new file copies its header from an older file instead of the current form CLAUDE.md requires — PR 37
