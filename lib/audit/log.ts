@@ -18,17 +18,21 @@ export function actorSnapshot(userId: string | null) {
   };
 }
 
-export async function writeAuditLog(params: {
-  userId: string | null;
-  machineAccountId?: string | null;
-  action: AuditAction | string;
-  resource: string;
-  repositoryId?: string | null;
-  metadata?: Record<string, unknown> | null;
-  clientIp?: string | null;
-}): Promise<void> {
-  const db = getDb();
-  await db.insert(auditLog).values({
+export type AuditExecutor = Pick<ReturnType<typeof getDb>, "insert">;
+
+export async function writeAuditLog(
+  params: {
+    userId: string | null;
+    machineAccountId?: string | null;
+    action: AuditAction | string;
+    resource: string;
+    repositoryId?: string | null;
+    metadata?: Record<string, unknown> | null;
+    clientIp?: string | null;
+  },
+  executor: AuditExecutor = getDb(),
+): Promise<void> {
+  await executor.insert(auditLog).values({
     userId: params.userId,
     ...actorSnapshot(params.userId),
     machineAccountId: params.machineAccountId ?? null,

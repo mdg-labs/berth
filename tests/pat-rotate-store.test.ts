@@ -13,12 +13,14 @@ const { selectMock, updateMock, getPatPolicyMock, writeAuditLogMock } =
     writeAuditLogMock: vi.fn(),
   }));
 
-vi.mock("@/lib/db", () => ({
-  getDb: () => ({
+vi.mock("@/lib/db", () => {
+  const db = {
     select: selectMock,
     update: updateMock,
-  }),
-}));
+    transaction: async (run: (tx: unknown) => Promise<unknown>) => run(db),
+  };
+  return { getDb: () => db };
+});
 
 vi.mock("@/lib/pat/config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/pat/config")>();
