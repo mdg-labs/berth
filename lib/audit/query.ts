@@ -58,6 +58,7 @@ export type AuditLogEntry = {
     userId: string | null;
     email: string | null;
     name: string | null;
+    deletedUser: boolean;
     machineAccount: AuditLogMachineActor | null;
   };
   repositoryId: string | null;
@@ -108,6 +109,9 @@ export function parseAuditLogQuery(
   return { page, pageSize, sort, search, action, actor, resource, from, to };
 }
 
+const actorEmail = sql<string | null>`coalesce(${users.email}, ${auditLog.actorEmail})`;
+const actorName = sql<string | null>`coalesce(${users.name}, ${auditLog.actorName})`;
+
 const metadataMachineAccountName = sql`${auditLog.metadata} -> 'machineAccount' ->> 'name'`;
 
 function machineActorMatches(pattern: string) {
@@ -132,8 +136,8 @@ function buildWhereConditions(query: AuditLogQuery) {
     const pattern = `%${query.actor}%`;
     conditions.push(
       or(
-        ilike(users.email, pattern),
-        ilike(users.name, pattern),
+        ilike(actorEmail, pattern),
+        ilike(actorName, pattern),
         machineActorMatches(pattern),
       )!,
     );
@@ -149,8 +153,8 @@ function buildWhereConditions(query: AuditLogQuery) {
       or(
         ilike(auditLog.action, pattern),
         ilike(auditLog.resource, pattern),
-        ilike(users.email, pattern),
-        ilike(users.name, pattern),
+        ilike(actorEmail, pattern),
+        ilike(actorName, pattern),
         machineActorMatches(pattern),
       )!,
     );
@@ -173,7 +177,7 @@ function buildWhereConditions(query: AuditLogQuery) {
   return conditions.length > 0 ? and(...conditions) : undefined;
 }
 
-const actorSortKey = sql`coalesce(${users.email}, ${machineAccounts.name}, ${metadataMachineAccountName})`;
+const actorSortKey = sql`coalesce(${users.email}, ${auditLog.actorEmail}, ${machineAccounts.name}, ${metadataMachineAccountName})`;
 
 function buildOrderBy(sort: AuditLogSort) {
   switch (sort) {
@@ -229,6 +233,7 @@ function toEntry(row: {
       userId: row.userId,
       email: row.actorEmail,
       name: row.actorName,
+      deletedUser: row.userId === null && row.actorEmail !== null,
       machineAccount: toMachineActor(row, metadata),
     },
   };
@@ -295,8 +300,8 @@ export async function listAuditLog(
       metadata: auditLog.metadata,
       repositoryId: auditLog.repositoryId,
       userId: auditLog.userId,
-      actorEmail: users.email,
-      actorName: users.name,
+      actorEmail,
+      actorName,
       machineAccountId: machineAccounts.id,
       machineAccountName: machineAccounts.name,
       machineAccountOwnerRepositoryId: machineAccounts.ownerRepositoryId,

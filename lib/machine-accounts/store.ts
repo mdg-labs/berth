@@ -15,6 +15,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 
+import { actorSnapshot } from "@/lib/audit/log";
 import { getDb } from "@/lib/db";
 import {
   auditLog,
@@ -571,6 +572,7 @@ export async function createMachineAccount(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
+        ...actorSnapshot(actor.id),
         repositoryId: repository.id,
         action: "machine_account.create",
         resource: `machine_account:${row.id}`,
@@ -645,6 +647,7 @@ export async function deleteMachineAccount(
 
     await tx.insert(auditLog).values({
       userId: actor.id,
+      ...actorSnapshot(actor.id),
       repositoryId,
       action: "machine_account.delete",
       resource: `machine_account:${deleted.id}`,
@@ -710,6 +713,7 @@ export async function createHostMachineAccount(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
+        ...actorSnapshot(actor.id),
         repositoryId: null,
         action: "machine_account.create",
         resource: `machine_account:${row.id}`,
@@ -780,6 +784,7 @@ async function applyDisabled(
 
   await tx.insert(auditLog).values({
     userId: actor.id,
+    ...actorSnapshot(actor.id),
     repositoryId: account.repositoryId,
     action: disabled ? "machine_account.disable" : "machine_account.enable",
     resource: `machine_account:${account.id}`,
@@ -869,6 +874,7 @@ export async function updateMachineAccount(
 
         await tx.insert(auditLog).values({
           userId: actor.id,
+          ...actorSnapshot(actor.id),
           repositoryId,
           action: "machine_account.update",
           resource: `machine_account:${account.id}`,
@@ -973,6 +979,7 @@ export async function rotateMachineAccount(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
+        ...actorSnapshot(actor.id),
         repositoryId: account.ownerRepositoryId,
         action: "machine_account.rotate",
         resource: `machine_account:${account.id}`,
@@ -1088,6 +1095,7 @@ export async function updateHostMachineAccount(
         if (input.description !== undefined || input.repositoryIds) {
           await tx.insert(auditLog).values({
             userId: actor.id,
+            ...actorSnapshot(actor.id),
             repositoryId: null,
             action: "machine_account.update",
             resource: `machine_account:${account.id}`,
@@ -1170,6 +1178,7 @@ export async function deleteMachineAccountAsAdmin(
     const isHost = deleted.ownerRepositoryId === null;
     await tx.insert(auditLog).values({
       userId: actor.id,
+      ...actorSnapshot(actor.id),
       repositoryId: deleted.ownerRepositoryId,
       action: "machine_account.delete",
       resource: `machine_account:${deleted.id}`,

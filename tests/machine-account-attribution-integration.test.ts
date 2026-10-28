@@ -428,6 +428,7 @@ describe.skipIf(!databaseUrl)(
         userId: null,
         email: null,
         name: null,
+        deletedUser: false,
         machineAccount: null,
       });
     });

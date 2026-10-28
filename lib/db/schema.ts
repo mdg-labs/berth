@@ -173,6 +173,8 @@ export const auditLog = pgTable(
     userId: uuid("user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    actorEmail: varchar("actor_email", { length: 255 }),
+    actorName: varchar("actor_name", { length: 255 }),
     machineAccountId: uuid("machine_account_id").references(
       () => machineAccounts.id,
       { onDelete: "set null" },

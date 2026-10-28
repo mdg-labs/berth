@@ -20,6 +20,7 @@
   },
   "actor": {
     "system": "System",
+    "deletedUser": "Deleted user ({actor})",
     "machineAccount": "Machine account {name}",
     "machineAccountDeleted": "Machine account {name} (deleted)",
     "anonymous": "Anonymous",

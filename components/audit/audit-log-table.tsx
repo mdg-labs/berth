@@ -65,6 +65,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { apiFetch } from "@/lib/api/client";
+import { formatAuditActor } from "@/lib/audit/actor";
 import type {
   AuditLogEntry,
   AuditLogListResponse,
@@ -261,24 +262,7 @@ export function AuditLogTable({
   });
 
   const formatActor = useCallback(
-    (entry: AuditLogEntry) => {
-      const machine = entry.actor.machineAccount;
-      if (machine) {
-        const name = machine.name ?? machine.id;
-        return machine.deleted
-          ? t("actor.machineAccountDeleted", { name })
-          : t("actor.machineAccount", { name });
-      }
-      if (entry.actor.email) {
-        return entry.actor.name
-          ? `${entry.actor.name} (${entry.actor.email})`
-          : entry.actor.email;
-      }
-      if (entry.actor.userId === null) {
-        return t("actor.system");
-      }
-      return t("actor.unknown");
-    },
+    (entry: AuditLogEntry) => formatAuditActor(entry.actor, t),
     [t],
   );
 

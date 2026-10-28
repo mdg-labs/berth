@@ -78,6 +78,20 @@
       "when": 1793164902832,
       "tag": "0010_spotty_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793166024832,
+      "tag": "0011_grey_korath",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793166028343,
+      "tag": "0012_backfill_audit_actor_snapshot",
+      "breakpoints": true
     }
   ]
 }
