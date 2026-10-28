@@ -42,7 +42,11 @@ function mapPatError(error: PatValidationError) {
         400,
       );
     case "invalid_repository":
-      return apiError("bad_request", "One or more repositories are invalid", 400);
+      return apiError(
+        "bad_request",
+        "One or more repositories are invalid",
+        400,
+      );
     case "insufficient_repository_access":
       return apiError(
         "forbidden",
@@ -85,12 +89,61 @@ export async function POST(request: NextRequest) {
     return apiError("not_authenticated", "Not authenticated", 401);
   }
 
-  let body: CreatePersonalAccessTokenInput;
+  let parsed: unknown;
   try {
-    body = (await request.json()) as CreatePersonalAccessTokenInput;
+    parsed = await request.json();
   } catch {
     return apiError("bad_request", "Invalid JSON body", 400);
   }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return apiError("bad_request", "Request body must be a JSON object", 400);
+  }
+
+  const { name, allowPull, allowPush, expiresAt, repositoryIds } = parsed as {
+    name?: unknown;
+    allowPull?: unknown;
+    allowPush?: unknown;
+    expiresAt?: unknown;
+    repositoryIds?: unknown;
+  };
+
+  if (typeof name !== "string") {
+    return apiError("bad_request", "name must be a string", 400);
+  }
+  if (typeof allowPull !== "boolean") {
+    return apiError("bad_request", "allowPull must be a boolean", 400);
+  }
+  if (typeof allowPush !== "boolean") {
+    return apiError("bad_request", "allowPush must be a boolean", 400);
+  }
+  if (
+    expiresAt !== undefined &&
+    expiresAt !== null &&
+    typeof expiresAt !== "string"
+  ) {
+    return apiError("bad_request", "expiresAt must be a string or null", 400);
+  }
+  if (
+    repositoryIds !== undefined &&
+    repositoryIds !== null &&
+    (!Array.isArray(repositoryIds) ||
+      repositoryIds.some((id) => typeof id !== "string"))
+  ) {
+    return apiError(
+      "bad_request",
+      "repositoryIds must be an array of strings or null",
+      400,
+    );
+  }
+
+  const body: CreatePersonalAccessTokenInput = {
+    name,
+    allowPull,
+    allowPush,
+    expiresAt: expiresAt ?? null,
+    repositoryIds: repositoryIds ?? null,
+  };
 
   const result = await createPersonalAccessToken(
     {
