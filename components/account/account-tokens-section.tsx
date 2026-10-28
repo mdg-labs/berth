@@ -63,6 +63,7 @@ type TokenSummary = {
   revokedAt: string | null;
   lastUsedAt: string | null;
   createdAt: string;
+  allRepositories: boolean;
   repositoryIds: string[];
   repositoryNames: string[];
 };
@@ -336,9 +337,11 @@ export function AccountTokensSection() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {token.repositoryNames.length > 0
-                        ? token.repositoryNames.join(", ")
-                        : t("allRepositories")}
+                      {token.allRepositories
+                        ? t("allRepositories")
+                        : token.repositoryNames.length > 0
+                          ? token.repositoryNames.join(", ")
+                          : t("noRepositories")}
                     </TableCell>
                     <TableCell>
                       {token.revokedAt

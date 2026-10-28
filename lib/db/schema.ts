@@ -270,6 +270,7 @@ export const personalAccessTokens = pgTable(
     tokenHash: text("token_hash").notNull(),
     allowPull: boolean("allow_pull").notNull(),
     allowPush: boolean("allow_push").notNull(),
+    allRepositories: boolean("all_repositories").notNull().default(true),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),

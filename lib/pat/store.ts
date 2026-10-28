@@ -85,6 +85,7 @@ export async function listPersonalAccessTokens(
       revokedAt: row.revokedAt?.toISOString() ?? null,
       lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
+      allRepositories: row.allRepositories,
       repositoryIds: repos.ids,
       repositoryNames: repos.names,
     };
@@ -157,6 +158,7 @@ export async function createPersonalAccessToken(
   const tokenPrefix = fullToken.slice(0, 12);
   const tokenHash = hashToken(fullToken);
   const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
+  const allRepositories = !input.repositoryIds || input.repositoryIds.length === 0;
 
   const db = getDb();
   const [created] = await db
@@ -168,6 +170,7 @@ export async function createPersonalAccessToken(
       tokenHash,
       allowPull: input.allowPull,
       allowPush: input.allowPush,
+      allRepositories,
       expiresAt,
     })
     .returning();
@@ -176,7 +179,7 @@ export async function createPersonalAccessToken(
     throw new Error("Failed to create personal access token");
   }
 
-  if (input.repositoryIds && input.repositoryIds.length > 0) {
+  if (!allRepositories && input.repositoryIds) {
     await db.insert(personalAccessTokenRepositories).values(
       input.repositoryIds.map((repositoryId) => ({
         tokenId: created.id,
@@ -373,6 +376,7 @@ export async function resolvePersonalAccessToken(
       userId: personalAccessTokens.userId,
       allowPull: personalAccessTokens.allowPull,
       allowPush: personalAccessTokens.allowPush,
+      allRepositories: personalAccessTokens.allRepositories,
       expiresAt: personalAccessTokens.expiresAt,
       revokedAt: personalAccessTokens.revokedAt,
       lastUsedAt: personalAccessTokens.lastUsedAt,
@@ -404,6 +408,7 @@ export async function resolvePersonalAccessToken(
       userId: row.userId,
       allowPull: row.allowPull,
       allowPush: row.allowPush,
+      allRepositories: row.allRepositories,
       repositoryIds: repoRows.map((entry) => entry.repositoryId),
     },
     lastUsedAt: row.lastUsedAt,
