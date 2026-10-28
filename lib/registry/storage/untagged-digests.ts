@@ -67,8 +67,9 @@ async function collectRevisionDigests(manifestsPath: string): Promise<Set<string
 }
 
 /**
- * Returns null when any tag's current link cannot be read or is malformed,
- * since the manifest that tag points to cannot then be ruled out.
+ * Returns null when the tags directory exists but cannot be listed, or when
+ * any tag's current link cannot be read or is malformed, since the manifest
+ * a tag points to cannot then be ruled out.
  */
 async function collectTaggedDigests(
   manifestsPath: string,
@@ -79,8 +80,8 @@ async function collectTaggedDigests(
   let tagEntries;
   try {
     tagEntries = await readdir(tagsPath, { withFileTypes: true });
-  } catch {
-    return digests;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT" ? digests : null;
   }
 
   for (const tagEntry of tagEntries) {

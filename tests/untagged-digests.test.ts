@@ -275,6 +275,46 @@ describe("untagged digest storage inventory", () => {
     expect(await listUntaggedDigests(fullImageName)).toEqual([]);
   });
 
+  it("lists every revision when the repository has no tags directory", async () => {
+    const fullImageName = "demo-app/hello";
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_A);
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_B);
+
+    const { listUntaggedDigests } = await import(
+      "@/lib/registry/storage/untagged-digests"
+    );
+
+    expect(await listUntaggedDigests(fullImageName)).toEqual([
+      DIGEST_UNTAGGED_B,
+      DIGEST_UNTAGGED_A,
+    ]);
+  });
+
+  it("lists nothing when the tags directory cannot be read", async () => {
+    const fullImageName = "demo-app/hello";
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_TAGGED);
+    await writeManifestLink(tempRoot, fullImageName, DIGEST_UNTAGGED_A);
+    await writeFile(
+      path.join(
+        tempRoot,
+        "docker",
+        "registry",
+        "v2",
+        "repositories",
+        ...fullImageName.split("/"),
+        "_manifests",
+        "tags",
+      ),
+      "",
+    );
+
+    const { listUntaggedDigests } = await import(
+      "@/lib/registry/storage/untagged-digests"
+    );
+
+    expect(await listUntaggedDigests(fullImageName)).toEqual([]);
+  });
+
   it("reports storage readability", async () => {
     const { isRegistryStorageReadable } = await import(
       "@/lib/registry/storage/untagged-digests"
