@@ -218,7 +218,7 @@
     },
     "empty": {
       "title": "No machine accounts",
-      "description": "No machine account exists yet. Repository accounts are created in the repository settings.",
+      "description": "No machine account exists yet. Repository accounts are created in the repository settings; create a host account for a deploy host here.",
       "filteredDescription": "No machine account matches these filters."
     },
     "table": {
@@ -259,7 +259,47 @@
       "deleted": "Machine account deleted",
       "disableError": "Failed to disable machine account",
       "enableError": "Failed to enable machine account",
-      "deleteError": "Failed to delete machine account"
+      "deleteError": "Failed to delete machine account",
+      "updated": "Host machine account updated"
+    },
+    "policyError": "Failed to load the token policy. Creating a host account needs it.",
+    "editAccount": "Edit host machine account {name}",
+    "rotateAccount": "Rotate secret of machine account {name}",
+    "hostCreate": {
+      "open": "Create host account",
+      "title": "Create host account",
+      "description": "A host account lets one deploy host pull images from several repositories. It can never push or delete. The secret is shown once after creation.",
+      "submit": "Create",
+      "errorTitle": "Failed to create host account"
+    },
+    "hostCreated": {
+      "title": "Host account created",
+      "description": "Use the secret below on the host to log in as {name}.",
+      "done": "Done"
+    },
+    "hostEdit": {
+      "title": "Edit {name}",
+      "description": "Change the repositories this host may pull from. The name and the secret stay the same.",
+      "submit": "Save",
+      "errorTitle": "Failed to update host account"
+    },
+    "hostForm": {
+      "name": "Name",
+      "nameHint": "Lowercase letters, digits and hyphens, 2 to 63 characters, starting with a letter. For example the host name.",
+      "description": "Description (optional)",
+      "pullOnly": "Pull only: this account can pull images from the listed repositories and never push or delete.",
+      "repositories": "Repositories",
+      "filterRepositories": "Filter repositories",
+      "noRepositories": "No repository matches.",
+      "selectedCount": "{count, plural, one {# repository selected} other {# repositories selected}}",
+      "repositoriesError": "Failed to load the repository list",
+      "cancel": "Cancel",
+      "errors": {
+        "nameInvalid": "Use 2 to 63 lowercase letters, digits and hyphens, starting with a letter.",
+        "nameTaken": "This name is already used by another host account.",
+        "repositoriesRequired": "Select at least one repository.",
+        "repositoriesTooMany": "Select at most {max} repositories."
+      }
     }
   }
 }

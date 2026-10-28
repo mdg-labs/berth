@@ -43,7 +43,9 @@ test.describe("repository machine accounts", () => {
 
     await page.goto(`/r/${repositoryName}/settings`);
     await page.getByRole("tab", { name: "Access" }).click();
-    await expect(page.getByText("Machine accounts", { exact: true })).toBeVisible();
+    await expect(
+      page.getByLabel("Access").getByText("Machine accounts", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("No machine accounts yet")).toBeVisible();
 
     await page.getByRole("button", { name: "Create machine account" }).click();

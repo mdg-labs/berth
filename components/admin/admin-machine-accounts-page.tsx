@@ -2,15 +2,19 @@
 
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
 
 import {
   ADMIN_MACHINE_ACCOUNTS_QUERY_KEY,
   AdminMachineAccountsTable,
 } from "@/components/admin/admin-machine-accounts-table";
+import { CreateHostAccountDialog } from "@/components/admin/create-host-account-dialog";
 import { ErrorAlert } from "@/components/catalog/error-alert";
+import type { MachineAccountExpiryPolicy } from "@/components/settings/machine-account-expiry";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -38,6 +42,10 @@ type MachineAccountsResponse = {
   machineAccounts: AdminMachineAccountRow[];
 };
 
+type AdminSettingsResponse = {
+  settings: MachineAccountExpiryPolicy;
+};
+
 const KINDS = ["repository", "host"] as const;
 const STATUSES = ["active", "disabled", "expired"] as const;
 const ALL = "all";
@@ -49,6 +57,15 @@ export function AdminMachineAccountsPage() {
     repositoryId: parseAsString,
     status: parseAsStringLiteral(STATUSES),
   });
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const settingsQuery = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => apiFetch<AdminSettingsResponse>("/api/admin/settings"),
+  });
+  const policy = settingsQuery.data?.settings;
 
   const repositoriesQuery = useRepositoriesList();
   const repositories = repositoriesQuery.data?.repositories ?? [];
@@ -83,10 +100,28 @@ export function AdminMachineAccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("description")}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("description")}</p>
+        </div>
+        <Button
+          type="button"
+          disabled={!policy}
+          onClick={() => setCreateOpen(true)}
+        >
+          <PlusIcon />
+          {t("hostCreate.open")}
+        </Button>
       </div>
+
+      {settingsQuery.isError ? (
+        <ErrorAlert
+          title={t("policyError")}
+          error={settingsQuery.error}
+          onRetry={() => void settingsQuery.refetch()}
+        />
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <Select
@@ -216,7 +251,20 @@ export function AdminMachineAccountsPage() {
       ) : null}
 
       {accounts && accounts.length > 0 ? (
-        <AdminMachineAccountsTable accounts={accounts} />
+        <AdminMachineAccountsTable accounts={accounts} policy={policy} />
+      ) : null}
+
+      {policy ? (
+        <CreateHostAccountDialog
+          policy={policy}
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={() =>
+            void queryClient.invalidateQueries({
+              queryKey: [ADMIN_MACHINE_ACCOUNTS_QUERY_KEY],
+            })
+          }
+        />
       ) : null}
     </div>
   );

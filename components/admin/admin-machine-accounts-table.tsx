@@ -3,11 +3,22 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PowerIcon, PowerOffIcon, Trash2Icon } from "lucide-react";
+import {
+  KeyRoundIcon,
+  PencilIcon,
+  PowerIcon,
+  PowerOffIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import type { AdminMachineAccountRow } from "@/components/admin/admin-machine-accounts-page";
+import { EditHostAccountDialog } from "@/components/admin/edit-host-account-dialog";
+import {
+  MachineAccountRotateDialog,
+} from "@/components/settings/machine-account-rotate-dialog";
+import type { MachineAccountExpiryPolicy } from "@/components/settings/machine-account-expiry";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -36,6 +47,7 @@ export const ADMIN_MACHINE_ACCOUNTS_QUERY_KEY = "admin-machine-accounts";
 
 type AdminMachineAccountsTableProps = {
   accounts: AdminMachineAccountRow[];
+  policy: MachineAccountExpiryPolicy | undefined;
 };
 
 function formatDate(value: string): string {
@@ -51,6 +63,7 @@ function toggleUrl(account: AdminMachineAccountRow): string {
 
 export function AdminMachineAccountsTable({
   accounts,
+  policy,
 }: AdminMachineAccountsTableProps) {
   const t = useTranslations("admin.machineAccounts");
   const tCommon = useTranslations("common.actions");
@@ -58,6 +71,13 @@ export function AdminMachineAccountsTable({
   const queryClient = useQueryClient();
   const [toggleOpen, setToggleOpen] = useState(false);
   const [toggleTarget, setToggleTarget] =
+    useState<AdminMachineAccountRow | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<AdminMachineAccountRow | null>(
+    null,
+  );
+  const [rotateOpen, setRotateOpen] = useState(false);
+  const [rotateTarget, setRotateTarget] =
     useState<AdminMachineAccountRow | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] =
@@ -200,6 +220,32 @@ export function AdminMachineAccountsTable({
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
+                  {account.kind === "host" ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("editAccount", { name: account.name })}
+                      onClick={() => {
+                        setEditTarget(account);
+                        setEditOpen(true);
+                      }}
+                    >
+                      <PencilIcon className="size-4" />
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("rotateAccount", { name: account.name })}
+                    onClick={() => {
+                      setRotateTarget(account);
+                      setRotateOpen(true);
+                    }}
+                  >
+                    <KeyRoundIcon className="size-4" />
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -238,6 +284,22 @@ export function AdminMachineAccountsTable({
           ))}
         </TableBody>
       </Table>
+
+      <EditHostAccountDialog
+        account={editTarget}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSettled={() => void refresh()}
+      />
+
+      <MachineAccountRotateDialog
+        repositoryId={null}
+        account={rotateTarget}
+        policy={policy}
+        open={rotateOpen}
+        onOpenChange={setRotateOpen}
+        onSettled={() => void refresh()}
+      />
 
       <AlertDialog
         open={toggleOpen}

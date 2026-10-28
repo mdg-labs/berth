@@ -41,11 +41,13 @@ type RotateMachineAccountResponse = {
 };
 
 type MachineAccountRotateDialogProps = {
-  repositoryId: string;
+  // null rotates through the system-admin route, which covers both kinds.
+  repositoryId: string | null;
   account: MachineAccountSummary | null;
   policy: MachineAccountExpiryPolicy | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSettled?: () => void;
 };
 
 export function MachineAccountRotateDialog({
@@ -54,6 +56,7 @@ export function MachineAccountRotateDialog({
   policy,
   open,
   onOpenChange,
+  onSettled,
 }: MachineAccountRotateDialogProps) {
   const t = useTranslations("settings.machineAccounts");
   const queryClient = useQueryClient();
@@ -69,7 +72,9 @@ export function MachineAccountRotateDialog({
     gcTime: 0,
     mutationFn: (input: { accountId: string; expiresAt?: string | null }) =>
       apiFetch<RotateMachineAccountResponse>(
-        `/api/repositories/${repositoryId}/machine-accounts/${input.accountId}/rotate`,
+        repositoryId === null
+          ? `/api/admin/machine-accounts/${input.accountId}/rotate`
+          : `/api/repositories/${repositoryId}/machine-accounts/${input.accountId}/rotate`,
         {
           method: "POST",
           body:
@@ -77,9 +82,12 @@ export function MachineAccountRotateDialog({
         },
       ),
     onSettled: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["repository-machine-accounts", repositoryId],
-      });
+      if (repositoryId !== null) {
+        void queryClient.invalidateQueries({
+          queryKey: ["repository-machine-accounts", repositoryId],
+        });
+      }
+      onSettled?.();
     },
   });
 
