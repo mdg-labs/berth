@@ -52,6 +52,7 @@ import {
 import { toastManager } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api/client";
 import { formatApiError } from "@/lib/i18n/api-error";
+import { previewResetExpiry } from "@/lib/pat/expiry-reset";
 
 type TokenSummary = {
   id: string;
@@ -63,6 +64,7 @@ type TokenSummary = {
   revokedAt: string | null;
   lastUsedAt: string | null;
   createdAt: string;
+  expiryLifetimeSeconds: number | null;
   allRepositories: boolean;
   repositoryIds: string[];
   repositoryNames: string[];
@@ -101,12 +103,7 @@ function isTokenExpired(token: TokenSummary): boolean {
 }
 
 function computeRotatedExpiryPreview(token: TokenSummary): string | null {
-  if (!token.expiresAt) {
-    return null;
-  }
-  const ttlMs =
-    new Date(token.expiresAt).getTime() - new Date(token.createdAt).getTime();
-  return new Date(Date.now() + Math.max(ttlMs, 0)).toLocaleString();
+  return previewResetExpiry(token, Date.now())?.toLocaleString() ?? null;
 }
 
 export function AccountTokensSection() {

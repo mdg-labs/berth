@@ -13,6 +13,7 @@ import type {
 } from "@/lib/pat/types";
 import {
   computeRotatedPatExpiry,
+  expiryLifetimeSeconds,
   repositoryMeetsPatRequirements,
   validatePatCreateInput,
   type PatValidationError,
@@ -85,6 +86,7 @@ export async function listPersonalAccessTokens(
       revokedAt: row.revokedAt?.toISOString() ?? null,
       lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
+      expiryLifetimeSeconds: row.expiryLifetimeSeconds,
       allRepositories: row.allRepositories,
       repositoryIds: repos.ids,
       repositoryNames: repos.names,
@@ -158,6 +160,7 @@ export async function createPersonalAccessToken(
   const tokenPrefix = fullToken.slice(0, 12);
   const tokenHash = hashToken(fullToken);
   const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
+  const lifetimeSeconds = expiryLifetimeSeconds(expiresAt, new Date());
   const allRepositories = !input.repositoryIds || input.repositoryIds.length === 0;
 
   const db = getDb();
@@ -172,6 +175,7 @@ export async function createPersonalAccessToken(
       allowPush: input.allowPush,
       allRepositories,
       expiresAt,
+      expiryLifetimeSeconds: lifetimeSeconds,
     })
     .returning();
 
@@ -275,8 +279,7 @@ export async function rotatePersonalAccessToken(
 
   const policy = await getPatPolicy();
   const expiryResult = computeRotatedPatExpiry(
-    existing.createdAt,
-    existing.expiresAt,
+    existing,
     resetExpiry,
     policy,
   );

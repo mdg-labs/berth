@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
 import type { PatPolicy } from "@/lib/pat/config";
+import { resetExpiryLifetimeMs } from "@/lib/pat/expiry-reset";
 import type { CreatePersonalAccessTokenInput } from "@/lib/pat/types";
 import { roleAllowsAction } from "@/lib/rbac/matrix";
 import type { RepositoryRole } from "@/lib/rbac/types";
@@ -52,12 +53,26 @@ export function validatePatExpiry(
   return null;
 }
 
-export function computeRotatedPatExpiry(
-  createdAt: Date,
+export function expiryLifetimeSeconds(
   expiresAt: Date | null,
+  from: Date,
+): number | null {
+  if (expiresAt === null) {
+    return null;
+  }
+  return Math.max(Math.floor((expiresAt.getTime() - from.getTime()) / 1000), 0);
+}
+
+export function computeRotatedPatExpiry(
+  credential: {
+    createdAt: Date;
+    expiresAt: Date | null;
+    expiryLifetimeSeconds: number | null;
+  },
   resetExpiry: boolean,
   policy: PatPolicy,
 ): ComputeRotatedPatExpiryResult {
+  const { expiresAt } = credential;
   if (!resetExpiry) {
     if (expiresAt && expiresAt.getTime() <= Date.now()) {
       return { ok: false, error: "token_expired" };
@@ -72,8 +87,8 @@ export function computeRotatedPatExpiry(
     return { ok: true, expiresAt: null };
   }
 
-  const ttlMs = expiresAt.getTime() - createdAt.getTime();
-  const newExpiresAt = new Date(Date.now() + Math.max(ttlMs, 0));
+  const ttlMs = resetExpiryLifetimeMs(credential) ?? 0;
+  const newExpiresAt = new Date(Date.now() + ttlMs);
   const validationError = validatePatExpiry(newExpiresAt.toISOString(), policy);
   if (validationError) {
     return { ok: false, error: validationError };

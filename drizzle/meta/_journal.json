@@ -92,6 +92,20 @@
       "when": 1793166028343,
       "tag": "0012_backfill_audit_actor_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793166957930,
+      "tag": "0013_add_expiry_lifetime_seconds",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793166958704,
+      "tag": "0014_backfill_expiry_lifetime_seconds",
+      "breakpoints": true
     }
   ]
 }

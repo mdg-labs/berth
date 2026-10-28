@@ -282,6 +282,7 @@ export const personalAccessTokens = pgTable(
     allowPush: boolean("allow_push").notNull(),
     allRepositories: boolean("all_repositories").notNull().default(true),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
+    expiryLifetimeSeconds: bigint("expiry_lifetime_seconds", { mode: "number" }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -326,6 +327,7 @@ export const machineAccounts = pgTable(
     allowPull: boolean("allow_pull").notNull(),
     allowPush: boolean("allow_push").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
+    expiryLifetimeSeconds: bigint("expiry_lifetime_seconds", { mode: "number" }),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     createdBy: uuid("created_by").references(() => users.id, {

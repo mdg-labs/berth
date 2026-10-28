@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   computeRotatedPatExpiry,
+  expiryLifetimeSeconds,
   repositoryMeetsPatRequirements,
   validatePatCreateInput,
   validatePatExpiry,
@@ -75,49 +76,98 @@ describe("computeRotatedPatExpiry", () => {
     patMaxValidityDays: 90,
     patAllowNeverExpire: true,
   };
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  function credential(
+    createdDaysAgo: number,
+    expiresInDays: number | null,
+    lifetimeDays: number | null,
+  ) {
+    return {
+      createdAt: new Date(Date.now() - createdDaysAgo * DAY_MS),
+      expiresAt:
+        expiresInDays === null ? null : new Date(Date.now() + expiresInDays * DAY_MS),
+      expiryLifetimeSeconds: lifetimeDays === null ? null : lifetimeDays * 86400,
+    };
+  }
 
   it("keeps expiry when resetExpiry is false", () => {
-    const createdAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    const result = computeRotatedPatExpiry(createdAt, expiresAt, false, policy);
-    expect(result).toEqual({ ok: true, expiresAt });
+    const row = credential(30, 30, 60);
+    const result = computeRotatedPatExpiry(row, false, policy);
+    expect(result).toEqual({ ok: true, expiresAt: row.expiresAt });
   });
 
   it("rejects expired tokens when resetExpiry is false", () => {
-    const createdAt = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000);
-    const expiresAt = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const result = computeRotatedPatExpiry(createdAt, expiresAt, false, policy);
+    const result = computeRotatedPatExpiry(credential(120, -1, 119), false, policy);
     expect(result).toEqual({ ok: false, error: "token_expired" });
   });
 
-  it("preserves original ttl when resetExpiry is true", () => {
-    const createdAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  it("resets to now plus the stored lifetime", () => {
     const before = Date.now();
-    const result = computeRotatedPatExpiry(createdAt, expiresAt, true, policy);
+    const result = computeRotatedPatExpiry(credential(30, 30, 60), true, policy);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      const ttlMs = expiresAt.getTime() - createdAt.getTime();
-      const expectedMin = before + ttlMs;
-      const expectedMax = Date.now() + ttlMs;
-      expect(result.expiresAt?.getTime()).toBeGreaterThanOrEqual(expectedMin - 1000);
-      expect(result.expiresAt?.getTime()).toBeLessThanOrEqual(expectedMax + 1000);
+      expect(result.expiresAt?.getTime()).toBeGreaterThanOrEqual(before + 60 * DAY_MS);
+      expect(result.expiresAt?.getTime()).toBeLessThanOrEqual(Date.now() + 60 * DAY_MS);
+    }
+  });
+
+  it("ignores the age of the row when the lifetime is stored", () => {
+    const result = computeRotatedPatExpiry(credential(25, 5, 30), true, {
+      ...policy,
+      patMaxValidityDays: 30,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.expiresAt!.getTime()).toBeLessThanOrEqual(Date.now() + 30 * DAY_MS);
+    }
+  });
+
+  it("falls back to expiresAt - createdAt when no lifetime is stored", () => {
+    const before = Date.now();
+    const result = computeRotatedPatExpiry(credential(30, 30, null), true, policy);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.expiresAt?.getTime()).toBeGreaterThanOrEqual(before + 60 * DAY_MS);
     }
   });
 
   it("keeps never-expiring tokens when resetExpiry is true", () => {
-    const createdAt = new Date("2026-01-01T00:00:00.000Z");
-    const result = computeRotatedPatExpiry(createdAt, null, true, policy);
+    const result = computeRotatedPatExpiry(credential(30, null, null), true, policy);
     expect(result).toEqual({ ok: true, expiresAt: null });
   });
 
-  it("rejects ttl that exceeds policy max validity", () => {
-    const createdAt = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000);
-    const expiresAt = new Date(Date.now() + 120 * 24 * 60 * 60 * 1000);
-    const result = computeRotatedPatExpiry(createdAt, expiresAt, true, {
+  it("rejects never-expire on reset when the policy forbids it", () => {
+    const result = computeRotatedPatExpiry(credential(30, null, null), true, {
+      ...policy,
+      patAllowNeverExpire: false,
+    });
+    expect(result).toEqual({ ok: false, error: "never_expire_not_allowed" });
+  });
+
+  it("rejects a lifetime that exceeds policy max validity", () => {
+    const result = computeRotatedPatExpiry(credential(0, 120, 120), true, {
       ...policy,
       patMaxValidityDays: 30,
     });
     expect(result).toEqual({ ok: false, error: "expiry_exceeds_max" });
+  });
+});
+
+describe("expiryLifetimeSeconds", () => {
+  const from = new Date("2026-01-01T00:00:00.000Z");
+
+  it("is null for a never-expiring credential", () => {
+    expect(expiryLifetimeSeconds(null, from)).toBeNull();
+  });
+
+  it("rounds down to whole seconds", () => {
+    expect(
+      expiryLifetimeSeconds(new Date("2026-01-01T00:01:00.999Z"), from),
+    ).toBe(60);
+  });
+
+  it("never goes negative", () => {
+    expect(expiryLifetimeSeconds(new Date("2025-12-31T00:00:00.000Z"), from)).toBe(0);
   });
 });

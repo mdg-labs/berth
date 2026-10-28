@@ -45,6 +45,7 @@ import { isUuid } from "@/lib/machine-accounts/validation";
 import { getPatPolicy, PAT_LAST_USED_THROTTLE_MS } from "@/lib/pat/config";
 import {
   computeRotatedPatExpiry,
+  expiryLifetimeSeconds,
   validatePatExpiry,
   type PatValidationError,
 } from "@/lib/pat/validation";
@@ -562,6 +563,10 @@ export async function createMachineAccount(
           allowPull: input.allowPull,
           allowPush: input.allowPush,
           expiresAt: expiry.expiresAt,
+          expiryLifetimeSeconds: expiryLifetimeSeconds(
+            expiry.expiresAt,
+            new Date(),
+          ),
           createdBy: actor.id,
         })
         .returning();
@@ -696,6 +701,10 @@ export async function createHostMachineAccount(
           allowPull: true,
           allowPush: false,
           expiresAt: expiry.expiresAt,
+          expiryLifetimeSeconds: expiryLifetimeSeconds(
+            expiry.expiresAt,
+            new Date(),
+          ),
           createdBy: actor.id,
         })
         .returning();
@@ -926,6 +935,7 @@ export async function rotateMachineAccount(
           ownerRepositoryId: machineAccounts.ownerRepositoryId,
           createdAt: machineAccounts.createdAt,
           expiresAt: machineAccounts.expiresAt,
+          expiryLifetimeSeconds: machineAccounts.expiryLifetimeSeconds,
         })
         .from(machineAccounts)
         .where(
@@ -944,6 +954,7 @@ export async function rotateMachineAccount(
 
       const resetExpiry = input.resetExpiry ?? false;
       let nextExpiresAt: Date | null;
+      let nextLifetimeSeconds = account.expiryLifetimeSeconds;
       if (input.expiresAt !== undefined) {
         const error = validatePatExpiry(input.expiresAt, policy);
         if (error) {
@@ -951,10 +962,10 @@ export async function rotateMachineAccount(
         }
         nextExpiresAt =
           input.expiresAt === null ? null : new Date(input.expiresAt);
+        nextLifetimeSeconds = expiryLifetimeSeconds(nextExpiresAt, new Date());
       } else {
         const computed = computeRotatedPatExpiry(
-          account.createdAt,
-          account.expiresAt,
+          account,
           resetExpiry,
           policy,
         );
@@ -973,6 +984,7 @@ export async function rotateMachineAccount(
           tokenPrefix: secret.slice(0, MACHINE_ACCOUNT_TOKEN_PREFIX_LENGTH),
           tokenHash: hashToken(secret),
           expiresAt: nextExpiresAt,
+          expiryLifetimeSeconds: nextLifetimeSeconds,
           lastUsedAt: null,
         })
         .where(eq(machineAccounts.id, account.id));

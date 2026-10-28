@@ -39,6 +39,7 @@ const existingRow = {
   allowPush: false,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  expiryLifetimeSeconds: 30 * 24 * 60 * 60,
   lastUsedAt: null,
   revokedAt: null,
 };
@@ -91,5 +92,21 @@ describe("rotatePersonalAccessToken", () => {
     expect(sql).toContain('"personal_access_tokens"."revoked_at" is null');
     expect(sql).toContain('"personal_access_tokens"."token_hash" = $');
     expect(params).toEqual(["pat-1", "user-1", "old-hash"]);
+  });
+
+  it("resets to the stored lifetime rather than the time since creation", async () => {
+    getPatPolicyMock.mockResolvedValue({
+      patMaxValidityDays: 30,
+      patAllowNeverExpire: true,
+    });
+    const { set } = mockUpdate([]);
+
+    await rotatePersonalAccessToken("user-1", "pat-1", { resetExpiry: true });
+
+    const written = set.mock.calls[0]![0] as { expiresAt: Date };
+    expect(
+      Math.abs(written.expiresAt.getTime() - (Date.now() + 30 * 24 * 60 * 60 * 1000)),
+    ).toBeLessThan(5000);
+    expect(set.mock.calls[0]![0]).not.toHaveProperty("expiryLifetimeSeconds");
   });
 });

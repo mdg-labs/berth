@@ -12,6 +12,7 @@ export type PersonalAccessTokenSummary = {
   revokedAt: string | null;
   lastUsedAt: string | null;
   createdAt: string;
+  expiryLifetimeSeconds: number | null;
   allRepositories: boolean;
   repositoryIds: string[];
   repositoryNames: string[];
