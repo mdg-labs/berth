@@ -38,13 +38,20 @@ describe.skipIf(!databaseUrl)("purging deleted users against Postgres", () => {
   const inviteIds: string[] = [];
   const repositoryInviteIds: string[] = [];
   let originalGrace: string | undefined;
-  let originalSettingsUpdatedBy: string | null | undefined;
+  let originalSettingsUpdatedBy: string | null = null;
   let settingsRowExisted = false;
 
   beforeAll(async () => {
     originalGrace = process.env.USER_DELETE_GRACE_PERIOD_DAYS;
     process.env.USER_DELETE_GRACE_PERIOD_DAYS = "1";
     await runMigrations();
+    const [existingSettings] = await getDb()
+      .select({ updatedBy: systemSettings.updatedBy })
+      .from(systemSettings)
+      .where(eq(systemSettings.id, "default"))
+      .limit(1);
+    settingsRowExisted = Boolean(existingSettings);
+    originalSettingsUpdatedBy = existingSettings?.updatedBy ?? null;
   });
 
   afterEach(async () => {
@@ -192,13 +199,6 @@ describe.skipIf(!databaseUrl)("purging deleted users against Postgres", () => {
       allowPush: false,
     });
 
-    const [existingSettings] = await db
-      .select({ updatedBy: systemSettings.updatedBy })
-      .from(systemSettings)
-      .where(eq(systemSettings.id, "default"))
-      .limit(1);
-    settingsRowExisted = Boolean(existingSettings);
-    originalSettingsUpdatedBy = existingSettings?.updatedBy ?? null;
     await db
       .insert(systemSettings)
       .values({ id: "default", updatedBy: departing })
