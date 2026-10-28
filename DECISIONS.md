@@ -239,6 +239,16 @@ Per-file license headers on copied-in `@coss/ui` components must be verified dur
 | Existing tokens | Migration `0008` adds the column with default true; migration `0009` (a drizzle-kit custom migration, because drizzle-kit cannot generate a data step) sets it to false for every token that has at least one allowlist row. Tokens with no rows stay unrestricted. A token created as restricted whose repositories were all deleted before the migration is indistinguishable from an unrestricted one and migrates as unrestricted | No token with rows is widened and none is revoked; the one unrecoverable case has no recorded intent |
 | Token list | `GET /api/account/tokens` returns `allRepositories` per token. The account page shows "All accessible repositories" when it is true and the repository names otherwise, or "No repositories" when a restricted token has none left | A restricted token with no repositories is not shown as unrestricted |
 
+## User purge choices
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Actor retention | Every nullable `users` reference that records who did something is `ON DELETE SET NULL`: `audit_log.user_id`, `pull_events.user_id`, `repositories.created_by`, `system_settings.updated_by` (and the existing `machine_accounts.created_by`). Purging a user detaches the actor and keeps the row; the audit views already left-join `users`, so an entry reads as one with no actor | Spec §8: audit entries stay readable after the actor is gone. A foreign-key violation on purge failed every session lookup |
+| Invite inviter | `user_invites.invited_by` and `repository_invites.invited_by` are nullable with `ON DELETE SET NULL` (migration `0010` drops `NOT NULL`; no data changes). Nothing reads the column | An invite is a record of who was invited, not data owned by the inviter; cascading would delete it with the inviter |
+| Owned rows | `sessions`, `mfa_backup_codes`, `password_reset_tokens`, `repository_members` and `personal_access_tokens` keep `ON DELETE CASCADE`; they are credentials or memberships of the user and mean nothing without them. No table blocks the purge | A purged user has no sessions, tokens or memberships |
+| Repositories | A repository created by a purged user is kept with `created_by` null; it is never deleted by cascade | Repositories hold images and other members' access |
+| Purge failure | `getActiveSession` logs a failed purge (the error name and database error code, read from the wrapped driver error by walking `cause` to a bounded depth; never the message, query or parameters) and carries on with the lookup. A session whose user is past the purge deadline is rejected whether or not its deletion succeeds | A purge problem must not take every authenticated request down, nor let an expired user keep a session |
+
 ## Open (record when decided)
 
 - Exact wording for sibling-tag delete warning and other UX microcopy (Phase 8) — **resolved in P8**: sibling dialog explains tag-only removal; checkbox ack when siblings exist

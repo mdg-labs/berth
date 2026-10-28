@@ -77,7 +77,9 @@ export const repositories = pgTable("repositories", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   isPublic: boolean("is_public").notNull().default(false),
-  createdBy: uuid("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -138,9 +140,9 @@ export const userInvites = pgTable("user_invites", {
   name: varchar("name", { length: 255 }).notNull(),
   systemRole: systemRoleEnum("system_role").notNull().default("user"),
   tokenHash: text("token_hash").notNull(),
-  invitedBy: uuid("invited_by")
-    .notNull()
-    .references(() => users.id),
+  invitedBy: uuid("invited_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -155,9 +157,9 @@ export const repositoryInvites = pgTable("repository_invites", {
     .references(() => repositories.id, { onDelete: "cascade" }),
   email: varchar("email", { length: 255 }).notNull(),
   role: repositoryMemberRoleEnum("role").notNull(),
-  invitedBy: uuid("invited_by")
-    .notNull()
-    .references(() => users.id),
+  invitedBy: uuid("invited_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -168,7 +170,9 @@ export const auditLog = pgTable(
   "audit_log",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     machineAccountId: uuid("machine_account_id").references(
       () => machineAccounts.id,
       { onDelete: "set null" },
@@ -223,7 +227,9 @@ export const pullEvents = pgTable(
     imageName: varchar("image_name", { length: 255 }).notNull(),
     tagReference: varchar("tag_reference", { length: 255 }),
     digest: varchar("digest", { length: 255 }).notNull(),
-    userId: uuid("user_id").references(() => users.id),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     machineAccountId: uuid("machine_account_id").references(
       () => machineAccounts.id,
       { onDelete: "set null" },
@@ -255,7 +261,9 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-  updatedBy: uuid("updated_by").references(() => users.id),
+  updatedBy: uuid("updated_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
 });
 
 export const personalAccessTokens = pgTable(
