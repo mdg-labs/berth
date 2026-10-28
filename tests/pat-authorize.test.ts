@@ -11,6 +11,7 @@ describe("PAT scope authorization", () => {
     userId: "user-1",
     allowPull: true,
     allowPush: false,
+    allRepositories: false,
     repositoryIds: ["repo-a-id"],
   };
 
@@ -57,8 +58,29 @@ describe("PAT scope authorization", () => {
     expect(result).toEqual([]);
   });
 
-  it("allows all repositories when allowlist is empty", () => {
-    const openPat: PatContext = { ...pat, repositoryIds: [] };
+  it("grants nothing to a restricted token whose allowlist is empty", () => {
+    const emptiedPat: PatContext = { ...pat, repositoryIds: [] };
+    const result = filterAccessByPatRepositoryAllowlist(
+      [
+        {
+          type: "repository",
+          name: "repo-b/image",
+          actions: ["pull", "push"],
+        },
+      ],
+      emptiedPat,
+      repositoryNameToId,
+    );
+
+    expect(result).toEqual([]);
+  });
+
+  it("allows all repositories for an unrestricted token", () => {
+    const openPat: PatContext = {
+      ...pat,
+      allRepositories: true,
+      repositoryIds: [],
+    };
     const result = filterAccessByPatRepositoryAllowlist(
       [
         {

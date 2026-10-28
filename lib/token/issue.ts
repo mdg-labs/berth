@@ -2,6 +2,7 @@
 
 import { SignJWT } from "jose";
 
+import { MACHINE_ACCOUNT_CLAIM } from "./claims";
 import { getTokenIssuer, getTokenTtlSeconds } from "./config";
 import { getSigningCertDer, getSigningPrivateKey } from "./keys";
 import type { RegistryAccess } from "./scope";
@@ -12,17 +13,27 @@ export type IssuedRegistryToken = {
   issuedAt: string;
 };
 
+export type RegistryTokenOptions = {
+  machineAccountId?: string;
+};
+
 export async function issueRegistryToken(
   subject: string,
   service: string,
   access: RegistryAccess[],
+  options: RegistryTokenOptions = {},
 ): Promise<IssuedRegistryToken> {
   const ttlSeconds = getTokenTtlSeconds();
   const now = Math.floor(Date.now() / 1000);
   const privateKey = await getSigningPrivateKey();
   const x5c = getSigningCertDer();
 
-  const token = await new SignJWT({ access })
+  const token = await new SignJWT({
+    access,
+    ...(options.machineAccountId
+      ? { [MACHINE_ACCOUNT_CLAIM]: options.machineAccountId }
+      : {}),
+  })
     .setProtectedHeader({ alg: "RS256", typ: "JWT", x5c: [x5c] })
     .setIssuer(getTokenIssuer())
     .setSubject(subject)

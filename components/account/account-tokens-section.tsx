@@ -7,6 +7,7 @@ import { CopyIcon, KeyRoundIcon, PlusIcon, RotateCwIcon, Trash2Icon } from "luci
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
+import { latestPatExpiryDate, resolvePatExpiry } from "@/components/account/pat-expiry";
 import { useAuthUser } from "@/components/providers/auth-guard";
 import { ErrorAlert } from "@/components/catalog/error-alert";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +52,7 @@ import {
 import { toastManager } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/api/client";
 import { formatApiError } from "@/lib/i18n/api-error";
+import { previewResetExpiry } from "@/lib/pat/expiry-reset";
 
 type TokenSummary = {
   id: string;
@@ -62,6 +64,8 @@ type TokenSummary = {
   revokedAt: string | null;
   lastUsedAt: string | null;
   createdAt: string;
+  expiryLifetimeSeconds: number | null;
+  allRepositories: boolean;
   repositoryIds: string[];
   repositoryNames: string[];
 };
@@ -99,12 +103,7 @@ function isTokenExpired(token: TokenSummary): boolean {
 }
 
 function computeRotatedExpiryPreview(token: TokenSummary): string | null {
-  if (!token.expiresAt) {
-    return null;
-  }
-  const ttlMs =
-    new Date(token.expiresAt).getTime() - new Date(token.createdAt).getTime();
-  return new Date(Date.now() + Math.max(ttlMs, 0)).toLocaleString();
+  return previewResetExpiry(token, Date.now())?.toLocaleString() ?? null;
 }
 
 export function AccountTokensSection() {
@@ -137,9 +136,7 @@ export function AccountTokensSection() {
     if (maxDays === null || maxDays === undefined) {
       return undefined;
     }
-    const date = new Date();
-    date.setDate(date.getDate() + maxDays);
-    return date.toISOString().slice(0, 10);
+    return latestPatExpiryDate(Date.now(), maxDays);
   }, [tokensQuery.data?.policy.patMaxValidityDays]);
 
   const minExpiryDate = useMemo(() => {
@@ -162,7 +159,11 @@ export function AccountTokensSection() {
     mutationFn: () => {
       let parsedExpiresAt: string | null = null;
       if (expiryMode === "custom" && expiresAt) {
-        parsedExpiresAt = new Date(`${expiresAt}T23:59:59.999Z`).toISOString();
+        parsedExpiresAt = resolvePatExpiry(
+          expiresAt,
+          Date.now(),
+          tokensQuery.data?.policy.patMaxValidityDays ?? null,
+        );
       }
 
       return apiFetch<CreateTokenResponse>("/api/account/tokens", {
@@ -333,9 +334,11 @@ export function AccountTokensSection() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {token.repositoryNames.length > 0
-                        ? token.repositoryNames.join(", ")
-                        : t("allRepositories")}
+                      {token.allRepositories
+                        ? t("allRepositories")
+                        : token.repositoryNames.length > 0
+                          ? token.repositoryNames.join(", ")
+                          : t("noRepositories")}
                     </TableCell>
                     <TableCell>
                       {token.revokedAt

@@ -1,21 +1,41 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
+import { sql } from "drizzle-orm";
+
 import { getDb } from "@/lib/db";
-import { auditLog } from "@/lib/db/schema";
+import { auditLog, users } from "@/lib/db/schema";
 
 import type { AuditAction } from "./actions";
 
-export async function writeAuditLog(params: {
-  userId: string | null;
-  action: AuditAction | string;
-  resource: string;
-  repositoryId?: string | null;
-  metadata?: Record<string, unknown> | null;
-  clientIp?: string | null;
-}): Promise<void> {
-  const db = getDb();
-  await db.insert(auditLog).values({
+export function actorSnapshot(userId: string | null) {
+  if (userId === null) {
+    return { actorEmail: null, actorName: null };
+  }
+
+  return {
+    actorEmail: sql<string>`(select ${users.email} from ${users} where ${users.id} = ${userId}::uuid)`,
+    actorName: sql<string>`(select ${users.name} from ${users} where ${users.id} = ${userId}::uuid)`,
+  };
+}
+
+export type AuditExecutor = Pick<ReturnType<typeof getDb>, "insert">;
+
+export async function writeAuditLog(
+  params: {
+    userId: string | null;
+    machineAccountId?: string | null;
+    action: AuditAction | string;
+    resource: string;
+    repositoryId?: string | null;
+    metadata?: Record<string, unknown> | null;
+    clientIp?: string | null;
+  },
+  executor: AuditExecutor = getDb(),
+): Promise<void> {
+  await executor.insert(auditLog).values({
     userId: params.userId,
+    ...actorSnapshot(params.userId),
+    machineAccountId: params.machineAccountId ?? null,
     repositoryId: params.repositoryId ?? null,
     action: params.action,
     resource: params.resource,

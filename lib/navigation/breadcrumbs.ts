@@ -10,6 +10,7 @@ export type NavigationTranslator = (
     | "images"
     | "admin"
     | "users"
+    | "machineAccounts"
     | "garbageCollection"
     | "auditLog"
     | "profile"
@@ -155,6 +156,11 @@ export function buildBreadcrumbItems(
     if (segments[1] === "users" && segments[2]) {
       items.push({ label: t("users"), href: "/admin" });
       items.push({ label: decodeURIComponent(segments[2]) });
+      return items;
+    }
+
+    if (segments[1] === "machine-accounts") {
+      items.push({ label: t("machineAccounts") });
       return items;
     }
 

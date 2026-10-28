@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Michael David Guggenbichler | MDG-Labs, licensed under Apache-2.0 — see LICENSE
 
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -11,6 +12,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -75,7 +77,9 @@ export const repositories = pgTable("repositories", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   isPublic: boolean("is_public").notNull().default(false),
-  createdBy: uuid("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -136,9 +140,9 @@ export const userInvites = pgTable("user_invites", {
   name: varchar("name", { length: 255 }).notNull(),
   systemRole: systemRoleEnum("system_role").notNull().default("user"),
   tokenHash: text("token_hash").notNull(),
-  invitedBy: uuid("invited_by")
-    .notNull()
-    .references(() => users.id),
+  invitedBy: uuid("invited_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -153,9 +157,9 @@ export const repositoryInvites = pgTable("repository_invites", {
     .references(() => repositories.id, { onDelete: "cascade" }),
   email: varchar("email", { length: 255 }).notNull(),
   role: repositoryMemberRoleEnum("role").notNull(),
-  invitedBy: uuid("invited_by")
-    .notNull()
-    .references(() => users.id),
+  invitedBy: uuid("invited_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -166,7 +170,15 @@ export const auditLog = pgTable(
   "audit_log",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    actorEmail: varchar("actor_email", { length: 255 }),
+    actorName: varchar("actor_name", { length: 255 }),
+    machineAccountId: uuid("machine_account_id").references(
+      () => machineAccounts.id,
+      { onDelete: "set null" },
+    ),
     repositoryId: uuid("repository_id").references(() => repositories.id, {
       onDelete: "set null",
     }),
@@ -217,7 +229,13 @@ export const pullEvents = pgTable(
     imageName: varchar("image_name", { length: 255 }).notNull(),
     tagReference: varchar("tag_reference", { length: 255 }),
     digest: varchar("digest", { length: 255 }).notNull(),
-    userId: uuid("user_id").references(() => users.id),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    machineAccountId: uuid("machine_account_id").references(
+      () => machineAccounts.id,
+      { onDelete: "set null" },
+    ),
     anonymous: boolean("anonymous").notNull().default(false),
     pulledAt: timestamp("pulled_at", { withTimezone: true })
       .notNull()
@@ -245,7 +263,9 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-  updatedBy: uuid("updated_by").references(() => users.id),
+  updatedBy: uuid("updated_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
 });
 
 export const personalAccessTokens = pgTable(
@@ -260,7 +280,9 @@ export const personalAccessTokens = pgTable(
     tokenHash: text("token_hash").notNull(),
     allowPull: boolean("allow_pull").notNull(),
     allowPush: boolean("allow_push").notNull(),
+    allRepositories: boolean("all_repositories").notNull().default(true),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
+    expiryLifetimeSeconds: bigint("expiry_lifetime_seconds", { mode: "number" }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -287,6 +309,61 @@ export const personalAccessTokenRepositories = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.tokenId, table.repositoryId] }),
+  }),
+);
+
+export const machineAccounts = pgTable(
+  "machine_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerRepositoryId: uuid("owner_repository_id").references(
+      () => repositories.id,
+      { onDelete: "cascade" },
+    ),
+    name: varchar("name", { length: 63 }).notNull(),
+    description: varchar("description", { length: 255 }),
+    tokenPrefix: varchar("token_prefix", { length: 12 }).notNull(),
+    tokenHash: text("token_hash").notNull(),
+    allowPull: boolean("allow_pull").notNull(),
+    allowPush: boolean("allow_push").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    expiryLifetimeSeconds: bigint("expiry_lifetime_seconds", { mode: "number" }),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    tokenHashIdx: uniqueIndex("machine_accounts_token_hash_idx").on(
+      table.tokenHash,
+    ),
+    ownerRepositoryNameIdx: uniqueIndex(
+      "machine_accounts_owner_repository_name_idx",
+    ).on(table.ownerRepositoryId, table.name),
+    hostNameIdx: uniqueIndex("machine_accounts_host_name_idx")
+      .on(table.name)
+      .where(sql`${table.ownerRepositoryId} is null`),
+  }),
+);
+
+export const machineAccountRepositories = pgTable(
+  "machine_account_repositories",
+  {
+    machineAccountId: uuid("machine_account_id")
+      .notNull()
+      .references(() => machineAccounts.id, { onDelete: "cascade" }),
+    repositoryId: uuid("repository_id")
+      .notNull()
+      .references(() => repositories.id, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({
+      columns: [table.machineAccountId, table.repositoryId],
+    }),
   }),
 );
 

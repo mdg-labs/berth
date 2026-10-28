@@ -100,6 +100,19 @@ describe("bulk-delete route validation", () => {
     expect(mocks.bulkDeleteTags).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["null", null],
+    ["an array", ["a"]],
+    ["a string", "a"],
+    ["a number", 1],
+    ["a boolean", true],
+  ])("rejects a %s body with 400 and deletes nothing", async (_label, body) => {
+    const response = await post(body);
+
+    expect(response.status).toBe(400);
+    expect(mocks.bulkDeleteTags).not.toHaveBeenCalled();
+  });
+
   it("passes strings and objects through as normalized items", async () => {
     const response = await post({
       tags: ["dev", { name: "sha256:abc", isUntagged: true }, { name: "v1" }],

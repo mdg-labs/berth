@@ -72,6 +72,129 @@
       "inviteRemoveError": "Failed to remove invite"
     }
   },
+  "machineAccounts": {
+    "title": "Machine accounts",
+    "description": "Credentials for CI pipelines to pull or push this repository's images with docker login, without a personal login.",
+    "create": "Create machine account",
+    "empty": {
+      "title": "No machine accounts yet",
+      "description": "Create one to let a CI pipeline log in to this repository."
+    },
+    "table": {
+      "name": "Name",
+      "username": "Username",
+      "description": "Description",
+      "permissions": "Permissions",
+      "createdBy": "Created by",
+      "createdAt": "Created",
+      "actions": "Actions",
+      "expires": "Expires",
+      "lastUsed": "Last used"
+    },
+    "permission": {
+      "pull": "Pull",
+      "push": "Push"
+    },
+    "deletedUser": "Deleted user",
+    "managedBySystem": "Managed by system admins",
+    "deleteAccount": "Delete machine account {name}",
+    "createDialog": {
+      "title": "Create machine account",
+      "description": "The secret is shown once after creation.",
+      "name": "Name",
+      "nameHint": "Lowercase letters, digits and hyphens, 2 to 63 characters, starting with a letter.",
+      "descriptionLabel": "Description (optional)",
+      "permissions": "Permissions",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "errorTitle": "Failed to create machine account",
+      "errors": {
+        "nameInvalid": "Use 2 to 63 lowercase letters, digits and hyphens, starting with a letter.",
+        "nameTaken": "This name is already used by another machine account in this repository.",
+        "permissionRequired": "Select at least one permission."
+      }
+    },
+    "createdDialog": {
+      "title": "Machine account created",
+      "description": "Use the secret below to log in as {name}.",
+      "warningTitle": "You won't see this secret again",
+      "warningDescription": "Copy it now and store it in your CI secret store. If you lose it, rotate the secret to get a new one.",
+      "secret": "Secret",
+      "copySecret": "Copy secret",
+      "secretCopied": "Secret copied",
+      "command": "Login command",
+      "copyCommand": "Copy login command",
+      "commandCopied": "Login command copied",
+      "commandHint": "The username {username} is informational; the secret alone identifies the account.",
+      "copyFailed": "Could not copy",
+      "copyFailedDescription": "Select the text and copy it manually.",
+      "done": "Done"
+    },
+    "deleteDialog": {
+      "title": "Delete machine account {name}?",
+      "description": "Anything logging in as {username} stops working immediately. This cannot be undone.",
+      "confirm": "Delete"
+    },
+    "toast": {
+      "deleted": "Machine account deleted",
+      "deleteError": "Failed to delete machine account",
+      "updated": "Machine account updated",
+      "disabled": "Machine account disabled",
+      "enabled": "Machine account enabled",
+      "disableError": "Failed to disable machine account",
+      "enableError": "Failed to enable machine account"
+    },
+    "status": {
+      "disabled": "Disabled",
+      "expired": "Expired",
+      "never": "Never",
+      "neverUsed": "Never used"
+    },
+    "editAccount": "Edit machine account {name}",
+    "rotateAccount": "Rotate secret of machine account {name}",
+    "disableAccount": "Disable machine account {name}",
+    "enableAccount": "Enable machine account {name}",
+    "expiry": {
+      "label": "Expiration",
+      "never": "Never expires",
+      "custom": "Expires on a date",
+      "date": "Expiration date",
+      "invalid": "Choose an expiration date within the limit set by your administrator.",
+      "maxValidityHint": "Your administrator limits the validity to {days} days."
+    },
+    "rotateDialog": {
+      "title": "Rotate secret of {name}",
+      "description": "Creates a new secret for {username}.",
+      "warning": "The current secret stops working immediately. Update every pipeline or host that uses it.",
+      "expiryMode": "Expiration",
+      "keepExpiry": "Keep the current expiration ({date})",
+      "keepNoExpiry": "Keep it without an expiration",
+      "newExpiry": "Set a new expiration",
+      "expiredHint": "This account has expired. Set a new expiration to rotate it.",
+      "cancel": "Cancel",
+      "submit": "Rotate secret",
+      "errorTitle": "Failed to rotate the secret",
+      "doneTitle": "Secret rotated",
+      "doneDescription": "Use the new secret below to log in as {name}."
+    },
+    "editDialog": {
+      "title": "Edit {name}",
+      "description": "The name, permissions and secret stay the same.",
+      "cancel": "Cancel",
+      "submit": "Save",
+      "errorTitle": "Failed to update machine account"
+    },
+    "disableDialog": {
+      "title": "Disable machine account {name}?",
+      "description": "Logins as {username} fail until you enable it again. Registry tokens already issued stay valid until they expire.",
+      "confirm": "Disable"
+    },
+    "enableDialog": {
+      "title": "Enable machine account {name}?",
+      "description": "The secret of {username} works again.",
+      "confirm": "Enable"
+    }
+  },
   "rolesMatrix": {
     "title": "Role permissions",
     "description": "What each repository role can do in this registry.",

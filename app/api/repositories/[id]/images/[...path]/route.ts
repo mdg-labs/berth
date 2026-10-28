@@ -355,12 +355,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return apiError("bad_request", "Invalid bulk-delete API path", 400);
   }
 
-  let body: BulkDeleteBody;
+  let parsedBody: unknown;
   try {
-    body = (await request.json()) as BulkDeleteBody;
+    parsedBody = await request.json();
   } catch {
     return apiError("bad_request", "Invalid JSON body", 400);
   }
+
+  if (
+    typeof parsedBody !== "object" ||
+    parsedBody === null ||
+    Array.isArray(parsedBody)
+  ) {
+    return apiError("bad_request", "Invalid JSON body", 400);
+  }
+  const body = parsedBody as BulkDeleteBody;
 
   if (!Array.isArray(body.tags) || body.tags.length === 0) {
     return apiError("bad_request", "At least one tag is required", 400);

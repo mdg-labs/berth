@@ -162,6 +162,7 @@ describe("token authorization", () => {
         userId: "u1",
         allowPull: true,
         allowPush: false,
+        allRepositories: true,
         repositoryIds: [],
       },
     );
@@ -169,6 +170,56 @@ describe("token authorization", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.access[0]?.actions).toEqual(["pull"]);
+    }
+  });
+
+  it("denies an admin's restricted token whose allowlist was emptied", async () => {
+    findMissingRepositoriesMock.mockResolvedValue([]);
+
+    const result = await authorizeTokenAccess(
+      { id: "admin", email: "admin@localhost", systemRole: "admin" },
+      [{ type: "repository", name: "repo-b/image", actions: ["pull"] }],
+      {
+        id: "pat-1",
+        userId: "admin",
+        allowPull: true,
+        allowPush: true,
+        allRepositories: false,
+        repositoryIds: [],
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("forbidden");
+    }
+  });
+
+  it("denies a member's restricted token whose allowlist was emptied", async () => {
+    findMissingRepositoriesMock.mockResolvedValue([]);
+    getRepositoryByNameMock.mockResolvedValue({
+      id: "p1",
+      name: "proj",
+      isPublic: false,
+    });
+    getEffectiveRepositoryRoleMock.mockResolvedValue("maintainer");
+
+    const result = await authorizeTokenAccess(
+      { id: "u1", email: "maint@example.com", systemRole: "user" },
+      [{ type: "repository", name: "proj/repo", actions: ["pull", "push"] }],
+      {
+        id: "pat-1",
+        userId: "u1",
+        allowPull: true,
+        allowPush: true,
+        allRepositories: false,
+        repositoryIds: [],
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("forbidden");
     }
   });
 

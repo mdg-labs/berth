@@ -66,15 +66,22 @@ async function collectRevisionDigests(manifestsPath: string): Promise<Set<string
   return digests;
 }
 
-async function collectTaggedDigests(manifestsPath: string): Promise<Set<string>> {
+/**
+ * Returns null when the tags directory exists but cannot be listed, or when
+ * any tag's current link cannot be read or is malformed, since the manifest
+ * a tag points to cannot then be ruled out.
+ */
+async function collectTaggedDigests(
+  manifestsPath: string,
+): Promise<Set<string> | null> {
   const digests = new Set<string>();
   const tagsPath = path.join(manifestsPath, TAGS_DIR);
 
   let tagEntries;
   try {
     tagEntries = await readdir(tagsPath, { withFileTypes: true });
-  } catch {
-    return digests;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT" ? digests : null;
   }
 
   for (const tagEntry of tagEntries) {
@@ -84,9 +91,10 @@ async function collectTaggedDigests(manifestsPath: string): Promise<Set<string>>
 
     const linkPath = path.join(tagsPath, tagEntry.name, CURRENT_LINK);
     const digest = await readDigestFromLink(linkPath);
-    if (digest) {
-      digests.add(digest);
+    if (!digest) {
+      return null;
     }
+    digests.add(digest);
   }
 
   return digests;
@@ -187,6 +195,10 @@ export async function listUntaggedDigests(fullImageName: string): Promise<string
     collectRevisionDigests(manifestsPath),
     collectTaggedDigests(manifestsPath),
   ]);
+
+  if (!taggedDigests) {
+    return [];
+  }
 
   const referencedDigests = await collectReferencedDigests(taggedDigests);
   if (!referencedDigests) {

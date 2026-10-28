@@ -9,6 +9,7 @@
   "settings": "Repository settings",
   "imageSettings": "Settings",
   "users": "Users",
+  "machineAccounts": "Machine accounts",
   "garbageCollection": "Garbage collection",
   "systemSettings": "System settings",
   "auditLog": "Audit log",

@@ -4,6 +4,7 @@
 
 import { useTranslations } from "next-intl";
 import {
+  BotIcon,
   ClipboardListIcon,
   FolderKanbanIcon,
   PackageIcon,
@@ -64,6 +65,7 @@ export function PortalSidebar() {
     repositoryPath && pathname === `${repositoryPath}/settings`,
   );
   const isAdminUsersActive = pathname === "/admin";
+  const isAdminMachineAccountsActive = pathname === "/admin/machine-accounts";
   const isAdminGcActive = pathname === "/admin/gc";
   const isAdminSettingsActive = pathname === "/admin/settings";
   const isAdminAuditActive = pathname === "/admin/audit";
@@ -147,6 +149,16 @@ export function PortalSidebar() {
                   >
                     <UsersIcon />
                     <span>{t("users")}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={isAdminMachineAccountsActive}
+                    render={<Link href="/admin/machine-accounts" />}
+                    tooltip={t("machineAccounts")}
+                  >
+                    <BotIcon />
+                    <span>{t("machineAccounts")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

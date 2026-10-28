@@ -49,7 +49,7 @@ export function filterAccessByPatRepositoryAllowlist(
 ): RegistryAccess[] {
   let scoped = access;
 
-  if (pat.repositoryIds.length > 0) {
+  if (!pat.allRepositories) {
     const allowlist = new Set(pat.repositoryIds);
     scoped = access.filter((entry) => {
       if (entry.type !== "repository") {

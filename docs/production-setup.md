@@ -66,8 +66,9 @@ Keep secrets **outside** the git clone:
 Clone the repository:
 
 ```bash
-sudo mkdir -p /opt/berth/secrets
+sudo mkdir -p /opt/berth
 sudo chown "$USER:$USER" /opt/berth
+mkdir -p /opt/berth/secrets
 git clone https://github.com/mdg-labs/berth.git /opt/berth/repo
 cd /opt/berth/repo
 ```
@@ -361,9 +362,13 @@ Pushing to a project that does not exist returns **403** — create the project 
 | HTTPS works but `docker login` fails | Align `APP_URL`, `REGISTRY_AUTH_TOKEN_REALM`, and `config.yml` realm |
 | Token / 401 errors on push | Signing key must match `rootcert.pem` — see [Key rotation](key-rotation.md) |
 | Push returns 403 | Create the project in the portal; check RBAC |
-| Wrong client IP in audit log | Ensure the edge proxy overwrites `X-Forwarded-For` (nginx: `$remote_addr`) and sets `X-Real-IP` |
+| Wrong client IP in audit log | Set `TRUSTED_PROXY_HOPS` to the number of proxies in front of the app (default `1`) — see [Client IP behind a proxy](#client-ip-behind-a-proxy) |
 
 ## Optional configuration
+
+### Client IP behind a proxy
+
+Per-IP rate limits and audit entries use the client address from `X-Forwarded-For`, taken `TRUSTED_PROXY_HOPS` entries from the right. The default `1` matches the single nginx or Caddy edge proxy in this guide; entries a client sends before it are ignored. When a second proxy (for example a CDN) sits in front of nginx, add `TRUSTED_PROXY_HOPS: "2"` under the `app` environment in `compose.prod.yml` and make nginx append to `X-Forwarded-For` (`$proxy_add_x_forwarded_for`) instead of overwriting it; only the outermost proxy may overwrite. Alternatively, for a single edge proxy that overwrites `X-Real-IP` with the connecting address (the nginx example, but not the Caddy example unless you add `header_up X-Real-IP {remote_host}`, and not nginx behind a CDN), set `TRUSTED_PROXY_HEADER: "x-real-ip"` to read `X-Real-IP` instead. Details: [TLS](tls.md).
 
 ### OIDC
 

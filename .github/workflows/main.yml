@@ -18,6 +18,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Test release-exists.sh
+        run: .github/scripts/release-exists.test.sh
+
       - name: Detect version bump
         id: version
         env:
@@ -46,15 +49,22 @@ jobs:
           fi
 
           TAG="v${CURRENT}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
+          EXISTS=0
+          .github/scripts/release-exists.sh "$TAG" || EXISTS=$?
+          if [ "$EXISTS" -eq 10 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "Release ${TAG} already exists"
             exit 0
+          elif [ "$EXISTS" -ne 0 ]; then
+            echo "Could not determine whether release ${TAG} exists" >&2
+            exit 1
           fi
 
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "version=${CURRENT}" >> "$GITHUB_OUTPUT"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          {
+            echo "skip=false"
+            echo "version=${CURRENT}"
+            echo "tag=${TAG}"
+          } >> "$GITHUB_OUTPUT"
           echo "Version bumped: ${PREVIOUS:-<none>} -> ${CURRENT}"
 
       - name: Generate release notes

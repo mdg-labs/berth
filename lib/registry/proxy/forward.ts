@@ -79,17 +79,21 @@ function copyResponseHeaders(
 async function validateBearerIfPresent(
   request: NextRequest,
 ): Promise<
-  | { ok: true; subject: string | null }
+  | { ok: true; subject: string | null; machineAccountId: string | null }
   | { ok: false; response: NextResponse }
 > {
   const bearer = extractBearerToken(request.headers.get("authorization"));
   if (!bearer) {
-    return { ok: true, subject: null };
+    return { ok: true, subject: null, machineAccountId: null };
   }
 
   const verified = await verifyRegistryBearerToken(bearer);
   if (verified.ok) {
-    return { ok: true, subject: verified.subject };
+    return {
+      ok: true,
+      subject: verified.subject,
+      machineAccountId: verified.machineAccountId ?? null,
+    };
   }
 
   const service = getTokenService();
@@ -110,6 +114,7 @@ function maybeRecordManifestPull(
   request: NextRequest,
   upstream: Response,
   tokenSubject: string | null,
+  machineAccountId: string | null,
 ): void {
   if (
     (request.method !== "GET" && request.method !== "HEAD") ||
@@ -132,6 +137,7 @@ function maybeRecordManifestPull(
     isDigestReference: parsed.isDigestReference,
     digest,
     tokenSubject,
+    machineAccountId,
   });
 }
 
@@ -167,12 +173,18 @@ export async function proxyRegistryRequest(
     const upstream = await fetch(url, init);
     const responseHeaders = copyResponseHeaders(upstream, publicOrigin);
 
-    maybeRecordManifestPull(request, upstream, auth.subject);
+    maybeRecordManifestPull(
+      request,
+      upstream,
+      auth.subject,
+      auth.machineAccountId,
+    );
 
     scheduleManifestPushRecording({
       request,
       upstreamStatus: upstream.status,
       tokenSubject: auth.subject,
+      machineAccountId: auth.machineAccountId,
       digest: upstream.headers.get("docker-content-digest"),
     });
 

@@ -10,11 +10,12 @@ import {
   ilike,
   lte,
   or,
+  sql,
 } from "drizzle-orm";
 
 import { AUDIT_ACTIONS } from "@/lib/audit/actions";
 import { getDb } from "@/lib/db";
-import { auditLog, users } from "@/lib/db/schema";
+import { auditLog, machineAccounts, users } from "@/lib/db/schema";
 
 export type AuditLogSort =
   | "created_at_asc"
@@ -39,6 +40,13 @@ export type AuditLogQuery = {
   repositoryId?: string;
 };
 
+export type AuditLogMachineActor = {
+  id: string;
+  name: string | null;
+  kind: "repository" | "host" | null;
+  deleted: boolean;
+};
+
 export type AuditLogEntry = {
   id: string;
   createdAt: string;
@@ -50,6 +58,8 @@ export type AuditLogEntry = {
     userId: string | null;
     email: string | null;
     name: string | null;
+    deletedUser: boolean;
+    machineAccount: AuditLogMachineActor | null;
   };
   repositoryId: string | null;
 };
@@ -99,6 +109,18 @@ export function parseAuditLogQuery(
   return { page, pageSize, sort, search, action, actor, resource, from, to };
 }
 
+const actorEmail = sql<string | null>`coalesce(${users.email}, ${auditLog.actorEmail})`;
+const actorName = sql<string | null>`coalesce(${users.name}, ${auditLog.actorName})`;
+
+const metadataMachineAccountName = sql`${auditLog.metadata} -> 'machineAccount' ->> 'name'`;
+
+function machineActorMatches(pattern: string) {
+  return or(
+    ilike(machineAccounts.name, pattern),
+    ilike(metadataMachineAccountName, pattern),
+  )!;
+}
+
 function buildWhereConditions(query: AuditLogQuery) {
   const conditions = [];
 
@@ -113,7 +135,11 @@ function buildWhereConditions(query: AuditLogQuery) {
   if (query.actor) {
     const pattern = `%${query.actor}%`;
     conditions.push(
-      or(ilike(users.email, pattern), ilike(users.name, pattern))!,
+      or(
+        ilike(actorEmail, pattern),
+        ilike(actorName, pattern),
+        machineActorMatches(pattern),
+      )!,
     );
   }
 
@@ -127,8 +153,9 @@ function buildWhereConditions(query: AuditLogQuery) {
       or(
         ilike(auditLog.action, pattern),
         ilike(auditLog.resource, pattern),
-        ilike(users.email, pattern),
-        ilike(users.name, pattern),
+        ilike(actorEmail, pattern),
+        ilike(actorName, pattern),
+        machineActorMatches(pattern),
       )!,
     );
   }
@@ -150,6 +177,8 @@ function buildWhereConditions(query: AuditLogQuery) {
   return conditions.length > 0 ? and(...conditions) : undefined;
 }
 
+const actorSortKey = sql`coalesce(${users.email}, ${auditLog.actorEmail}, ${machineAccounts.name}, ${metadataMachineAccountName})`;
+
 function buildOrderBy(sort: AuditLogSort) {
   switch (sort) {
     case "created_at_asc":
@@ -159,9 +188,9 @@ function buildOrderBy(sort: AuditLogSort) {
     case "action_desc":
       return desc(auditLog.action);
     case "actor_asc":
-      return asc(users.email);
+      return asc(actorSortKey);
     case "actor_desc":
-      return desc(users.email);
+      return desc(actorSortKey);
     case "resource_asc":
       return asc(auditLog.resource);
     case "resource_desc":
@@ -183,23 +212,71 @@ function toEntry(row: {
   userId: string | null;
   actorEmail: string | null;
   actorName: string | null;
+  machineAccountId: string | null;
+  machineAccountName: string | null;
+  machineAccountOwnerRepositoryId: string | null;
 }): AuditLogEntry {
+  const metadata =
+    row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
+      : null;
+
   return {
     id: row.id,
     createdAt: row.createdAt.toISOString(),
     action: row.action,
     resource: row.resource,
     clientIp: row.clientIp,
-    metadata:
-      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
-        ? (row.metadata as Record<string, unknown>)
-        : null,
+    metadata,
     repositoryId: row.repositoryId,
     actor: {
       userId: row.userId,
       email: row.actorEmail,
       name: row.actorName,
+      deletedUser: row.userId === null && row.actorEmail !== null,
+      machineAccount: toMachineActor(row, metadata),
     },
+  };
+}
+
+function toMachineActor(
+  row: {
+    userId: string | null;
+    machineAccountId: string | null;
+    machineAccountName: string | null;
+    machineAccountOwnerRepositoryId: string | null;
+  },
+  metadata: Record<string, unknown> | null,
+): AuditLogMachineActor | null {
+  if (row.machineAccountId) {
+    return {
+      id: row.machineAccountId,
+      name: row.machineAccountName,
+      kind: row.machineAccountOwnerRepositoryId ? "repository" : "host",
+      deleted: false,
+    };
+  }
+
+  const snapshot = metadata?.machineAccount;
+  if (
+    row.userId !== null ||
+    !snapshot ||
+    typeof snapshot !== "object" ||
+    Array.isArray(snapshot)
+  ) {
+    return null;
+  }
+
+  const { id, name, kind } = snapshot as Record<string, unknown>;
+  if (typeof id !== "string") {
+    return null;
+  }
+
+  return {
+    id,
+    name: typeof name === "string" ? name : null,
+    kind: kind === "repository" || kind === "host" ? kind : null,
+    deleted: true,
   };
 }
 
@@ -223,16 +300,21 @@ export async function listAuditLog(
       metadata: auditLog.metadata,
       repositoryId: auditLog.repositoryId,
       userId: auditLog.userId,
-      actorEmail: users.email,
-      actorName: users.name,
+      actorEmail,
+      actorName,
+      machineAccountId: machineAccounts.id,
+      machineAccountName: machineAccounts.name,
+      machineAccountOwnerRepositoryId: machineAccounts.ownerRepositoryId,
     })
     .from(auditLog)
-    .leftJoin(users, eq(auditLog.userId, users.id));
+    .leftJoin(users, eq(auditLog.userId, users.id))
+    .leftJoin(machineAccounts, eq(auditLog.machineAccountId, machineAccounts.id));
 
   const countQuery = db
     .select({ total: count() })
     .from(auditLog)
-    .leftJoin(users, eq(auditLog.userId, users.id));
+    .leftJoin(users, eq(auditLog.userId, users.id))
+    .leftJoin(machineAccounts, eq(auditLog.machineAccountId, machineAccounts.id));
 
   const [rows, [countRow], actionRows] = await Promise.all([
     baseQuery

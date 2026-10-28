@@ -4,6 +4,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 
 import { getDb } from "@/lib/db";
 import { sessions, users } from "@/lib/db/schema";
+import { isPastPurgeDeadline } from "@/lib/users/config";
 import { purgeExpiredDeletedUsers } from "@/lib/users/lifecycle";
 import { getUserDeletionState } from "@/lib/users/presentation";
 
@@ -57,10 +58,37 @@ export async function revokeAllSessionsForUser(userId: string): Promise<void> {
     .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
 }
 
+const MAX_CAUSE_DEPTH = 5;
+
+// Drizzle wraps a failed query in an error whose `cause` is the driver error
+// that carries the database code, so the chain is walked (bounded, in case of
+// a cycle). Only the error name and the code are read; never the message,
+// query or parameters.
+function logPurgeFailure(error: unknown): void {
+  let name = error instanceof Error ? error.name : typeof error;
+  let code: string | undefined;
+  let current: unknown = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
+    if (typeof current !== "object" || current === null) break;
+    const candidate = (current as { code?: unknown }).code;
+    if (typeof candidate === "string" || typeof candidate === "number") {
+      code = String(candidate);
+      if (current instanceof Error) name = current.name;
+      break;
+    }
+    current = (current as { cause?: unknown }).cause;
+  }
+  console.error("Failed to purge expired deleted users", { name, code });
+}
+
 export async function getActiveSession(
   sessionId: string,
 ): Promise<SessionUser | null> {
-  await purgeExpiredDeletedUsers();
+  try {
+    await purgeExpiredDeletedUsers();
+  } catch (error) {
+    logPurgeFailure(error);
+  }
 
   const db = getDb();
   const now = new Date();
@@ -92,15 +120,17 @@ export async function getActiveSession(
     return null;
   }
 
-  const deletion = getUserDeletionState(row.deletedAt);
-  if (deletion.status === "pending_deletion" && deletion.purgesAt) {
-    const purgesAt = new Date(deletion.purgesAt);
-    if (purgesAt.getTime() <= now.getTime()) {
-      const { hardDeleteUser } = await import("@/lib/users/lifecycle");
+  if (row.deletedAt && isPastPurgeDeadline(row.deletedAt, now)) {
+    const { hardDeleteUser } = await import("@/lib/users/lifecycle");
+    try {
       await hardDeleteUser(row.userId);
-      return null;
+    } catch (error) {
+      logPurgeFailure(error);
     }
+    return null;
   }
+
+  const deletion = getUserDeletionState(row.deletedAt);
 
   return {
     id: row.userId,

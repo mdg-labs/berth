@@ -25,7 +25,7 @@ See [Key rotation](key-rotation.md) for signing key delivery and [Install](insta
 
 - [ ] Only **app** (or TLS proxy) published to the host — registry and Postgres stay internal
 - [ ] Firewall restricts access to admin paths if needed
-- [ ] Reverse proxy sets `X-Forwarded-For` / `X-Forwarded-Proto` correctly — the edge proxy overwrites `X-Forwarded-For` with the client address (nginx: `$remote_addr`) instead of appending to a client-supplied value
+- [ ] Reverse proxy sets `X-Forwarded-For` / `X-Forwarded-Proto` correctly — the outermost proxy overwrites `X-Forwarded-For` with the client address (nginx: `$remote_addr`) instead of appending to a client-supplied value, every proxy behind it appends (`$proxy_add_x_forwarded_for`), and `TRUSTED_PROXY_HOPS` equals the number of proxies in front of the app (default `1`)
 
 ## Rate limiting
 

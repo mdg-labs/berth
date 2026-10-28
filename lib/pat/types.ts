@@ -12,6 +12,8 @@ export type PersonalAccessTokenSummary = {
   revokedAt: string | null;
   lastUsedAt: string | null;
   createdAt: string;
+  expiryLifetimeSeconds: number | null;
+  allRepositories: boolean;
   repositoryIds: string[];
   repositoryNames: string[];
 };
@@ -44,5 +46,6 @@ export type PatContext = {
   userId: string;
   allowPull: boolean;
   allowPush: boolean;
+  allRepositories: boolean;
   repositoryIds: string[];
 };

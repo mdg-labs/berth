@@ -10,6 +10,13 @@ import {
   getClientIp,
   verifyPassword,
 } from "@/lib/auth/credentials";
+import { authorizeMachineTokenAccess } from "@/lib/machine-accounts/authorize";
+import { MACHINE_ACCOUNT_PREFIX } from "@/lib/machine-accounts/config";
+import {
+  recordMachineAccountUsage,
+  resolveMachineAccount,
+} from "@/lib/machine-accounts/store";
+import type { ResolvedMachineAccount } from "@/lib/machine-accounts/types";
 import { PAT_PREFIX } from "@/lib/pat/config";
 import { isPasswordAuthAllowedForUser } from "@/lib/pat/password-auth";
 import {
@@ -18,12 +25,23 @@ import {
   touchPersonalAccessTokenLastUsed,
 } from "@/lib/pat/store";
 import type { PatContext } from "@/lib/pat/types";
-import { checkTokenRateLimit } from "@/lib/rate-limit/token";
+import {
+  checkBasicCredentialRateLimit,
+  checkMachineTokenRateLimit,
+  checkTokenRateLimit,
+} from "@/lib/rate-limit/token";
 import { getSessionUserFromRequest } from "@/lib/session/request";
 import { authorizeTokenAccess } from "@/lib/token/authorize";
+import { MACHINE_SUBJECT_PREFIX } from "@/lib/token/claims";
 import { getTokenService } from "@/lib/token/config";
 import { issueRegistryToken } from "@/lib/token/issue";
-import { parseScopes } from "@/lib/token/scope";
+import { extractRepositoryNames, parseScopes } from "@/lib/token/scope";
+
+type MachineIdentity = {
+  machine: ResolvedMachineAccount;
+};
+
+type RejectedMachineSecret = { rejected: true };
 
 type TokenIdentity = {
   subject: string;
@@ -39,9 +57,14 @@ type TokenIdentity = {
 
 async function resolveIdentity(
   request: NextRequest,
-): Promise<TokenIdentity | null> {
+): Promise<TokenIdentity | MachineIdentity | RejectedMachineSecret | null> {
   const basic = parseBasicAuth(request.headers.get("authorization"));
   if (basic) {
+    if (basic.password.startsWith(MACHINE_ACCOUNT_PREFIX)) {
+      const machine = await resolveMachineAccount(basic.password);
+      return machine ? { machine } : { rejected: true };
+    }
+
     if (basic.password.startsWith(PAT_PREFIX)) {
       const resolved = await resolvePersonalAccessToken(basic.password);
       if (resolved) {
@@ -122,14 +145,71 @@ export async function GET(request: NextRequest) {
   }
 
   const access = parseScopes(scopeParam);
+
+  const authorization = request.headers.get("authorization");
+  const basic = parseBasicAuth(authorization);
+  const basicAttempted = /^basic(\s|$)/i.test(authorization ?? "");
+  if (
+    basicAttempted &&
+    !checkBasicCredentialRateLimit(clientIp, basic ? basic.username : null)
+  ) {
+    return apiError("rate_limited", "Too many token requests", 429);
+  }
+
   const identity = await resolveIdentity(request);
+
+  if (identity && "rejected" in identity) {
+    if (!checkTokenRateLimit(clientIp, "unauthenticated", basicAttempted)) {
+      return apiError("rate_limited", "Too many token requests", 429);
+    }
+    return apiError("not_authenticated", "Authentication required", 401);
+  }
+
+  if (identity && "machine" in identity) {
+    const { machine } = identity;
+    if (!checkMachineTokenRateLimit(clientIp, machine.id, basicAttempted)) {
+      return apiError("rate_limited", "Too many token requests", 429);
+    }
+
+    const authorized = await authorizeMachineTokenAccess(machine, access);
+    if (!authorized.ok) {
+      if (authorized.code === "repository_not_found") {
+        return apiError("repository_not_found", authorized.message, 403);
+      }
+      return apiError("forbidden", authorized.message, 403);
+    }
+
+    try {
+      await recordMachineAccountUsage(
+        machine,
+        extractRepositoryNames(authorized.access).sort(),
+        clientIp,
+      );
+    } catch (error) {
+      console.error("Failed to record machine account usage", error);
+    }
+
+    const issued = await issueRegistryToken(
+      `${MACHINE_SUBJECT_PREFIX}${machine.id}`,
+      service,
+      authorized.access,
+      { machineAccountId: machine.id },
+    );
+
+    return NextResponse.json({
+      token: issued.token,
+      access_token: issued.token,
+      expires_in: issued.expiresIn,
+      issued_at: issued.issuedAt,
+    });
+  }
 
   if (!identity) {
     if (access.length === 0) {
       return apiError("not_authenticated", "Authentication required", 401);
     }
 
-    if (!checkTokenRateLimit(clientIp, "unauthenticated")) {
+    if (!checkTokenRateLimit(clientIp, "unauthenticated", basicAttempted)) {
       return apiError("rate_limited", "Too many token requests", 429);
     }
 
@@ -155,7 +235,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  if (!checkTokenRateLimit(clientIp, identity.rateLimitKey)) {
+  if (!checkTokenRateLimit(clientIp, identity.rateLimitKey, basicAttempted)) {
     return apiError("rate_limited", "Too many token requests", 429);
   }
 

@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 
 import { RepositoryAuditSection } from "@/components/settings/repository-audit-section";
 import { RepositoryDangerZone } from "@/components/settings/repository-danger-zone";
+import { RepositoryMachineAccountsSection } from "@/components/settings/repository-machine-accounts-section";
 import { RepositoryMembersSection } from "@/components/settings/repository-members-section";
 import { RepositoryRolesMatrix } from "@/components/settings/repository-roles-matrix";
 import { RepositoryVisibilitySection } from "@/components/settings/repository-visibility-section";
@@ -114,6 +115,7 @@ export function RepositorySettingsPage({ repositoryName }: RepositorySettingsPag
 
           <TabsPanel className="space-y-6" value="access">
             <RepositoryMembersSection repositoryId={repository.id} />
+            <RepositoryMachineAccountsSection repositoryId={repository.id} />
             <RepositoryRolesMatrix />
           </TabsPanel>
 

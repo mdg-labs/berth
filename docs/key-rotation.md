@@ -58,6 +58,14 @@ The registry now trusts JWTs signed by either key.
 
 ### Step 3 — Switch app to the new private key
 
+The app container runs as uid/gid 1001 and reads a mounted key file, so on the server hand the new key to that uid before the app is pointed at it. Set the mode first: after the chown, a non-root account can no longer chmod the file.
+
+```bash
+chmod 600 new-signing-key.pem
+sudo chown 1001:1001 new-signing-key.pem
+chmod 644 new-signing-cert.pem
+```
+
 Point the app at the new key and cert (env or mounted files):
 
 ```yaml

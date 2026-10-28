@@ -38,6 +38,7 @@
     "createToken": "New token",
     "empty": "No personal access tokens yet.",
     "allRepositories": "All accessible repositories",
+    "noRepositories": "No repositories",
     "revoke": "Revoke token",
     "rotate": "Rotate token",
     "columns": {

@@ -1,0 +1,1 @@
+ALTER TABLE "personal_access_tokens" ADD COLUMN "all_repositories" boolean DEFAULT true NOT NULL;

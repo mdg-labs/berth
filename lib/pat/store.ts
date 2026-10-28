@@ -13,6 +13,7 @@ import type {
 } from "@/lib/pat/types";
 import {
   computeRotatedPatExpiry,
+  expiryLifetimeSeconds,
   repositoryMeetsPatRequirements,
   validatePatCreateInput,
   type PatValidationError,
@@ -39,8 +40,8 @@ export type CreatePatResult =
 
 export async function listPersonalAccessTokens(
   userId: string,
+  db: Pick<ReturnType<typeof getDb>, "select"> = getDb(),
 ): Promise<PersonalAccessTokenSummary[]> {
-  const db = getDb();
   const rows = await db
     .select()
     .from(personalAccessTokens)
@@ -85,6 +86,8 @@ export async function listPersonalAccessTokens(
       revokedAt: row.revokedAt?.toISOString() ?? null,
       lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
+      expiryLifetimeSeconds: row.expiryLifetimeSeconds,
+      allRepositories: row.allRepositories,
       repositoryIds: repos.ids,
       repositoryNames: repos.names,
     };
@@ -157,6 +160,8 @@ export async function createPersonalAccessToken(
   const tokenPrefix = fullToken.slice(0, 12);
   const tokenHash = hashToken(fullToken);
   const expiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
+  const lifetimeSeconds = expiryLifetimeSeconds(expiresAt, new Date());
+  const allRepositories = !input.repositoryIds || input.repositoryIds.length === 0;
 
   const db = getDb();
   const [created] = await db
@@ -168,7 +173,9 @@ export async function createPersonalAccessToken(
       tokenHash,
       allowPull: input.allowPull,
       allowPush: input.allowPush,
+      allRepositories,
       expiresAt,
+      expiryLifetimeSeconds: lifetimeSeconds,
     })
     .returning();
 
@@ -176,7 +183,7 @@ export async function createPersonalAccessToken(
     throw new Error("Failed to create personal access token");
   }
 
-  if (input.repositoryIds && input.repositoryIds.length > 0) {
+  if (!allRepositories && input.repositoryIds) {
     await db.insert(personalAccessTokenRepositories).values(
       input.repositoryIds.map((repositoryId) => ({
         tokenId: created.id,
@@ -219,31 +226,40 @@ export async function revokePersonalAccessToken(
 ): Promise<boolean> {
   const db = getDb();
   const now = new Date();
-  const [updated] = await db
-    .update(personalAccessTokens)
-    .set({ revokedAt: now })
-    .where(
-      and(
-        eq(personalAccessTokens.id, tokenId),
-        eq(personalAccessTokens.userId, userId),
-        isNull(personalAccessTokens.revokedAt),
-      ),
-    )
-    .returning({ id: personalAccessTokens.id, name: personalAccessTokens.name });
 
-  if (!updated) {
-    return false;
-  }
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(personalAccessTokens)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(personalAccessTokens.id, tokenId),
+          eq(personalAccessTokens.userId, userId),
+          isNull(personalAccessTokens.revokedAt),
+        ),
+      )
+      .returning({
+        id: personalAccessTokens.id,
+        name: personalAccessTokens.name,
+      });
 
-  await writeAuditLog({
-    userId,
-    action: "auth.pat_revoked",
-    resource: `pat:${updated.id}`,
-    metadata: { name: updated.name },
-    clientIp: clientIp ?? null,
+    if (!updated) {
+      return false;
+    }
+
+    await writeAuditLog(
+      {
+        userId,
+        action: "auth.pat_revoked",
+        resource: `pat:${updated.id}`,
+        metadata: { name: updated.name },
+        clientIp: clientIp ?? null,
+      },
+      tx,
+    );
+
+    return true;
   });
-
-  return true;
 }
 
 export async function rotatePersonalAccessToken(
@@ -272,8 +288,7 @@ export async function rotatePersonalAccessToken(
 
   const policy = await getPatPolicy();
   const expiryResult = computeRotatedPatExpiry(
-    existing.createdAt,
-    existing.expiresAt,
+    existing,
     resetExpiry,
     policy,
   );
@@ -286,51 +301,52 @@ export async function rotatePersonalAccessToken(
   const tokenPrefix = fullToken.slice(0, 12);
   const tokenHash = hashToken(fullToken);
 
-  const [updated] = await db
-    .update(personalAccessTokens)
-    .set({
-      tokenPrefix,
-      tokenHash,
-      expiresAt: expiryResult.expiresAt,
-      lastUsedAt: null,
-    })
-    .where(
-      and(
-        eq(personalAccessTokens.id, existing.id),
-        eq(personalAccessTokens.userId, userId),
-        isNull(personalAccessTokens.revokedAt),
-        eq(personalAccessTokens.tokenHash, existing.tokenHash),
-      ),
-    )
-    .returning();
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(personalAccessTokens)
+      .set({
+        tokenPrefix,
+        tokenHash,
+        expiresAt: expiryResult.expiresAt,
+        lastUsedAt: null,
+      })
+      .where(
+        and(
+          eq(personalAccessTokens.id, existing.id),
+          eq(personalAccessTokens.userId, userId),
+          isNull(personalAccessTokens.revokedAt),
+          eq(personalAccessTokens.tokenHash, existing.tokenHash),
+        ),
+      )
+      .returning();
 
-  if (!updated) {
-    return { ok: false, error: "not_found" };
-  }
+    if (!updated) {
+      return { ok: false, error: "not_found" } as const;
+    }
 
-  const summaries = await listPersonalAccessTokens(userId);
-  const summary = summaries.find((entry) => entry.id === updated.id);
-  if (!summary) {
-    throw new Error("Failed to load rotated personal access token");
-  }
+    const summaries = await listPersonalAccessTokens(userId, tx);
+    const summary = summaries.find((entry) => entry.id === updated.id);
+    if (!summary) {
+      throw new Error("Failed to load rotated personal access token");
+    }
 
-  await writeAuditLog({
-    userId,
-    action: "auth.pat_rotated",
-    resource: `pat:${updated.id}`,
-    metadata: {
-      name: updated.name,
-      resetExpiry,
-      expiresAt: updated.expiresAt?.toISOString() ?? null,
-    },
-    clientIp: clientIp ?? null,
+    await writeAuditLog(
+      {
+        userId,
+        action: "auth.pat_rotated",
+        resource: `pat:${updated.id}`,
+        metadata: {
+          name: updated.name,
+          resetExpiry,
+          expiresAt: updated.expiresAt?.toISOString() ?? null,
+        },
+        clientIp: clientIp ?? null,
+      },
+      tx,
+    );
+
+    return { ok: true, token: fullToken, summary } as const;
   });
-
-  return {
-    ok: true,
-    token: fullToken,
-    summary,
-  };
 }
 
 export async function revokeAllPersonalAccessTokensForUser(
@@ -373,6 +389,7 @@ export async function resolvePersonalAccessToken(
       userId: personalAccessTokens.userId,
       allowPull: personalAccessTokens.allowPull,
       allowPush: personalAccessTokens.allowPush,
+      allRepositories: personalAccessTokens.allRepositories,
       expiresAt: personalAccessTokens.expiresAt,
       revokedAt: personalAccessTokens.revokedAt,
       lastUsedAt: personalAccessTokens.lastUsedAt,
@@ -404,6 +421,7 @@ export async function resolvePersonalAccessToken(
       userId: row.userId,
       allowPull: row.allowPull,
       allowPush: row.allowPush,
+      allRepositories: row.allRepositories,
       repositoryIds: repoRows.map((entry) => entry.repositoryId),
     },
     lastUsedAt: row.lastUsedAt,

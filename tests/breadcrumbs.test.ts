@@ -15,6 +15,7 @@ const t: NavigationTranslator = (key) => {
     images: "Images",
     admin: "Admin",
     users: "Users",
+    machineAccounts: "Machine accounts",
     garbageCollection: "Garbage collection",
     auditLog: "Audit log",
     profile: "Profile",
@@ -92,6 +93,13 @@ describe("buildBreadcrumbItems", () => {
       { label: "Admin", href: "/admin" },
       { label: "Users", href: "/admin" },
       { label: "user-123" },
+    ]);
+  });
+
+  it("maps admin machine accounts route", () => {
+    expect(buildBreadcrumbItems("/admin/machine-accounts", t)).toEqual([
+      { label: "Admin", href: "/admin" },
+      { label: "Machine accounts" },
     ]);
   });
 
