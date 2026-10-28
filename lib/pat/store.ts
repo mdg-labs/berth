@@ -226,31 +226,40 @@ export async function revokePersonalAccessToken(
 ): Promise<boolean> {
   const db = getDb();
   const now = new Date();
-  const [updated] = await db
-    .update(personalAccessTokens)
-    .set({ revokedAt: now })
-    .where(
-      and(
-        eq(personalAccessTokens.id, tokenId),
-        eq(personalAccessTokens.userId, userId),
-        isNull(personalAccessTokens.revokedAt),
-      ),
-    )
-    .returning({ id: personalAccessTokens.id, name: personalAccessTokens.name });
 
-  if (!updated) {
-    return false;
-  }
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(personalAccessTokens)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(personalAccessTokens.id, tokenId),
+          eq(personalAccessTokens.userId, userId),
+          isNull(personalAccessTokens.revokedAt),
+        ),
+      )
+      .returning({
+        id: personalAccessTokens.id,
+        name: personalAccessTokens.name,
+      });
 
-  await writeAuditLog({
-    userId,
-    action: "auth.pat_revoked",
-    resource: `pat:${updated.id}`,
-    metadata: { name: updated.name },
-    clientIp: clientIp ?? null,
+    if (!updated) {
+      return false;
+    }
+
+    await writeAuditLog(
+      {
+        userId,
+        action: "auth.pat_revoked",
+        resource: `pat:${updated.id}`,
+        metadata: { name: updated.name },
+        clientIp: clientIp ?? null,
+      },
+      tx,
+    );
+
+    return true;
   });
-
-  return true;
 }
 
 export async function rotatePersonalAccessToken(
